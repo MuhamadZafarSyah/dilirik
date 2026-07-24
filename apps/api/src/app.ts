@@ -11,6 +11,7 @@ import { cvRouter } from "./routes/cv"
 import { jobsRouter } from "./routes/jobs"
 import { applicationsRouter } from "./routes/applications"
 import { analyzeRouter } from "./routes/analyze"
+import { sessionsRouter } from "./routes/sessions"
 import { dashboardRouter } from "./routes/dashboard"
 import { settingsRouter } from "./routes/settings"
 
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/jobs", jobsRouter)
   app.use("/api/applications", applicationsRouter)
   app.use("/api/analyze", analyzeRouter)
+  app.use("/api/sessions", sessionsRouter)
   app.use("/api/dashboard", dashboardRouter)
   app.use("/api/settings", settingsRouter)
 
