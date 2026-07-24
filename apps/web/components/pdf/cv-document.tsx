@@ -3,6 +3,7 @@ import type { CvStructured } from "@dilirik/shared"
 
 const LABELS = {
   id: {
+    about: "Tentang",
     skills: "Keahlian",
     experience: "Pengalaman",
     achievements: "Pencapaian",
@@ -10,6 +11,7 @@ const LABELS = {
     footer: "Dibuat dengan Dilirik — bikin CV-mu dilirik.",
   },
   en: {
+    about: "About",
     skills: "Skills",
     experience: "Experience",
     achievements: "Achievements",
@@ -79,6 +81,7 @@ type Props = {
  * Template PDF CV ATS-friendly (1 kolom, font standar, tanpa grafis) yang
  * dirender dari structuredJson versi CV — dipakai untuk fitur "Download PDF"
  * hasil revisi. Dirender sepenuhnya di browser (client-side).
+ * Ikut memuat "about" dan section dinamis (Bahasa, Sertifikasi, dll).
  */
 export function CvDocument({ cv, title, language }: Props) {
   const t = language.toLowerCase().startsWith("en") ? LABELS.en : LABELS.id
@@ -88,6 +91,13 @@ export function CvDocument({ cv, title, language }: Props) {
       <Page size="A4" style={styles.page}>
         <Text style={styles.name}>{cv.fullName || title}</Text>
         {cv.headline ? <Text style={styles.headline}>{cv.headline}</Text> : null}
+
+        {cv.about ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t.about}</Text>
+            <Text>{cv.about}</Text>
+          </View>
+        ) : null}
 
         {cv.skills.length > 0 ? (
           <View style={styles.section}>
@@ -146,6 +156,21 @@ export function CvDocument({ cv, title, language }: Props) {
             ))}
           </View>
         ) : null}
+
+        {/* Section dinamis dari CV user: Bahasa, Sertifikasi, Proyek, dll */}
+        {(cv.sections ?? []).map((section, i) =>
+          section.items.length > 0 ? (
+            <View key={i} style={styles.section}>
+              <Text style={styles.sectionTitle}>{section.label}</Text>
+              {section.items.map((item, j) => (
+                <View key={j} style={styles.bulletRow}>
+                  <Text style={styles.bullet}>•</Text>
+                  <Text style={styles.bulletText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null,
+        )}
 
         <Text style={styles.footer} fixed>{t.footer}</Text>
       </Page>

@@ -44,6 +44,9 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
 
   if (!cv) return <p className="scrawl text-2xl">{t("loading")}</p>
   const s = cv.structuredJson
+  // Section dinamis dari CV user (Bahasa, Sertifikasi, Proyek, dll) — guard utk data lama
+  const extraSections = (s.sections ?? []).filter((sec) => sec.items.length > 0)
+  const achievements = s.achievements ?? []
 
   return (
     <div className="space-y-6">
@@ -77,28 +80,53 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Hasil parsing */}
+        {/* Hasil parsing — kartu DINAMIS mengikuti isi CV, semuanya jadi bahan analisis */}
         <div className="space-y-4">
           <h2 className="scrawl text-2xl">Hasil baca AI</h2>
-          <Card className="rotate-[-0.5deg]">
-            <h3 className="label text-xs font-bold uppercase">Skills</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {s.skills.map((skill) => (
-                <span key={skill} className="label bg-blue/15 text-blue rounded-sm px-2 py-0.5 text-xs font-semibold">{skill}</span>
-              ))}
-            </div>
-          </Card>
-          <Card className="rotate-[0.5deg]">
-            <h3 className="label text-xs font-bold uppercase">Pengalaman</h3>
-            <ul className="mt-2 space-y-3">
-              {s.experiences.map((exp, i) => (
-                <li key={i} className="border-line border-l-2 pl-3">
-                  <p className="text-sm font-bold">{exp.title} · <span className="font-normal">{exp.company ?? "—"}</span></p>
-                  <p className="text-muted text-xs">{exp.period ?? "—"}</p>
-                </li>
-              ))}
-            </ul>
-          </Card>
+
+          {s.about ? (
+            <Card className="rotate-[0.4deg]">
+              <h3 className="label text-xs font-bold uppercase">Tentang</h3>
+              <p className="mt-2 text-sm whitespace-pre-wrap">{s.about}</p>
+            </Card>
+          ) : null}
+
+          {s.skills.length > 0 ? (
+            <Card className="rotate-[-0.5deg]">
+              <h3 className="label text-xs font-bold uppercase">Skills</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {s.skills.map((skill) => (
+                  <span key={skill} className="label bg-blue/15 text-blue rounded-sm px-2 py-0.5 text-xs font-semibold">{skill}</span>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+
+          {s.experiences.length > 0 ? (
+            <Card className="rotate-[0.5deg]">
+              <h3 className="label text-xs font-bold uppercase">Pengalaman</h3>
+              <ul className="mt-2 space-y-3">
+                {s.experiences.map((exp, i) => (
+                  <li key={i} className="border-line border-l-2 pl-3">
+                    <p className="text-sm font-bold">{exp.title} · <span className="font-normal">{exp.company ?? "—"}</span></p>
+                    <p className="text-muted text-xs">{exp.period ?? "—"}</p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {achievements.length > 0 ? (
+            <Card className="rotate-[-0.4deg]">
+              <h3 className="label text-xs font-bold uppercase">Pencapaian</h3>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm">
+                {achievements.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           {s.education.length > 0 ? (
             <Card className="rotate-[-0.5deg]">
               <h3 className="label text-xs font-bold uppercase">Pendidikan</h3>
@@ -109,8 +137,21 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
               </ul>
             </Card>
           ) : null}
+
+          {/* Section dinamis: Bahasa, Sertifikasi, Proyek, Organisasi, dll — muncul sesuai isi CV */}
+          {extraSections.map((sec, i) => (
+            <Card key={`${sec.label}-${i}`} className={i % 2 === 0 ? "rotate-[0.5deg]" : "rotate-[-0.5deg]"}>
+              <h3 className="label text-xs font-bold uppercase">{sec.label}</h3>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm">
+                {sec.items.map((item, j) => (
+                  <li key={j}>{item}</li>
+                ))}
+              </ul>
+            </Card>
+          ))}
+
           <Sticky tone="blue" className="text-xs">
-            Hasil baca tidak akurat? Analisis tetap memakai teks asli CV-mu sebagai sumber fakta.
+            Semua kartu di atas mengikuti isi CV-mu dan ikut jadi bahan analisis. Hasil baca kurang akurat? Analisis tetap memakai teks asli CV sebagai sumber fakta.
           </Sticky>
         </div>
 
