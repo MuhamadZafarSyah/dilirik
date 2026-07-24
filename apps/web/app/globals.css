@@ -1,0 +1,411 @@
+@import "tailwindcss";
+
+/* Dark mode berbasis class (html.dark) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens (Tailwind v4, CSS-first) ───────────── */
+@theme {
+  --color-paper: #f2e8d5;
+  --color-panel: #fbf6ea;
+  --color-ink: #2a241d;
+  --color-muted: #7a6f5e;
+  --color-line: #d8c9ad;
+  --color-red: #df513b;
+  --color-yellow: #f5c84b;
+  --color-blue: #3f6fb0;
+  --color-green: #5d8a4e;
+
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-hand: var(--font-gochi), cursive;
+  --font-scrawl: var(--font-caveat), cursive;
+
+  --shadow-paper: 0 10px 24px -12px rgb(42 36 29 / 0.35);
+  --shadow-lift: 0 18px 40px -16px rgb(42 36 29 / 0.45);
+
+  --breakpoint-xs: 480px;
+  --container-shell: 1200px;
+
+  --animate-marquee: marquee 26s linear infinite;
+  --animate-wiggle: wiggle 2.6s ease-in-out infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(2deg); }
+  }
+}
+
+/* Dark mode token overrides */
+.dark {
+  --color-paper: #181512;
+  --color-panel: #26211c;
+  --color-ink: #f4edd9;
+  --color-muted: #a39580;
+  --color-line: #483f33;
+  --color-red: #e66450;
+  --color-yellow: #c29729;
+  --color-blue: #4479ab;
+  --color-green: #538c42;
+}
+
+:root {
+  --nav-bg: color-mix(in srgb, var(--color-panel) 80%, transparent);
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+/* View Transition Theme Toggle styling */
+[data-magicui-theme-vt="active"]::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+[data-magicui-theme-vt="active"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  clip-path: var(--magicui-theme-vt-clip-from);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+::selection {
+  background-color: var(--color-red);
+  color: var(--color-paper);
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 9999;
+  padding: 12px 20px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 16px;
+}
+
+:focus-visible:not(.outline-none) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+button:focus-visible:not(.outline-none),
+a:focus-visible:not(.outline-none),
+input:focus-visible:not(.outline-none),
+textarea:focus-visible:not(.outline-none) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Warm paper grain + faint ruled texture */
+.paper-texture {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.5) 0%, transparent 36%),
+    radial-gradient(circle at 82% 8%, rgba(223, 81, 59, 0.05) 0%, transparent 30%),
+    radial-gradient(circle at 70% 88%, rgba(63, 111, 176, 0.05) 0%, transparent 30%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+.dark .paper-texture {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.04) 0%, transparent 36%),
+    radial-gradient(circle at 82% 8%, rgba(230, 100, 80, 0.03) 0%, transparent 30%),
+    radial-gradient(circle at 70% 88%, rgba(92, 139, 189, 0.03) 0%, transparent 30%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-shell px-5 sm:px-8;
+  }
+  .hand {
+    @apply font-hand;
+  }
+  .scrawl {
+    @apply font-scrawl;
+  }
+  .label {
+    @apply font-scrawl text-xl text-muted;
+  }
+  .card {
+    @apply rounded-[14px] border border-line bg-panel shadow-paper;
+  }
+  .polaroid {
+    @apply bg-panel p-3 pb-12 shadow-paper;
+    border: 1px solid color-mix(in srgb, var(--color-line) 80%, transparent);
+  }
+  .sticky {
+    @apply p-5 shadow-paper;
+    background: #fbe89a;
+    background-image: linear-gradient(180deg, #ffe98f, #f6d96b);
+  }
+}
+
+/* Utilitas & dekorasi (plain CSS) */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Washi tape strip */
+.tape::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 92px;
+  height: 26px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(245, 200, 75, 0.55);
+  border-left: 1px dashed rgba(0, 0, 0, 0.08);
+  border-right: 1px dashed rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+.dark .tape::before {
+  background: rgba(247, 209, 101, 0.35) !important;
+  border-left-color: rgba(255, 255, 255, 0.15) !important;
+  border-right-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3) !important;
+}
+.tape-blue::before {
+  background: rgba(63, 111, 176, 0.35);
+}
+.dark .tape-blue::before {
+  background: rgba(68, 121, 171, 0.3) !important;
+}
+.tape-red::before {
+  background: rgba(223, 81, 59, 0.35);
+}
+.dark .tape-red::before {
+  background: rgba(230, 100, 80, 0.3) !important;
+}
+.tape-hv::before {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.tape-hv:hover::before {
+  opacity: 1;
+}
+.text-stroke {
+  -webkit-text-stroke: 2px var(--color-ink);
+  color: transparent;
+}
+.grab {
+  cursor: grab;
+}
+.grab:active {
+  cursor: grabbing;
+}
+
+/* Custom cursor: hide the native one on fine-pointer devices */
+.cursor-none,
+.cursor-none * {
+  cursor: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Guestbook Note Text Override (paksa kontras terang) */
+.guestbook-note {
+  --color-ink: #2a241d !important;
+  --color-line: #d8c9ad !important;
+  --color-muted: #7a6f5e !important;
+}
+.guestbook-note textarea::placeholder,
+.guestbook-note input::placeholder {
+  color: rgba(42, 36, 29, 0.3) !important;
+}
+
+/* Corkboard styling */
+.corkboard {
+  border-style: solid !important;
+  border-color: #8a684b !important;
+  background-color: #ecdcc4 !important;
+  background-image:
+    radial-gradient(rgba(139, 109, 81, 0.22) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(139, 109, 81, 0.18) 1px, transparent 1px);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
+.dark .corkboard {
+  border-color: #4a3625 !important;
+  background-color: #2b2018 !important;
+  background-image:
+    radial-gradient(rgba(180, 140, 110, 0.12) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(180, 140, 110, 0.08) 1px, transparent 1px) !important;
+}
+
+/* Sticker Board container */
+.sticker-board {
+  background-image: radial-gradient(var(--color-line) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Cutting Board grid */
+.cutting-board {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(216, 201, 173, 0.25) 38px 39px),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(216, 201, 173, 0.25) 38px 39px);
+}
+.dark .cutting-board {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(72, 63, 51, 0.2) 38px 39px),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(72, 63, 51, 0.2) 38px 39px) !important;
+}
+
+/* Story Canvas dots */
+.story-canvas {
+  background-image: radial-gradient(#cdbf9f 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.dark .story-canvas {
+  background-image: radial-gradient(rgba(180, 200, 255, 0.08) 1.5px, transparent 1.5px) !important;
+}
+
+/* Journey Cards */
+.journey-card-graph {
+  background-color: #fcfbf7;
+  background-image:
+    linear-gradient(90deg, rgba(63, 111, 176, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(63, 111, 176, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.dark .journey-card-graph {
+  background-color: #201c18 !important;
+  background-image:
+    linear-gradient(90deg, rgba(92, 139, 189, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(92, 139, 189, 0.06) 1px, transparent 1px) !important;
+}
+
+.journey-card-ruled {
+  background-color: #fdfcfa;
+  background-image:
+    linear-gradient(90deg, transparent 28px, rgba(223, 81, 59, 0.2) 28px, rgba(223, 81, 59, 0.2) 30px, transparent 30px),
+    linear-gradient(rgba(63, 111, 176, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 22px;
+}
+.dark .journey-card-ruled {
+  background-color: #201c18 !important;
+  background-image:
+    linear-gradient(90deg, transparent 28px, rgba(230, 100, 80, 0.25) 28px, rgba(230, 100, 80, 0.25) 30px, transparent 30px),
+    linear-gradient(rgba(92, 139, 189, 0.08) 1px, transparent 1px) !important;
+}
+
+.journey-card-sticky {
+  background: linear-gradient(180deg, #fffbe5 0%, #fff7ce 100%);
+  border: 1px solid rgba(245, 200, 75, 0.4);
+}
+.dark .journey-card-sticky {
+  background: linear-gradient(180deg, #382f1b 0%, #2f2714 100%) !important;
+  border: 1px solid rgba(247, 209, 101, 0.3) !important;
+}
+
+.journey-card-postcard {
+  background-color: #ede4cf;
+  border: 3px double #c8ba9d;
+}
+.dark .journey-card-postcard {
+  background-color: #28221a !important;
+  border: 3px double #4a3f32 !important;
+}
+
+/* Active story highlight */
+.active-story-bg {
+  background-color: color-mix(in srgb, var(--color-ink) 6%, transparent) !important;
+}
+
+/* ── Guestbook Drawing Mode ──────────────────── */
+.note-flip-container {
+  perspective: 900px;
+}
+.note-flip-inner {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+.drawing-canvas {
+  cursor: crosshair;
+  touch-action: none;
+  image-rendering: -webkit-optimize-contrast;
+  border-radius: 2px;
+}
+.cursor-none .drawing-canvas {
+  cursor: crosshair !important;
+}
+.draw-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.draw-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(42, 36, 29, 0.15);
+  border-radius: 6px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.draw-tools button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.draw-tools button.active {
+  border-color: #2a241d;
+  box-shadow: 0 0 0 2px rgba(42, 36, 29, 0.25);
+}
+.draw-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(42, 36, 29, 0.2);
+}
+.note-drawing-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  border-radius: 2px;
+}

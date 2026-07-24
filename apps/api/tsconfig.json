@@ -1,0 +1,5 @@
+{
+  "extends": "@dilirik/tsconfig/node.json",
+  "compilerOptions": { "noEmit": true, "moduleResolution": "Bundler", "module": "ESNext" },
+  "include": ["src", "test"]
+}

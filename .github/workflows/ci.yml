@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @dilirik/db db:generate
+
+      - name: Lint
+        run: pnpm turbo lint
+
+      - name: Typecheck
+        run: pnpm turbo typecheck
+
+      - name: Unit & integration tests
+        run: pnpm turbo test
+
+      - name: Build
+        run: pnpm turbo build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dilirik/web exec playwright install --with-deps chromium
+      - name: Build & start web
+        run: |
+          pnpm --filter @dilirik/web build
+          pnpm --filter @dilirik/web start &
+          npx wait-on http://localhost:3000
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+      - name: Run Playwright
+        run: pnpm --filter @dilirik/web e2e
+        env:
+          CI: "true"
+          E2E_BASE_URL: http://localhost:3000

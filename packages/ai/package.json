@@ -1,0 +1,26 @@
+{
+  "name": "@dilirik/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^0.0.18",
+    "@dilirik/shared": "workspace:*",
+    "ai": "^4.0.30",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@dilirik/tsconfig": "workspace:*",
+    "msw": "^2.7.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

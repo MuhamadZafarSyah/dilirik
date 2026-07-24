@@ -1,0 +1,173 @@
+// Dilirik — skema data sesuai PRD §9
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Auth (Better Auth) =====
+model User {
+  id                     String    @id @default(cuid())
+  name                   String
+  email                  String    @unique
+  emailVerified          Boolean   @default(false)
+  image                  String?
+  plan                   String    @default("free")
+  // Kuota analisis: null = unlimited; default 10/bulan (PRD §14)
+  analysisQuota          Int?      @default(10)
+  analysisUsedThisPeriod Int       @default(0)
+  quotaResetAt           DateTime?
+  uiLanguage             String?   @default("id")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  sessions     Session[]
+  accounts     Account[]
+  cvs          Cv[]
+  jobPostings  JobPosting[]
+  applications Application[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String // "credential" | "google" | "github"
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String? // hash utk provider credential
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ===== Domain =====
+model Cv {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  language       String   @default("id")
+  rawText        String
+  structuredJson Json
+  fileKey        String? // key objek R2 bila via upload
+  parentCvId     String? // versi lama TIDAK dihapus — untuk compare
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Cv?           @relation("CvVersions", fields: [parentCvId], references: [id], onDelete: SetNull)
+  children     Cv[]          @relation("CvVersions")
+  applications Application[]
+  analyses     Analysis[]
+
+  @@index([userId])
+  @@map("cv")
+}
+
+model JobPosting {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceUrl  String?
+  rawText    String
+  parsedJson Json
+  createdAt  DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([userId])
+  @@map("job_posting")
+}
+
+enum ApplicationStatus {
+  DISIMPAN
+  DILAMAR
+  SCREENING
+  INTERVIEW
+  OFFER
+  DITOLAK
+}
+
+model Application {
+  id           String            @id @default(cuid())
+  userId       String
+  jobPostingId String
+  cvId         String
+  status       ApplicationStatus @default(DISIMPAN)
+  matchScore   Int?
+  notes        String?
+  appliedAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  cv         Cv         @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  analyses   Analysis[]
+
+  @@index([userId, status])
+  @@map("application")
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  applicationId   String?
+  cvId            String
+  userId          String
+  jobPostingId    String
+  cacheKey        String   @unique // hash(cv + job + engineVersion)
+  matchScore      Int
+  gapsJson        Json
+  suggestionsJson Json
+  language        String
+  engineVersion   String
+  createdAt       DateTime @default(now())
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  cv          Cv           @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cacheKey])
+  @@map("analysis")
+}

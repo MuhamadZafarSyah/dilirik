@@ -1,0 +1,13 @@
+{
+  "name": "@dilirik/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "@eslint/js": "^9.17.0",
+    "typescript-eslint": "^8.19.0",
+    "eslint-plugin-import": "^2.31.0"
+  },
+  "peerDependencies": { "eslint": "^9" }
+}
