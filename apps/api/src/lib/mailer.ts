@@ -9,7 +9,12 @@ async function send(to: string, subject: string, html: string) {
     logger.warn({ to, subject }, "RESEND_API_KEY belum di-set — email dilewati (dev mode)")
     return
   }
-  await resend.emails.send({ from: env.MAIL_FROM, to, subject, html })
+  const { data, error } = await resend.emails.send({ from: env.MAIL_FROM, to, subject, html })
+  if (error) {
+    logger.error({ error, to, subject }, "Gagal kirim email via Resend")
+  } else {
+    logger.info({ to, subject, id: data?.id }, "Email terkirim via Resend")
+  }
 }
 
 export async function sendVerificationEmail(to: string, url: string) {
