@@ -9,11 +9,12 @@ export function normalize(text: string): string {
     .trim()
 }
 
-/** Kumpulkan seluruh fakta tekstual dari structuredJson CV. */
+/** Kumpulkan seluruh fakta tekstual dari structuredJson CV (termasuk about & section dinamis). */
 export function collectCvFacts(cv: CvStructured): string[] {
   const facts: string[] = [...cv.skills, ...cv.achievements]
   if (cv.fullName) facts.push(cv.fullName)
   if (cv.headline) facts.push(cv.headline)
+  if (cv.about) facts.push(cv.about)
   for (const exp of cv.experiences) {
     facts.push(exp.title)
     if (exp.company) facts.push(exp.company)
@@ -22,6 +23,10 @@ export function collectCvFacts(cv: CvStructured): string[] {
   for (const edu of cv.education) {
     facts.push(edu.institution)
     if (edu.degree) facts.push(edu.degree)
+  }
+  for (const section of cv.sections ?? []) {
+    facts.push(section.label)
+    facts.push(...section.items)
   }
   return facts.map(normalize).filter(Boolean)
 }

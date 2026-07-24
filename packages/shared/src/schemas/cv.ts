@@ -1,10 +1,20 @@
 import { z } from "zod"
 import { MAX_CV_CHARS } from "../constants"
 
+/** Section dinamis di luar field standar (mis. Bahasa, Sertifikasi, Proyek, Organisasi). */
+export const cvSectionSchema = z.object({
+  label: z.string().min(1),
+  items: z.array(z.string()).default([]),
+})
+
+export type CvSection = z.infer<typeof cvSectionSchema>
+
 /** Struktur CV hasil parsing AI — target Zod untuk structured output. */
 export const cvStructuredSchema = z.object({
   fullName: z.string().nullable().default(null),
   headline: z.string().nullable().default(null),
+  // Ringkasan / tentang saya / profil singkat — APA ADANYA dari CV (null bila tidak ada)
+  about: z.string().nullable().default(null),
   skills: z.array(z.string().min(1)).default([]),
   experiences: z
     .array(
@@ -26,6 +36,8 @@ export const cvStructuredSchema = z.object({
       }),
     )
     .default([]),
+  // Section lain APA ADANYA dari CV — dinamis, label mengikuti CV user
+  sections: z.array(cvSectionSchema).default([]),
 })
 
 export type CvStructured = z.infer<typeof cvStructuredSchema>

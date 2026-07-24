@@ -14,7 +14,8 @@ export function skillCovered(jobSkill: string, cvCorpus: string[]): boolean {
 /**
  * Scoring rule-based deterministik (PRD §8.3a).
  * Bobot skill wajib (3x) > opsional (1x) → persen 0–100.
- * Dipakai sebagai fallback & sanity-check untuk skor semantic.
+ * Korpus mencakup SELURUH isi structured CV, termasuk about & section dinamis
+ * (Bahasa, Sertifikasi, dll) sehingga semuanya ikut jadi bahan analisis.
  */
 export function ruleBasedScore(cv: CvStructured, job: JobParsed): {
   score: number
@@ -27,7 +28,9 @@ export function ruleBasedScore(cv: CvStructured, job: JobParsed): {
     ...cv.skills,
     ...cv.experiences.flatMap((e) => [e.title, ...(e.highlights ?? [])]),
     ...cv.achievements,
+    ...(cv.sections ?? []).flatMap((s) => [s.label, ...s.items]),
     cv.headline ?? "",
+    cv.about ?? "",
   ]
     .map(normalize)
     .filter(Boolean)
