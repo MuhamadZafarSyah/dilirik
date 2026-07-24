@@ -7,6 +7,7 @@ import type { JobParsed } from "@dilirik/shared"
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Sticky } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useI18n } from "@/lib/i18n"
 
 type CvOption = { id: string; title: string; version: number }
@@ -52,20 +53,32 @@ function AnalyzeForm() {
         <span className="tape-red" aria-hidden />
         <div>
           <label className="label text-xs font-bold uppercase">1. Pilih CV</label>
-          <select value={cvId} onChange={(e) => setCvId(e.target.value)}
-            className="border-line bg-paper mt-1 w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink">
-            <option value="">— pilih CV —</option>
-            {cvs.map((cv) => <option key={cv.id} value={cv.id}>{cv.title} (v{cv.version})</option>)}
-          </select>
+          <Select value={cvId} onValueChange={setCvId}>
+            <SelectTrigger className="mt-1" aria-label="Pilih CV">
+              <SelectValue placeholder="— pilih CV —" />
+            </SelectTrigger>
+            <SelectContent>
+              {cvs.map((cv) => (
+                <SelectItem key={cv.id} value={cv.id}>{cv.title} (v{cv.version})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {cvs.length === 0 ? <Link href="/app/cv/new" className="text-red mt-1 inline-block text-xs underline">Belum ada CV → tambah dulu</Link> : null}
         </div>
         <div>
           <label className="label text-xs font-bold uppercase">2. Pilih lowongan</label>
-          <select value={jobPostingId} onChange={(e) => setJobPostingId(e.target.value)}
-            className="border-line bg-paper mt-1 w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink">
-            <option value="">— pilih lowongan —</option>
-            {jobs.map((job) => <option key={job.id} value={job.id}>{job.parsedJson.jobTitle || "Untitled"}{job.parsedJson.company ? ` — ${job.parsedJson.company}` : ""}</option>)}
-          </select>
+          <Select value={jobPostingId} onValueChange={setJobPostingId}>
+            <SelectTrigger className="mt-1" aria-label="Pilih lowongan">
+              <SelectValue placeholder="— pilih lowongan —" />
+            </SelectTrigger>
+            <SelectContent>
+              {jobs.map((job) => (
+                <SelectItem key={job.id} value={job.id}>
+                  {job.parsedJson.jobTitle || "Untitled"}{job.parsedJson.company ? ` — ${job.parsedJson.company}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {jobs.length === 0 ? <Link href="/app/jobs/new" className="text-red mt-1 inline-block text-xs underline">Belum ada lowongan → tambah dulu</Link> : null}
         </div>
 

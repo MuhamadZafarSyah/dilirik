@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { CvStructured } from "@dilirik/shared"
 import { api } from "@/lib/api"
+import { DownloadCvButton } from "@/components/pdf/download-cv-button"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
 import { useI18n } from "@/lib/i18n"
@@ -20,7 +21,7 @@ type CvDetail = {
   createdAt: string
 }
 
-/** Detail CV: hasil parsing terstruktur + teks asli + aksi (analisis, compare, hapus). */
+/** Detail CV: hasil parsing terstruktur + teks asli + aksi (analisis, compare, download PDF, hapus). */
 export default function CvDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -51,7 +52,8 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
           <h1 className="hand text-4xl">{cv.title}</h1>
           <p className="label text-muted text-xs uppercase">bahasa: {cv.language} · versi {cv.version}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <DownloadCvButton cv={s} title={cv.title} version={cv.version} language={cv.language} />
           <Link href={`/app/analyze?cvId=${cv.id}`} className="label bg-red text-paper rounded-md px-4 py-2 text-sm font-bold">⚡ Analisis dengan lowongan</Link>
           {siblings.length > 0 ? (
             <Link href={`/app/cv/${cv.id}/compare?with=${siblings[0]!.id}`} className="label bg-panel border-line rounded-md border-2 px-4 py-2 text-sm font-bold">{t("compare")}</Link>
