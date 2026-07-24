@@ -43,6 +43,7 @@ export async function runAnalysis(args: { userId: string; cvId: string; jobPosti
     result = await analyze({
       cv: cvStructuredSchema.parse(cv.structuredJson),
       job: jobParsedSchema.parse(job.parsedJson),
+      rawText: cv.rawText,
       language: cv.language,
     })
     await setCachedAnalysis(cacheKey, result)
