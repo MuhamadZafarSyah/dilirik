@@ -4,10 +4,13 @@ import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { CvStructured } from "@dilirik/shared"
-import { api } from "@/lib/api"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { api, errorMessage } from "@/lib/api"
 import { DownloadCvButton } from "@/components/pdf/download-cv-button"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
 
 type CvDetail = {
@@ -21,26 +24,59 @@ type CvDetail = {
   createdAt: string
 }
 
+type CvListItem = { id: string; version: number; parentCvId: string | null }
+
 /** Detail CV: hasil parsing terstruktur + teks asli + aksi (analisis, compare, download PDF, hapus). */
 export default function CvDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const { t } = useI18n()
-  const [cv, setCv] = useState<CvDetail | null>(null)
-  const [siblings, setSiblings] = useState<Array<{ id: string; version: number }>>([])
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const cvQuery = useQuery({
+    queryKey: ["cv", id],
+    queryFn: async () => {
+      const { data } = await api.get<{ cv: CvDetail }>(`/api/cv/${id}`)
+      return data.cv
+    },
+  })
+
+  // Versi lain diturunkan dari cache ["cvs"] — tidak perlu effect berantai.
+  const allCvsQuery = useQuery({
+    queryKey: ["cvs"],
+    queryFn: async () => {
+      const { data } = await api.get<{ cvs: CvListItem[] }>("/api/cv")
+      return data.cvs
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/api/cv/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cvs"] })
+      toast("CV dihapus. Versi lain tetap aman.", "success")
+      router.push("/app/cv")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
+
+  // Satu-satunya effect: navigasi keluar bila CV tidak ditemukan (bukan data-fetching).
   useEffect(() => {
-    api.get<{ cv: CvDetail }>(`/api/cv/${id}`).then(async (r) => {
-      setCv(r.data.cv)
-      const all = await api.get<{ cvs: Array<{ id: string; version: number; parentCvId: string | null }> }>("/api/cv")
-      const rootId = r.data.cv.parentCvId ?? r.data.cv.id
-      setSiblings(
-        all.data.cvs
+    if (cvQuery.isError) router.push("/app/cv")
+  }, [cvQuery.isError, router])
+
+  const cv = cvQuery.data ?? null
+  const rootId = cv ? (cv.parentCvId ?? cv.id) : null
+  const siblings =
+    cv && allCvsQuery.data
+      ? allCvsQuery.data
           .filter((c) => (c.parentCvId === rootId || c.id === rootId) && c.id !== id)
-          .map((c) => ({ id: c.id, version: c.version })),
-      )
-    }).catch(() => router.push("/app/cv"))
-  }, [id, router])
+          .map((c) => ({ id: c.id, version: c.version }))
+      : []
 
   if (!cv) return <p className="scrawl text-2xl">{t("loading")}</p>
   const s = cv.structuredJson
@@ -61,12 +97,7 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
           {siblings.length > 0 ? (
             <Link href={`/app/cv/${cv.id}/compare?with=${siblings[0]!.id}`} className="label bg-panel border-line rounded-md border-2 px-4 py-2 text-sm font-bold">{t("compare")}</Link>
           ) : null}
-          <Button variant="danger" onClick={async () => {
-            if (confirm("Hapus CV ini? Versi lain tidak ikut terhapus.")) {
-              await api.delete(`/api/cv/${cv.id}`)
-              router.push("/app/cv")
-            }
-          }}>Hapus</Button>
+          <Button variant="danger" onClick={() => setConfirmDelete(true)}>Hapus</Button>
         </div>
       </div>
 
@@ -161,6 +192,18 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
           <pre className="card bg-paper border-line mt-4 max-h-[32rem] overflow-auto rounded-lg border-2 p-4 text-xs whitespace-pre-wrap">{cv.rawText}</pre>
         </div>
       </div>
+
+      {/* Konfirmasi hapus — pengganti window.confirm */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Hapus CV ini?"
+        description="Versi lain dari CV ini tidak ikut terhapus — hanya versi yang sedang dibuka."
+        confirmLabel="Ya, hapus CV"
+        onConfirm={async () => {
+          await deleteMutation.mutateAsync().catch(() => {})
+        }}
+      />
     </div>
   )
 }

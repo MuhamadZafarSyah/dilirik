@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { FiBriefcase, FiPlus, FiZap, FiSearch, FiArrowRight, FiGlobe } from "react-icons/fi"
 import type { JobParsed } from "@dilirik/shared"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { Skeleton } from "boneyard-js/react"
 import { Card } from "@/components/ui/card"
@@ -26,12 +27,16 @@ const itemVariants = {
 
 export default function JobsPage() {
   const { t } = useI18n()
-  const [jobs, setJobs] = useState<JobItem[] | null>(null)
   const [search, setSearch] = useState("")
 
-  useEffect(() => {
-    api.get<{ jobs: JobItem[] }>("/api/jobs").then((r) => setJobs(r.data.jobs)).catch(() => setJobs([]))
-  }, [])
+  const jobsQuery = useQuery({
+    queryKey: ["jobs"],
+    queryFn: async () => {
+      const { data } = await api.get<{ jobs: JobItem[] }>("/api/jobs")
+      return data.jobs
+    },
+  })
+  const jobs = jobsQuery.data ?? (jobsQuery.isError ? [] : null)
 
   const filteredJobs = jobs?.filter((job) => {
     const title = job.parsedJson.jobTitle?.toLowerCase() || ""

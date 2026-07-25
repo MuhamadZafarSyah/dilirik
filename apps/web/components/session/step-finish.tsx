@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { FiCheckCircle, FiLayers } from "react-icons/fi"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -14,25 +14,23 @@ import type { CvFull, Patch, SessionDetail } from "./types"
 
 export function StepFinish({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const { t } = useI18n()
-  const [revised, setRevised] = useState<CvFull | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [downloadingDocx, setDownloadingDocx] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (!session.revisedCvId) return
-    api
-      .get<{ cv: CvFull }>(`/api/cv/${session.revisedCvId}`)
-      .then((r) => setRevised(r.data.cv))
-      .catch(() => {})
-  }, [session.revisedCvId])
+  const revisedQuery = useQuery({
+    queryKey: ["cv", session.revisedCvId],
+    enabled: Boolean(session.revisedCvId),
+    queryFn: async () => {
+      const { data } = await api.get<{ cv: CvFull }>(`/api/cv/${session.revisedCvId}`)
+      return data.cv
+    },
+  })
+  const revised = revisedQuery.data ?? null
 
   const hasDesignDocx = Boolean(revised?.fileKey?.toLowerCase().endsWith(".docx"))
 
-  async function downloadOriginalDocx() {
-    if (!revised) return
-    setDownloadingDocx(true)
-    try {
+  const docxMutation = useMutation({
+    mutationFn: async () => {
+      if (!revised) return
       const res = await api.get<Blob>(`/api/cv/${revised.id}/file`, { responseType: "blob" })
       const url = URL.createObjectURL(res.data)
       const a = document.createElement("a")
@@ -41,28 +39,31 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
       a.download = `${slug}-v${revised.version}-dilirik.docx`
       a.click()
       URL.revokeObjectURL(url)
-    } catch (err) {
-      setError(errorMessage(err))
-    } finally {
-      setDownloadingDocx(false)
-    }
-  }
+    },
+  })
 
-  async function saveApplication() {
-    setBusy(true)
-    setError(null)
-    try {
+  const saveMutation = useMutation({
+    mutationFn: async () => {
       const { data } = await api.post<{ application: { id: string } }>("/api/applications", {
         cvId: session.revisedCvId ?? session.cvId,
         jobPostingId: session.jobPostingId,
         ...(session.analysisId ? { analysisId: session.analysisId } : {}),
       })
-      await patch({ applicationId: data.application.id, status: "COMPLETED" })
-    } catch (err) {
-      setError(errorMessage(err))
-      setBusy(false)
-    }
-  }
+      return data.application.id
+    },
+    onSuccess: async (applicationId) => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] })
+      await patch({ applicationId, status: "COMPLETED" })
+    },
+  })
+
+  const busy = saveMutation.isPending
+  const downloadingDocx = docxMutation.isPending
+  const error = docxMutation.error
+    ? errorMessage(docxMutation.error)
+    : saveMutation.error
+      ? errorMessage(saveMutation.error)
+      : null
 
   return (
     <Card tape="red" pin className="relative space-y-6 text-center py-8">
@@ -84,7 +85,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
 
       <div className="flex flex-wrap justify-center gap-3">
         {hasDesignDocx && (
-          <Button onClick={downloadOriginalDocx} isLoading={downloadingDocx} variant="primary">
+          <Button onClick={() => docxMutation.mutate()} isLoading={downloadingDocx} variant="primary">
             {downloadingDocx ? "Menyiapkan DOCX…" : "⬇ DOCX (desain asli)"}
           </Button>
         )}
@@ -115,7 +116,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
           </Link>
         </p>
       ) : (
-        <Button onClick={saveApplication} isLoading={busy} variant="primary" size="lg">
+        <Button onClick={() => saveMutation.mutate()} isLoading={busy} variant="primary" size="lg">
           {busy ? "Menyiapkan…" : `📌 ${t("saveToTracker")}`}
         </Button>
       )}
