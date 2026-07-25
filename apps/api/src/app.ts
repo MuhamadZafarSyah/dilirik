@@ -14,6 +14,7 @@ import { analyzeRouter } from "./routes/analyze"
 import { sessionsRouter } from "./routes/sessions"
 import { dashboardRouter } from "./routes/dashboard"
 import { settingsRouter } from "./routes/settings"
+import { interviewRouter } from "./routes/interview"
 
 export function createApp() {
   const app = express()
@@ -37,6 +38,7 @@ export function createApp() {
   app.use("/api/sessions", sessionsRouter)
   app.use("/api/dashboard", dashboardRouter)
   app.use("/api/settings", settingsRouter)
+  app.use("/api/interview", interviewRouter)
 
   app.use(errorHandler)
   return app
