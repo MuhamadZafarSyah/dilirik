@@ -14,3 +14,9 @@ export { generateAnalysisReport, pickSuggestionMode } from "./analysis/report"
 export { parseCv } from "./prompts/parseCv"
 export { parseJob } from "./prompts/parseJob"
 export { analyze } from "./pipeline/analyze"
+export { buildInterviewPersona, type InterviewPersonaId } from "./prompts/interviewPersona"
+export {
+  generateInterviewFeedback,
+  interviewFeedbackSchema,
+  type InterviewFeedback,
+} from "./analysis/interviewFeedback"
