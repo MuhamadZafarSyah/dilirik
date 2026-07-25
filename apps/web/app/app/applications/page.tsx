@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { FiLayers, FiZap, FiBriefcase, FiArrowRight, FiCheckCircle } from "react-icons/fi"
+import { FiZap, FiArrowRight } from "react-icons/fi"
 import {
   APPLICATION_STATUSES,
   APPLICATION_STATUS_LABELS,
@@ -13,6 +13,7 @@ import {
   type JobParsed,
 } from "@dilirik/shared"
 import { api } from "@/lib/api"
+import { Skeleton } from "boneyard-js/react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -102,59 +103,72 @@ function ApplicationsList() {
         ))}
       </div>
 
-      {/* List */}
-      {!items ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="bg-line/20 h-24 animate-pulse rounded-xl border border-line" />
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          title="Belum Ada Lamaran di Kategori Ini"
-          note="Jalankan sesi analisis CV + lowongan, lalu simpan ke tracker lamaran."
-          ctaLabel={t("newAnalysis")}
-          ctaHref="/app/analyze"
-        />
-      ) : (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-3">
-          {items.map((item, i) => (
-            <motion.div key={item.id} variants={itemVariants}>
-              <Link href={`/app/applications/${item.id}`} className="block">
-                <Card
-                  rotate={i % 2 === 0 ? 0.4 : -0.4}
-                  className="group flex flex-wrap items-center justify-between gap-4 p-4 hover:scale-[1.01] transition-transform"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <h3 className="hand text-2xl font-bold text-ink group-hover:text-blue transition-colors truncate">
-                      {item.jobPosting.parsedJson.jobTitle || "Posisi Tanpa Judul"}
-                    </h3>
-                    <p className="label text-muted text-xs uppercase font-bold tracking-wider">
-                      {item.jobPosting.parsedJson.company ?? "Perusahaan"} · CV: {item.cv.title} (v{item.cv.version})
-                    </p>
-                    <p className="text-muted text-[11px]">
-                      Diubah {new Date(item.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    {item.matchScore !== null && (
-                      <div className="text-right">
-                        <span className={`hand text-3xl font-bold ${toneText[scoreTone(item.matchScore)]}`}>
-                          {item.matchScore}
-                        </span>
-                        <span className="scrawl text-muted text-xs block -mt-1">Match Score</span>
+      <Skeleton name="applications-list" loading={!items} animate="shimmer" fallback={<ApplicationsSkeleton />}>
+        {items ? (
+          items.length === 0 ? (
+            <EmptyState
+              title="Belum Ada Lamaran di Kategori Ini"
+              note="Jalankan sesi analisis CV + lowongan, lalu simpan ke tracker lamaran."
+              ctaLabel={t("newAnalysis")}
+              ctaHref="/app/analyze"
+            />
+          ) : (
+            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-3">
+              {items.map((item, i) => (
+                <motion.div key={item.id} variants={itemVariants}>
+                  <Link href={`/app/applications/${item.id}`} className="block">
+                    <Card
+                      rotate={i % 2 === 0 ? 0.4 : -0.4}
+                      className="group flex flex-wrap items-center justify-between gap-4 p-4 hover:scale-[1.01] transition-transform"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <h3 className="hand text-2xl font-bold text-ink group-hover:text-blue transition-colors truncate">
+                          {item.jobPosting.parsedJson.jobTitle || "Posisi Tanpa Judul"}
+                        </h3>
+                        <p className="label text-muted text-xs uppercase font-bold tracking-wider">
+                          {item.jobPosting.parsedJson.company ?? "Perusahaan"} · CV: {item.cv.title} (v{item.cv.version})
+                        </p>
+                        <p className="text-muted text-[11px]">
+                          Diubah {new Date(item.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
                       </div>
-                    )}
-                    <StatusBadge status={item.status} lang={lang} />
-                    <FiArrowRight className="h-4 w-4 text-muted group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Card>
-              </Link>
+
+                      <div className="flex items-center gap-4 shrink-0">
+                        {item.matchScore !== null && (
+                          <div className="text-right">
+                            <span className={`hand text-3xl font-bold ${toneText[scoreTone(item.matchScore)]}`}>
+                              {item.matchScore}
+                            </span>
+                            <span className="scrawl text-muted text-xs block -mt-1">Match Score</span>
+                          </div>
+                        )}
+                        <StatusBadge status={item.status} lang={lang} />
+                        <FiArrowRight className="h-4 w-4 text-muted group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
-      )}
+          )
+        ) : null}
+      </Skeleton>
+    </div>
+  )
+}
+
+function ApplicationsSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="h-24 border-2 border-line bg-panel/60 rounded-2xl p-4 flex items-center justify-between shadow-paper">
+          <div className="space-y-2 w-2/3">
+            <div className="h-5 w-48 bg-line/40 rounded-md" />
+            <div className="h-4 w-36 bg-line/25 rounded-md" />
+          </div>
+          <div className="h-8 w-24 bg-line/40 rounded-xl" />
+        </div>
+      ))}
     </div>
   )
 }

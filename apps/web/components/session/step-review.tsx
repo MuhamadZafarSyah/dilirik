@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { FiAlertTriangle, FiEdit3 } from "react-icons/fi"
+import { Skeleton } from "boneyard-js/react"
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
@@ -68,127 +69,155 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
     )
   }
 
-  if (!analysis) {
-    return (
-      <Card tape="yellow" className="text-center py-12 space-y-4">
-        <div className="inline-block animate-spin text-ink text-4xl">⚡</div>
-        <h2 className="hand text-3xl font-bold">AI Sedang Menganalisis Match CV Kamu...</h2>
-        <p className="scrawl text-muted text-xl max-w-md mx-auto">
-          Mengekstrak kualifikasi, mendeteksi gap penyajian vs fakta asli (±15 detik).
-        </p>
-      </Card>
-    )
-  }
-
-  const realGaps = analysis.gapsJson.filter((g) => g.type === "real")
-  const presentationGaps = analysis.gapsJson.filter((g) => g.type !== "real")
-  const suggestions = analysis.suggestionsJson.suggestions ?? []
+  const realGaps = analysis ? analysis.gapsJson.filter((g) => g.type === "real") : []
+  const presentationGaps = analysis ? analysis.gapsJson.filter((g) => g.type !== "real") : []
+  const suggestions = analysis ? (analysis.suggestionsJson.suggestions ?? []) : []
 
   return (
-    <div className="space-y-8">
-      {/* Hero Match Score Gauge */}
-      <Card tape="red" pin className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
-        <ScoreGauge score={analysis.matchScore} size={180} />
+    <Skeleton name="step-review-analysis" loading={!analysis} animate="shimmer" fallback={<StepReviewSkeleton />}>
+      {analysis ? (
+        <div className="space-y-8">
+          {/* Hero Match Score Gauge */}
+          <Card tape="red" pin className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+            <ScoreGauge score={analysis.matchScore} size={180} />
 
-        <div className="flex-1 text-center sm:text-left space-y-2">
-          <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
-            Hasil Analisis Match
-          </span>
-          <h2 className="hand text-3xl font-bold text-ink">
-            {session.cv?.title} vs {session.job?.parsedJson?.jobTitle ?? "Lowongan Target"}
-          </h2>
-          <p className="text-muted text-xs leading-relaxed">
-            Ditemukan <strong className="text-red">{realGaps.length} Gap Beneran</strong> dan{" "}
-            <strong className="text-yellow">{presentationGaps.length} Gap Penyajian</strong> yang bisa langsung diperbaiki tanpa perlu memalsukan fakta.
-          </p>
-          <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-            <Button variant="danger" icon={<FiEdit3 />} onClick={() => patch({ step: "REVISE" })}>
-              ✏︎ Lanjut ke Revisi Teks CV →
-            </Button>
-          </div>
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
+                Hasil Analisis Match
+              </span>
+              <h2 className="hand text-3xl font-bold text-ink">
+                {session.cv?.title} vs {session.job?.parsedJson?.jobTitle ?? "Lowongan Target"}
+              </h2>
+              <p className="text-muted text-xs leading-relaxed">
+                Ditemukan <strong className="text-red">{realGaps.length} Gap Beneran</strong> dan{" "}
+                <strong className="text-yellow">{presentationGaps.length} Gap Penyajian</strong> yang bisa langsung diperbaiki tanpa perlu memalsukan fakta.
+              </p>
+              <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
+                <Button variant="danger" icon={<FiEdit3 />} onClick={() => patch({ step: "REVISE" })}>
+                  ✏︎ Lanjut ke Revisi Teks CV →
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Tabs: Gap Breakdown */}
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">Semua Gap ({analysis.gapsJson.length})</TabsTrigger>
+              <TabsTrigger value="real">Gap Beneran ({realGaps.length})</TabsTrigger>
+              <TabsTrigger value="presentation">Gap Penyajian ({presentationGaps.length})</TabsTrigger>
+              <TabsTrigger value="suggestions">Saran Revisi ({suggestions.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {realGaps.map((gap, i) => (
+                  <Sticky key={`r-${i}`} tone="red" rotate={i % 2 === 0 ? -0.8 : 0.8} className="space-y-2">
+                    <span className="label bg-red/20 text-red px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      {t("realGap")} · {gap.skill}
+                    </span>
+                    <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
+                    <div className="pt-1 border-t border-red/30 text-xs font-bold text-ink">
+                      💡 Saran Jujur: {gap.advice}
+                    </div>
+                  </Sticky>
+                ))}
+                {presentationGaps.map((gap, i) => (
+                  <Sticky key={`p-${i}`} tone="yellow" rotate={i % 2 === 0 ? 0.8 : -0.8} className="space-y-2">
+                    <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      {t("presentationGap")} · {gap.skill}
+                    </span>
+                    <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
+                    <div className="pt-1 border-t border-yellow/40 text-xs font-bold text-ink">
+                      💡 Cara Menonjolkan: {gap.advice}
+                    </div>
+                  </Sticky>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="real">
+              <div className="space-y-3">
+                {realGaps.map((gap, i) => (
+                  <Sticky key={`r2-${i}`} tone="red" className="space-y-2">
+                    <span className="label bg-red/20 text-red px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      {gap.skill}
+                    </span>
+                    <p className="text-xs font-medium">{gap.explanation}</p>
+                    <p className="text-xs font-bold">💡 {gap.advice}</p>
+                  </Sticky>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="presentation">
+              <div className="space-y-3">
+                {presentationGaps.map((gap, i) => (
+                  <Sticky key={`p2-${i}`} tone="yellow" className="space-y-2">
+                    <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      {gap.skill}
+                    </span>
+                    <p className="text-xs font-medium">{gap.explanation}</p>
+                    <p className="text-xs font-bold">💡 {gap.advice}</p>
+                  </Sticky>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="suggestions">
+              <div className="space-y-3">
+                {suggestions.map((s, i) => (
+                  <Card key={i} rotate={i % 2 === 0 ? 0.4 : -0.4} className="space-y-2">
+                    <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                      Bagian: {s.section}
+                    </span>
+                    <p className="text-muted line-through text-xs font-mono">{s.before}</p>
+                    <p className="text-ink font-bold text-xs font-mono bg-green/10 p-2 rounded-lg border border-green/30">
+                      {s.after}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      ) : null}
+    </Skeleton>
+  )
+}
+
+function StepReviewSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <Card tape="yellow" className="text-center py-6 space-y-2 border-2 border-line bg-panel">
+        <div className="inline-block animate-spin text-ink text-3xl">⚡</div>
+        <h2 className="hand text-2xl font-bold">AI Sedang Menganalisis Match CV Kamu...</h2>
+        <p className="scrawl text-muted text-base max-w-md mx-auto">
+          Mengekstrak kualifikasi, mendeteksi gap penyajian vs fakta asli.
+        </p>
+      </Card>
+      <Card tape="red" pin className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+        <div className="w-[180px] h-[180px] rounded-full border-8 border-line/40 bg-panel/80 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full bg-line/30" />
+        </div>
+        <div className="flex-1 space-y-3 w-full">
+          <div className="h-6 w-32 bg-line/40 rounded-full" />
+          <div className="h-8 w-3/4 bg-line/50 rounded-xl" />
+          <div className="h-4 w-full bg-line/30 rounded-md" />
+          <div className="h-4 w-2/3 bg-line/30 rounded-md" />
+          <div className="h-10 w-48 bg-line/50 rounded-xl" />
         </div>
       </Card>
-
-      {/* Tabs: Gap Breakdown */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">Semua Gap ({analysis.gapsJson.length})</TabsTrigger>
-          <TabsTrigger value="real">Gap Beneran ({realGaps.length})</TabsTrigger>
-          <TabsTrigger value="presentation">Gap Penyajian ({presentationGaps.length})</TabsTrigger>
-          <TabsTrigger value="suggestions">Saran Revisi ({suggestions.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {realGaps.map((gap, i) => (
-              <Sticky key={`r-${i}`} tone="red" rotate={i % 2 === 0 ? -0.8 : 0.8} className="space-y-2">
-                <span className="label bg-red/20 text-red px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  {t("realGap")} · {gap.skill}
-                </span>
-                <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
-                <div className="pt-1 border-t border-red/30 text-xs font-bold text-ink">
-                  💡 Saran Jujur: {gap.advice}
-                </div>
-              </Sticky>
-            ))}
-            {presentationGaps.map((gap, i) => (
-              <Sticky key={`p-${i}`} tone="yellow" rotate={i % 2 === 0 ? 0.8 : -0.8} className="space-y-2">
-                <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  {t("presentationGap")} · {gap.skill}
-                </span>
-                <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
-                <div className="pt-1 border-t border-yellow/40 text-xs font-bold text-ink">
-                  💡 Cara Menonjolkan: {gap.advice}
-                </div>
-              </Sticky>
-            ))}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 border-2 border-line bg-panel/60 rounded-2xl p-4 space-y-2 shadow-paper">
+            <div className="h-4 w-24 bg-line/40 rounded" />
+            <div className="h-3 w-full bg-line/30 rounded" />
+            <div className="h-3 w-4/5 bg-line/30 rounded" />
+            <div className="h-4 w-3/5 bg-line/40 rounded pt-2" />
           </div>
-        </TabsContent>
-
-        <TabsContent value="real">
-          <div className="space-y-3">
-            {realGaps.map((gap, i) => (
-              <Sticky key={`r2-${i}`} tone="red" className="space-y-2">
-                <span className="label bg-red/20 text-red px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  {gap.skill}
-                </span>
-                <p className="text-xs font-medium">{gap.explanation}</p>
-                <p className="text-xs font-bold">💡 {gap.advice}</p>
-              </Sticky>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="presentation">
-          <div className="space-y-3">
-            {presentationGaps.map((gap, i) => (
-              <Sticky key={`p2-${i}`} tone="yellow" className="space-y-2">
-                <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  {gap.skill}
-                </span>
-                <p className="text-xs font-medium">{gap.explanation}</p>
-                <p className="text-xs font-bold">💡 {gap.advice}</p>
-              </Sticky>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="suggestions">
-          <div className="space-y-3">
-            {suggestions.map((s, i) => (
-              <Card key={i} rotate={i % 2 === 0 ? 0.4 : -0.4} className="space-y-2">
-                <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  Bagian: {s.section}
-                </span>
-                <p className="text-muted line-through text-xs font-mono">{s.before}</p>
-                <p className="text-ink font-bold text-xs font-mono bg-green/10 p-2 rounded-lg border border-green/30">
-                  {s.after}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
     </div>
   )
 }
