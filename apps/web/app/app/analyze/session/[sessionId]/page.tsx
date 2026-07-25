@@ -7,6 +7,7 @@ import type { CvStructured, Gap, JobParsed, SessionStep, Suggestion } from "@dil
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
+import { CopyButton } from "@/components/ui/copy-button"
 import { ScoreGauge } from "@/components/ui/gauge"
 import { DownloadCvButton } from "@/components/pdf/download-cv-button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -31,7 +32,7 @@ type SessionDetail = {
 type Patch = (input: Record<string, unknown>) => Promise<void>
 type CvOption = { id: string; title: string; version: number }
 type JobOption = { id: string; parsedJson: JobParsed }
-type CvFull = { id: string; title: string; version: number; language: string; rawText: string; structuredJson: CvStructured }
+type CvFull = { id: string; title: string; version: number; language: string; rawText: string; structuredJson: CvStructured; fileKey: string | null }
 type AnalysisDetail = {
   id: string
   matchScore: number
@@ -84,8 +85,8 @@ function applySuggestionToText(text: string, s: Suggestion): { text: string; app
 /**
  * Wizard sesi analisis — SATU sesi utuh:
  * 1. CV (pilih master / upload / paste) → 2. lowongan → 3. hasil AI →
- * 4. revisi (timpa teks CV → versi baru, tampilan data tidak diubah) →
- * 5. download PDF + simpan ke lamaran.
+ * 4. revisi (timpa teks CV → versi baru; jika sumbernya .docx, file desain asli
+ *    ikut direvisi native di server) → 5. download (PDF template / DOCX asli) + simpan lamaran.
  * Setiap langkah tersimpan ke server — keluar kapan pun, sesi jadi draft.
  */
 export default function SessionWizardPage({ params }: { params: Promise<{ sessionId: string }> }) {
@@ -235,11 +236,14 @@ function StepCv({ patch }: { patch: Patch }) {
       )}
 
       {tab === "upload" ? (
-        <label className="border-line bg-paper block cursor-pointer rounded-md border-2 border-dashed p-8 text-center">
-          <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <span className="hand text-2xl">{file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}</span>
-          <p className="text-muted mt-1 text-xs">Maks. 5MB · otomatis tersimpan juga ke master CV</p>
-        </label>
+        <>
+          <label className="border-line bg-paper block cursor-pointer rounded-md border-2 border-dashed p-8 text-center">
+            <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <span className="hand text-2xl">{file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}</span>
+            <p className="text-muted mt-1 text-xs">Maks. 5MB · otomatis tersimpan juga ke master CV</p>
+          </label>
+          <p className="text-muted text-xs">💡 Tips: upload versi <span className="font-bold">.docx</span> — Dilirik bisa merevisi file-nya langsung tanpa mengubah desain, font, dan tabelnya.</p>
+        </>
       ) : null}
 
       {tab === "paste" ? (
@@ -536,6 +540,7 @@ function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }
 
   const suggestions = analysis.suggestionsJson.suggestions ?? []
   const changed = squash(text) !== squash(cvFull.rawText)
+  const isDocxSource = Boolean(cvFull.fileKey?.toLowerCase().endsWith(".docx"))
 
   function applyOne(i: number) {
     const suggestion = suggestions[i]
@@ -574,7 +579,10 @@ function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }
       <div>
         <h2 className="hand text-3xl">Langkah 4 — Revisi teks CV ✏︎</h2>
         <p className="text-muted text-sm">
-          Teks CV DITIMPA jadi <span className="font-bold">versi baru</span> — versi lama tetap aman untuk compare. Tampilan/struktur datanya tidak diubah.
+          Teks CV DITIMPA jadi <span className="font-bold">versi baru</span> — versi lama tetap aman untuk compare.
+          {isDocxSource
+            ? " File .docx asli kamu juga ikut direvisi otomatis TANPA mengubah desain, font, dan tabel."
+            : " Tampilan/struktur datanya tidak diubah."}
         </p>
       </div>
 
@@ -602,9 +610,15 @@ function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }
                     {applied[i] === "ok" ? (
                       <p className="label text-green text-xs font-bold uppercase">✓ diterapkan ke teks</p>
                     ) : applied[i] === "manual" ? (
-                      <p className="label text-red text-xs font-bold uppercase">teks asli tidak ketemu persis — edit manual ya</p>
+                      <div className="space-y-2">
+                        <p className="label text-red text-xs font-bold uppercase">teks asli tidak ketemu persis — edit manual ya</p>
+                        <CopyButton text={s.after} label="📋 salin teks revisi" />
+                      </div>
                     ) : (
-                      <Button variant="secondary" onClick={() => applyOne(i)}>Terapkan</Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" onClick={() => applyOne(i)}>Terapkan</Button>
+                        <CopyButton text={s.after} label="📋 salin" />
+                      </div>
                     )}
                   </Card>
                 </li>
@@ -643,12 +657,34 @@ function StepFinish({ session, patch }: { session: SessionDetail; patch: Patch }
   const { t } = useI18n()
   const [revised, setRevised] = useState<CvFull | null>(null)
   const [busy, setBusy] = useState(false)
+  const [downloadingDocx, setDownloadingDocx] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session.revisedCvId) return
     api.get<{ cv: CvFull }>(`/api/cv/${session.revisedCvId}`).then((r) => setRevised(r.data.cv)).catch(() => {})
   }, [session.revisedCvId])
+
+  const hasDesignDocx = Boolean(revised?.fileKey?.toLowerCase().endsWith(".docx"))
+
+  async function downloadOriginalDocx() {
+    if (!revised) return
+    setDownloadingDocx(true)
+    try {
+      const res = await api.get<Blob>(`/api/cv/${revised.id}/file`, { responseType: "blob" })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement("a")
+      const slug = revised.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
+      a.href = url
+      a.download = `${slug}-v${revised.version}-dilirik.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setDownloadingDocx(false)
+    }
+  }
 
   async function saveApplication() {
     setBusy(true)
@@ -675,9 +711,15 @@ function StepFinish({ session, patch }: { session: SessionDetail; patch: Patch }
       </p>
 
       <div className="flex flex-wrap justify-center gap-2">
+        {hasDesignDocx ? (
+          <Button onClick={downloadOriginalDocx} disabled={downloadingDocx}>
+            {downloadingDocx ? "Menyiapkan DOCX…" : "⬇ DOCX (desain asli)"}
+          </Button>
+        ) : null}
         {revised ? (
           <DownloadCvButton rawText={revised.rawText} title={revised.title} version={revised.version} language={revised.language} />
         ) : null}
+        {revised ? <CopyButton text={revised.rawText} label="📋 salin semua teks revisi" /> : null}
         {session.revisedCvId && session.cvId ? (
           <Link
             href={`/app/cv/${session.revisedCvId}/compare?with=${session.cvId}`}
@@ -687,6 +729,12 @@ function StepFinish({ session, patch }: { session: SessionDetail; patch: Patch }
           </Link>
         ) : null}
       </div>
+
+      <p className="text-muted mx-auto max-w-xl text-xs">
+        {hasDesignDocx
+          ? "🎨 DOCX di atas adalah file asli kamu yang teksnya direvisi — desain, font, dan tabel tidak diubah sama sekali. Buka di Word lalu save-as-PDF untuk hasil akhir."
+          : "🎨 Catatan jujur: PDF di atas dirender ulang pakai template Dilirik (file PDF tidak menyimpan struktur desain, jadi tidak bisa diedit langsung). Untuk mempertahankan desain 100%: salin teks revisi ke file Word/Canva asli kamu — atau lain kali upload CV versi .docx agar Dilirik merevisi file-nya langsung."}
+      </p>
 
       {session.applicationId ? (
         <p className="scrawl text-green text-2xl">
