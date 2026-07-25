@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -8,15 +9,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { CvOption, Patch } from "./types"
 
 export function StepCv({ patch }: { patch: Patch }) {
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<"pilih" | "upload" | "paste">("pilih")
-  const [cvs, setCvs] = useState<CvOption[]>([])
   const [cvId, setCvId] = useState("")
   const [title, setTitle] = useState("")
   const [rawText, setRawText] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  const cvsQuery = useQuery({
+    queryKey: ["cvs"],
+    queryFn: async () => {
+      const { data } = await api.get<{ cvs: CvOption[] }>("/api/cv")
+      return data.cvs
+    },
+  })
+  const cvs = cvsQuery.data ?? []
+  // Derived (tanpa effect): kalau belum punya CV sama sekali, tab "pilih" tidak berguna → arahkan ke upload.
+  const effectiveTab = cvsQuery.data && cvs.length === 0 && tab === "pilih" ? "upload" : tab
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -30,6 +40,7 @@ export function StepCv({ patch }: { patch: Patch }) {
     setIsDragging(false)
   }
 
+  const [dropError, setDropError] = useState<string | null>(null)
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -39,45 +50,42 @@ export function StepCv({ patch }: { patch: Patch }) {
       const ext = droppedFile.name.toLowerCase()
       if (ext.endsWith(".pdf") || ext.endsWith(".docx")) {
         setFile(droppedFile)
-        setError(null)
+        setDropError(null)
       } else {
-        setError("Format file harus PDF atau DOCX.")
+        setDropError("Format file harus PDF atau DOCX.")
       }
     }
   }
 
-  useEffect(() => {
-    api
-      .get<{ cvs: CvOption[] }>("/api/cv")
-      .then((r) => {
-        setCvs(r.data.cvs)
-        if (r.data.cvs.length === 0) setTab("upload")
-      })
-      .catch(() => { })
-  }, [])
-
-  async function submit() {
-    setBusy(true)
-    setError(null)
-    try {
+  const submitMutation = useMutation({
+    mutationFn: async () => {
       let newCvId = cvId
-      if (tab === "upload") {
+      if (effectiveTab === "upload") {
         if (!file) throw new Error("__PILIH_FILE__")
         const form = new FormData()
         form.append("file", file)
         if (title) form.append("title", title)
         const { data } = await api.post<{ cv: { id: string } }>("/api/cv/upload", form)
         newCvId = data.cv.id
-      } else if (tab === "paste") {
+      } else if (effectiveTab === "paste") {
         const { data } = await api.post<{ cv: { id: string } }>("/api/cv", { title: title || "CV Saya", rawText })
         newCvId = data.cv.id
       }
+      return newCvId
+    },
+    onSuccess: async (newCvId) => {
+      if (effectiveTab !== "pilih") queryClient.invalidateQueries({ queryKey: ["cvs"] })
       await patch({ cvId: newCvId, step: "JOB" })
-    } catch (err) {
-      setError(err instanceof Error && err.message === "__PILIH_FILE__" ? "Pilih file dulu ya" : errorMessage(err))
-      setBusy(false)
-    }
-  }
+    },
+  })
+
+  const busy = submitMutation.isPending
+  const submitError = submitMutation.error
+    ? submitMutation.error instanceof Error && submitMutation.error.message === "__PILIH_FILE__"
+      ? "Pilih file dulu ya"
+      : errorMessage(submitMutation.error)
+    : null
+  const error = dropError ?? submitError
 
   return (
     <Card className="relative space-y-5">
@@ -93,7 +101,7 @@ export function StepCv({ patch }: { patch: Patch }) {
           <button
             key={m}
             onClick={() => setTab(m)}
-            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${tab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
+            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${effectiveTab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
               }`}
           >
             {label}
@@ -101,7 +109,7 @@ export function StepCv({ patch }: { patch: Patch }) {
         ))}
       </div>
 
-      {tab === "pilih" ? (
+      {effectiveTab === "pilih" ? (
         <div className="space-y-2">
           <label className="label text-xs font-bold uppercase tracking-wider block text-ink">
             Master CV tersimpan
@@ -134,7 +142,7 @@ export function StepCv({ patch }: { patch: Patch }) {
         </div>
       )}
 
-      {tab === "upload" && (
+      {effectiveTab === "upload" && (
         <>
           <label
             onDragOver={handleDragOver}
@@ -157,7 +165,7 @@ export function StepCv({ patch }: { patch: Patch }) {
         </>
       )}
 
-      {tab === "paste" && (
+      {effectiveTab === "paste" && (
         <textarea
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
@@ -170,9 +178,9 @@ export function StepCv({ patch }: { patch: Patch }) {
       {error && <p className="text-red text-xs font-semibold">{error}</p>}
 
       <Button
-        onClick={submit}
+        onClick={() => submitMutation.mutate()}
         isLoading={busy}
-        disabled={busy || (tab === "pilih" && !cvId) || (tab === "paste" && rawText.trim().length < 50)}
+        disabled={busy || (effectiveTab === "pilih" && !cvId) || (effectiveTab === "paste" && rawText.trim().length < 50)}
         variant="primary"
         size="lg"
         className="w-full"

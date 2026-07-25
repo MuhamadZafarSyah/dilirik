@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useCallback, useEffect, useState } from "react"
+import { use, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,6 +14,7 @@ import {
   FiCheck,
 } from "react-icons/fi"
 import type { SessionStep } from "@dilirik/shared"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import {
@@ -38,22 +39,41 @@ export default function SessionWizardPage({ params }: { params: Promise<{ sessio
   const { sessionId } = use(params)
   const router = useRouter()
   const { t } = useI18n()
-  const [session, setSession] = useState<SessionDetail | null>(null)
+  const queryClient = useQueryClient()
 
+  const sessionQuery = useQuery({
+    queryKey: ["session", sessionId],
+    queryFn: async () => {
+      const { data } = await api.get<{ session: SessionDetail }>(`/api/sessions/${sessionId}`)
+      return data.session
+    },
+  })
+
+  const patchMutation = useMutation({
+    mutationFn: async (input: Record<string, unknown>) => {
+      const { data } = await api.patch<{ session: SessionDetail }>(`/api/sessions/${sessionId}`, input)
+      return data.session
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["session", sessionId], updated)
+      queryClient.invalidateQueries({ queryKey: ["sessions"] })
+    },
+  })
+
+  const { mutateAsync: patchAsync } = patchMutation
   const patch: Patch = useCallback(
     async (input) => {
-      const { data } = await api.patch<{ session: SessionDetail }>(`/api/sessions/${sessionId}`, input)
-      setSession(data.session)
+      await patchAsync(input)
     },
-    [sessionId]
+    [patchAsync]
   )
 
+  // Satu-satunya effect di halaman ini: navigasi keluar bila sesi tidak ditemukan (bukan data-fetching).
   useEffect(() => {
-    api
-      .get<{ session: SessionDetail }>(`/api/sessions/${sessionId}`)
-      .then((r) => setSession(r.data.session))
-      .catch(() => router.push("/app/analyze"))
-  }, [sessionId, router])
+    if (sessionQuery.isError) router.replace("/app/analyze")
+  }, [sessionQuery.isError, router])
+
+  const session = sessionQuery.data
 
   if (!session) {
     return (
@@ -79,7 +99,7 @@ export default function SessionWizardPage({ params }: { params: Promise<{ sessio
           <h1 className="hand text-4xl sm:text-5xl font-bold mt-1">Sesi Match & Analysis ⚡</h1>
         </div>
         <Link href="/app/analyze" className="label text-xs font-bold text-muted hover:text-ink flex items-center gap-1">
-          <FiArrowLeft /> Wszystkie Sesi
+          <FiArrowLeft /> Semua Sesi
         </Link>
       </div>
 
