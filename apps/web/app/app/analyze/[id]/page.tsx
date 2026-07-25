@@ -7,6 +7,7 @@ import type { Gap, Suggestion } from "@dilirik/shared"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
+import { CopyButton } from "@/components/ui/copy-button"
 import { ScoreGauge } from "@/components/ui/gauge"
 import { useI18n } from "@/lib/i18n"
 
@@ -196,11 +197,17 @@ export default function AnalysisResultPage({ params }: { params: Promise<{ id: s
               {s.before ? <p className="text-muted mt-2 text-sm line-through">{s.before}</p> : null}
               <p className="mt-1 text-sm font-semibold">{s.after}</p>
               <p className="text-muted mt-2 text-xs">📎 Berdasarkan fakta di CV-mu: {s.basedOnFacts.join(" · ")}</p>
+              <div className="mt-3">
+                <CopyButton text={s.after} label="📋 salin teks revisi" />
+              </div>
             </Card>
           ))}
         </div>
         <p className="text-muted mt-4 text-xs">
           🛡︎ Janji kejujuran: saran yang tidak didukung fakta CV atau tidak menjawab requirement lowongan otomatis dibuang oleh guardrail.
+        </p>
+        <p className="text-muted mt-1 text-xs">
+          🎨 Jaga desain asli CV-mu: salin teks revisi lalu tempel ke file Word/Canva sumbernya — atau upload CV versi .docx agar Dilirik bisa merevisi file-nya langsung tanpa mengubah desain.
         </p>
       </section>
 
