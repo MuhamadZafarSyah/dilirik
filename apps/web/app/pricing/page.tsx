@@ -1,45 +1,129 @@
-import Link from "next/link"
+"use client"
 
-/** Pricing (PRD §14): semua fitur FREE dulu — billing di-defer. */
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { FiCheckCircle, FiZap, FiArrowRight } from "react-icons/fi"
+import { Button } from "@/components/ui/button"
+import { Card, Polaroid } from "@/components/ui/card"
+
 export default function PricingPage() {
   return (
     <main className="paper-texture min-h-screen">
-      <header className="shell mx-auto flex max-w-shell items-center justify-between px-4 py-5">
-        <Link href="/" className="hand text-3xl">Dilirik <span aria-hidden>👀</span></Link>
-        <Link href="/register" className="label bg-ink text-paper rounded-md px-4 py-2 text-sm font-bold">Daftar gratis</Link>
+      {/* Header */}
+      <header className="shell mx-auto flex max-w-shell items-center justify-between px-5 py-6">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="bg-ink text-paper flex h-9 w-9 items-center justify-center rounded-xl shadow-paper text-lg font-bold">
+            👀
+          </div>
+          <span className="hand text-3xl font-bold text-ink">Dilirik</span>
+        </Link>
+        <Link href="/register">
+          <Button variant="primary" size="sm" tape="yellow">
+            Daftar Gratis
+          </Button>
+        </Link>
       </header>
 
-      <section className="shell mx-auto max-w-shell px-4 py-12 text-center">
-        <h1 className="hand text-5xl">Pricing</h1>
-        <p className="text-muted mt-3">Selama beta: <strong className="text-ink">semuanya gratis.</strong> Serius.</p>
+      {/* Pricing Hero */}
+      <section className="shell mx-auto max-w-shell px-5 py-12 text-center">
+        <div className="max-w-2xl mx-auto space-y-3">
+          <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+            Pricing Sederhana & Transparan
+          </span>
+          <h1 className="hand text-5xl sm:text-6xl font-bold text-ink">Pilih Paket Kamu 📌</h1>
+          <p className="scrawl text-muted text-xl">
+            Selama masa beta: <strong className="text-ink font-bold">Semua fitur gratis.</strong> Tanpa kartu kredit.
+          </p>
+        </div>
 
-        <div className="mx-auto mt-10 grid max-w-3xl gap-6 md:grid-cols-2">
-          <div className="card bg-panel border-line relative rotate-[-1deg] rounded-lg border-2 p-8 shadow-lift">
-            <span className="tape" aria-hidden />
-            <h2 className="label text-lg font-bold">Free (Beta)</h2>
-            <div className="hand text-red mt-2 text-5xl">Rp0</div>
-            <ul className="text-ink mt-6 space-y-2 text-left text-sm">
-              <li>✓ 10 analisis / bulan</li>
-              <li>✓ CV & lowongan tak terbatas</li>
-              <li>✓ Semua versi CV tersimpan (bisa di-compare)</li>
-              <li>✓ Job application tracker</li>
-              <li>✓ Semua bahasa CV didukung</li>
-            </ul>
-            <Link href="/register" className="label bg-red text-paper mt-8 inline-block rounded-md px-6 py-3 font-bold">
-              Mulai sekarang
+        {/* Pricing Cards */}
+        <div className="mx-auto mt-12 grid max-w-3xl gap-8 md:grid-cols-2">
+          {/* Free Beta Plan */}
+          <Card tape="red" pin rotate={-1} className="flex flex-col justify-between p-8 text-left space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
+                  Free (Beta)
+                </span>
+                <span className="scrawl text-muted text-xs font-bold">Recommended</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="hand text-6xl font-bold text-red">Rp0</span>
+                <span className="scrawl text-muted text-lg">/ bulan</span>
+              </div>
+              <p className="text-muted text-xs leading-relaxed">
+                Cocok untuk kamu yang sedang aktif mencari pekerjaan dan ingin optimasi CV secara berkala.
+              </p>
+
+              <ul className="space-y-3 text-sm text-ink pt-2 font-medium">
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green h-4 w-4 shrink-0" />
+                  <span>10 Analisis Match / bulan</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green h-4 w-4 shrink-0" />
+                  <span>Simpan Master CV & Lowongan tanpa batas</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green h-4 w-4 shrink-0" />
+                  <span>Editor Revisi Teks CV 1-Click</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green h-4 w-4 shrink-0" />
+                  <span>Simpan Versi & Compare Sebelum/Sesudah</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green h-4 w-4 shrink-0" />
+                  <span>Tracker Pipeline Pelamaran</span>
+                </li>
+              </ul>
+            </div>
+
+            <Link href="/register" className="block pt-4">
+              <Button variant="danger" size="lg" className="w-full">
+                Mulai Sekarang Gratis
+              </Button>
             </Link>
-          </div>
-          <div className="card bg-panel border-line relative rotate-[1deg] rounded-lg border-2 border-dashed p-8 opacity-80">
-            <span className="tape-blue" aria-hidden />
-            <h2 className="label text-lg font-bold">Pro</h2>
-            <div className="scrawl text-blue mt-2 text-4xl">segera…</div>
-            <ul className="text-muted mt-6 space-y-2 text-left text-sm">
-              <li>• Analisis unlimited</li>
-              <li>• Model AI terbaik</li>
-              <li>• Ekspor laporan</li>
-            </ul>
-            <p className="text-muted mt-8 text-xs">Pengguna beta akan dapat penawaran spesial 💛</p>
-          </div>
+          </Card>
+
+          {/* Pro Plan Coming Soon */}
+          <Card tape="blue" rotate={1} className="flex flex-col justify-between p-8 text-left space-y-6 opacity-90 border-dashed">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="label bg-blue/20 text-blue px-3 py-1 rounded-full text-xs font-bold uppercase">
+                  Pro
+                </span>
+                <span className="scrawl text-blue text-xs font-bold">Segera Hadir</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="hand text-5xl font-bold text-blue">Unlimited</span>
+              </div>
+              <p className="text-muted text-xs leading-relaxed">
+                Untuk pencari kerja profesional yang butuh analisis tanpa batas dan fitur ekspor advanced.
+              </p>
+
+              <ul className="space-y-3 text-sm text-muted pt-2 font-medium">
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-blue h-4 w-4 shrink-0" />
+                  <span>Analisis Match Unlimited</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-blue h-4 w-4 shrink-0" />
+                  <span>Prioritas Pengolahan Model AI</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiCheckCircle className="text-blue h-4 w-4 shrink-0" />
+                  <span>Ekspor Laporan Analisis Lengkap</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="pt-4">
+              <p className="scrawl text-muted text-sm text-center">
+                Pengguna Beta akan mendapatkan harga penawaran spesial 💛
+              </p>
+            </div>
+          </Card>
         </div>
       </section>
     </main>

@@ -1,10 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { FiUser, FiGlobe, FiShield, FiZap, FiCheck } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useI18n, type Lang } from "@/lib/i18n"
+import { useToast } from "@/components/ui/toast"
 
 type Settings = {
   user: { id: string; name: string; email: string; plan: string; uiLanguage: string | null; createdAt: string }
@@ -12,86 +15,160 @@ type Settings = {
   quota: { quota: number | null; used: number; remaining: number | null; resetAt: string }
 }
 
-/** Settings (PRD /app/settings): profil, bahasa UI, akun terhubung, kuota. */
 export default function SettingsPage() {
   const { lang, setLang, t } = useI18n()
+  const { toast } = useToast()
   const [data, setData] = useState<Settings | null>(null)
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    api.get<Settings>("/api/settings").then((r) => {
-      setData(r.data)
-      setName(r.data.user.name)
-      if (r.data.user.uiLanguage === "id" || r.data.user.uiLanguage === "en") setLang(r.data.user.uiLanguage)
-    }).catch(() => {})
+    api
+      .get<Settings>("/api/settings")
+      .then((r) => {
+        setData(r.data)
+        setName(r.data.user.name)
+        if (r.data.user.uiLanguage === "id" || r.data.user.uiLanguage === "en") {
+          setLang(r.data.user.uiLanguage)
+        }
+      })
+      .catch(() => {})
   }, [setLang])
 
-  if (!data) return <p className="scrawl text-2xl">{t("loading")}</p>
+  if (!data) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="bg-line/30 h-10 w-48 animate-pulse rounded-lg" />
+        <div className="bg-line/20 h-96 animate-pulse rounded-xl border border-line" />
+      </div>
+    )
+  }
 
   async function save(payload: { name?: string; uiLanguage?: Lang }) {
     setError(null)
+    setSaving(true)
     try {
       await api.patch("/api/settings", payload)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 1500)
+      toast("Pengaturan berhasil disimpan!", "success")
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="hand text-4xl">{t("settings")}</h1>
-
-      <Card className="rotate-[-0.5deg] space-y-4">
-        <p className="label text-xs font-bold uppercase">Profil</p>
-        <input value={name} onChange={(e) => setName(e.target.value)}
-          className="border-line bg-paper w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink" />
-        <p className="text-muted text-sm">{data.user.email} · plan: <span className="label font-bold uppercase">{data.user.plan}</span></p>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => save({ name })}>Simpan</Button>
-          {saved ? <span className="scrawl text-green text-xl">tersimpan ✓</span> : null}
-        </div>
-      </Card>
-
-      <Card className="rotate-[0.5deg] space-y-3">
-        <p className="label text-xs font-bold uppercase">Bahasa UI</p>
-        <div className="flex gap-2">
-          {(["id", "en"] as const).map((l) => (
-            <button key={l} onClick={() => { setLang(l); save({ uiLanguage: l }) }}
-              className={`label rounded-sm px-4 py-1.5 text-xs font-bold uppercase ${lang === l ? "bg-ink text-paper" : "bg-panel border-line border-2"}`}>
-              {l === "id" ? "🇮🇩 Indonesia" : "🇬🇧 English"}
-            </button>
-          ))}
-        </div>
-        <p className="text-muted text-xs">Bahasa hasil analisis selalu mengikuti bahasa CV-mu, bukan bahasa UI.</p>
-      </Card>
-
-      <Card className="rotate-[-0.5deg]">
-        <p className="label text-xs font-bold uppercase">Akun terhubung</p>
-        <div className="mt-2 flex gap-2">
-          {["google", "github", "credential"].map((provider) => (
-            <span key={provider}
-              className={`label rounded-sm px-3 py-1 text-xs font-bold uppercase ${
-                data.connectedAccounts.includes(provider) ? "bg-green/20 text-green" : "bg-line/40 text-muted"
-              }`}>
-              {provider === "credential" ? "email" : provider} {data.connectedAccounts.includes(provider) ? "✓" : "—"}
-            </span>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="rotate-[0.5deg]">
-        <p className="label text-xs font-bold uppercase">Kuota analisis</p>
-        <p className="hand mt-1 text-3xl">
-          {data.quota.quota === null ? "♾︎ unlimited" : `${data.quota.remaining} / ${data.quota.quota}`}
+    <div className="mx-auto max-w-2xl space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="hand text-4xl sm:text-5xl font-bold flex items-center gap-2">
+          Pengaturan Akun ⚙️
+        </h1>
+        <p className="scrawl text-muted text-xl mt-1">
+          Kelola profil pengguna, preferensi bahasa, dan kuota analisis.
         </p>
-        <p className="text-muted text-xs">Reset: {new Date(data.quota.resetAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+      </div>
+
+      {/* Profile Card */}
+      <Card tape="yellow" pin className="space-y-4">
+        <h3 className="label text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+          <FiUser className="h-4 w-4 text-ink" /> Profil Pengguna
+        </h3>
+        <div>
+          <label className="label text-xs font-bold uppercase text-ink block mb-1">Nama Lengkap</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line bg-paper text-ink text-sm font-semibold outline-none focus:border-ink shadow-inner"
+          />
+        </div>
+        <p className="text-muted text-xs">
+          Email: <span className="font-bold text-ink">{data.user.email}</span> · Plan:{" "}
+          <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[11px] font-bold uppercase">
+            {data.user.plan}
+          </span>
+        </p>
+        <Button onClick={() => save({ name })} isLoading={saving} variant="primary">
+          Simpan Profil
+        </Button>
       </Card>
 
-      {error ? <p className="text-red text-sm">{error}</p> : null}
+      {/* Language Preferences */}
+      <Card rotate={0.5} tape="blue">
+        <h3 className="label text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5 mb-3">
+          <FiGlobe className="h-4 w-4 text-blue" /> Preferensi Bahasa Antarmuka (UI)
+        </h3>
+        <div className="flex gap-2">
+          {(["id", "en"] as const).map((l) => {
+            const active = lang === l
+            return (
+              <button
+                key={l}
+                onClick={() => {
+                  setLang(l)
+                  save({ uiLanguage: l })
+                }}
+                className={`label rounded-xl px-4 py-2 text-xs font-bold uppercase transition-all select-none ${
+                  active
+                    ? "bg-ink text-paper shadow-paper -rotate-1"
+                    : "bg-paper border-2 border-line text-ink hover:border-ink"
+                }`}
+              >
+                {l === "id" ? "🇮🇩 Bahasa Indonesia" : "🇬🇧 English"}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-muted text-xs mt-2">
+          Catatan: Bahasa hasil analisis AI selalu menyesuaikan bahasa asli CV kamu secara otomatis.
+        </p>
+      </Card>
+
+      {/* Connected Accounts */}
+      <Card rotate={-0.5}>
+        <h3 className="label text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5 mb-3">
+          <FiShield className="h-4 w-4 text-green" /> Akun Terhubung
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {["google", "github", "credential"].map((provider) => {
+            const isConnected = data.connectedAccounts.includes(provider)
+            return (
+              <span
+                key={provider}
+                className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase border shadow-xs ${
+                  isConnected
+                    ? "bg-green/15 border-green/40 text-green"
+                    : "bg-line/20 border-line text-muted"
+                }`}
+              >
+                {provider === "credential" ? "Email Password" : provider}
+                {isConnected ? <FiCheck className="h-3.5 w-3.5" /> : "—"}
+              </span>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Analysis Quota */}
+      <Card rotate={0.5} tape="red">
+        <h3 className="label text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+          <FiZap className="h-4 w-4 text-red" /> Kuota Analisis Bulanan
+        </h3>
+        <p className="hand mt-1 text-4xl font-bold text-ink">
+          {data.quota.quota === null ? "♾︎ Unlimited Pro" : `${data.quota.remaining} / ${data.quota.quota}`}
+        </p>
+        <p className="text-muted text-xs mt-1">
+          Tanggal Reset Kuota:{" "}
+          {new Date(data.quota.resetAt).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
+      </Card>
+
+      {error && <p className="text-red text-xs font-semibold">{error}</p>}
     </div>
   )
 }

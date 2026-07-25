@@ -5,6 +5,7 @@ import Link from "next/link"
 import { FaGithub, FaGoogle } from "react-icons/fa6"
 import { signIn, signUp } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -21,62 +22,121 @@ export default function RegisterPage() {
     const { error: err } = await signUp.email({ name, email, password })
     setLoading(false)
     if (err) {
-      setError(err.message ?? "Gagal mendaftar, coba lagi")
+      setError(err.message ?? "Gagal mendaftar, silakan coba lagi.")
       return
     }
-    setDone(true) // → arahkan cek email (verifikasi wajib, PRD §7.1)
+    setDone(true)
   }
 
   if (done) {
     return (
-      <main className="paper-texture flex min-h-screen items-center justify-center px-4">
-        <div className="card bg-panel border-line relative max-w-md rotate-[1deg] rounded-lg border-2 p-8 text-center shadow-lift">
-          <span className="tape-blue" aria-hidden />
-          <p className="hand text-3xl">Cek email kamu! 📫</p>
-          <p className="text-muted mt-3 text-sm">
-            Kami kirim link verifikasi ke <strong className="text-ink">{email}</strong>. Klik link-nya, lalu login.
+      <main className="paper-texture flex min-h-screen items-center justify-center p-4">
+        <Card tape="blue" pin rotate={1} className="w-full max-w-md p-8 text-center space-y-4">
+          <h2 className="hand text-4xl font-bold text-ink">Cek Email Kamu! 📫</h2>
+          <p className="text-muted text-sm leading-relaxed">
+            Kami telah mengirimkan link verifikasi ke <strong className="text-ink font-bold">{email}</strong>. Silakan klik link tersebut untuk mengaktifkan akun.
           </p>
-          <Link href="/login" className="label bg-ink text-paper mt-6 inline-block rounded-md px-5 py-2 text-sm font-bold">Ke halaman login</Link>
-        </div>
+          <Link href="/login" className="block pt-2">
+            <Button variant="primary" size="lg" className="w-full">
+              Ke Halaman Login →
+            </Button>
+          </Link>
+        </Card>
       </main>
     )
   }
 
   return (
-    <main className="paper-texture flex min-h-screen items-center justify-center px-4">
-      <div className="card bg-panel border-line relative w-full max-w-md rotate-[-1deg] rounded-lg border-2 p-8 shadow-lift">
-        <span className="tape" aria-hidden />
-        <Link href="/" className="hand text-3xl">Dilirik 👀</Link>
-        <h1 className="label mt-4 text-lg font-bold">Daftar gratis</h1>
-        <p className="text-muted mt-1 text-sm">10 analisis/bulan. Nggak perlu kartu kredit.</p>
+    <main className="paper-texture flex min-h-screen items-center justify-center p-4">
+      <Card tape="red" pin rotate={-1} className="w-full max-w-md p-8 space-y-6">
+        <div className="text-center">
+          <Link href="/" className="inline-block group">
+            <span className="hand text-4xl sm:text-5xl font-bold text-ink">Dilirik 👀</span>
+          </Link>
+          <h1 className="hand text-2xl font-bold text-ink mt-2">Daftar Akun Gratis</h1>
+          <p className="scrawl text-muted text-base">Gratis 10 analisis per bulan. Tanpa kartu kredit.</p>
+        </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button type="button" variant="secondary" onClick={() => signIn.social({ provider: "google", callbackURL: `${window.location.origin}/app` })}>
-            <FaGoogle aria-hidden /> Google
+        {/* Social Register */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            icon={<FaGoogle />}
+            onClick={() => signIn.social({ provider: "google", callbackURL: `${window.location.origin}/app` })}
+          >
+            Google
           </Button>
-          <Button type="button" variant="secondary" onClick={() => signIn.social({ provider: "github", callbackURL: `${window.location.origin}/app` })}>
-            <FaGithub aria-hidden /> GitHub
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            icon={<FaGithub />}
+            onClick={() => signIn.social({ provider: "github", callbackURL: `${window.location.origin}/app` })}
+          >
+            GitHub
           </Button>
         </div>
-        <div className="text-muted label my-4 text-center text-xs">— atau pakai email —</div>
+
+        <div className="relative flex items-center justify-center">
+          <div className="border-t border-line w-full" />
+          <span className="scrawl text-muted text-xs bg-panel px-3 absolute">atau pakai email</span>
+        </div>
 
         <form onSubmit={submit} className="space-y-4">
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama kamu"
-            className="border-line bg-paper w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink" />
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@kamu.com"
-            className="border-line bg-paper w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink" />
-          <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="password (min. 8 karakter)"
-            className="border-line bg-paper w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:border-ink" />
-          {error ? <p className="text-red text-sm">{error}</p> : null}
-          <Button type="submit" disabled={loading} className="w-full justify-center">
-            {loading ? "Sebentar…" : "Daftar"}
+          <div>
+            <label className="label text-xs font-bold uppercase text-ink block mb-1">Nama Lengkap</label>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nama kamu"
+              className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line bg-paper text-ink text-sm font-semibold outline-none focus:border-ink shadow-inner"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs font-bold uppercase text-ink block mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@kamu.com"
+              className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line bg-paper text-ink text-sm font-semibold outline-none focus:border-ink shadow-inner"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs font-bold uppercase text-ink block mb-1">Password</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimal 8 karakter"
+              className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line bg-paper text-ink text-sm font-semibold outline-none focus:border-ink shadow-inner"
+            />
+          </div>
+
+          {error && <p className="text-red text-xs font-semibold">{error}</p>}
+
+          <Button type="submit" isLoading={loading} variant="danger" size="lg" className="w-full">
+            Daftar Akun Baru
           </Button>
         </form>
 
-        <p className="text-muted mt-4 text-sm">
-          Sudah punya akun? <Link href="/login" className="text-red underline">Masuk</Link>
-        </p>
-      </div>
+        <div className="text-center text-xs text-muted space-y-1 pt-2 border-t border-line">
+          <p>
+            Sudah punya akun?{" "}
+            <Link href="/login" className="text-red font-bold hover:underline">
+              Masuk Di Sini
+            </Link>
+          </p>
+        </div>
+      </Card>
     </main>
   )
 }

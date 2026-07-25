@@ -2,17 +2,26 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import {
-  FiBarChart2, FiBriefcase, FiFileText, FiLayers, FiLogOut, FiSettings, FiZap,
+  FiBarChart2,
+  FiBriefcase,
+  FiFileText,
+  FiLayers,
+  FiLogOut,
+  FiSettings,
+  FiZap,
+  FiUser,
+  FiGlobe,
 } from "react-icons/fi"
 import { signOut } from "@/lib/auth-client"
 import { useI18n } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
-/** Sidebar konsisten: Dashboard · CV · Lowongan · Analisis · Lamaran · Settings (Prinsip UX #5). */
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { t } = useI18n()
+  const { lang, setLang, t } = useI18n()
 
   const items = [
     { href: "/app", label: t("dashboard"), icon: FiBarChart2, exact: true },
@@ -24,35 +33,85 @@ export function Sidebar() {
   ]
 
   return (
-    <aside className="border-line bg-panel/60 flex h-full w-full flex-row gap-1 border-b-2 p-2 md:w-56 md:flex-col md:border-b-0 md:border-r-2 md:p-4">
-      <Link href="/" className="hand text-ink mb-0 hidden px-2 text-3xl md:mb-6 md:block">
-        Dilirik <span aria-hidden>👀</span>
-      </Link>
-      <nav className="flex flex-1 flex-row gap-1 overflow-x-auto md:flex-col">
+    <aside className="border-line bg-panel/70 relative flex h-auto w-full flex-col border-b-2 p-3 backdrop-blur-md md:sticky md:top-0 md:h-screen md:w-64 md:border-b-0 md:border-r-2 md:p-5 shrink-0">
+      {/* Brand logo */}
+      <div className="flex items-center justify-between px-2 mb-3 md:mb-8">
+        <Link href="/" className="group flex items-center gap-2">
+          <motion.div
+            whileHover={{ rotate: 12, scale: 1.1 }}
+            className="bg-ink text-paper flex h-9 w-9 items-center justify-center rounded-lg shadow-paper font-bold text-lg"
+          >
+            👀
+          </motion.div>
+          <div className="flex flex-col">
+            <span className="hand text-ink text-3xl leading-none font-bold">Dilirik</span>
+            <span className="scrawl text-muted text-xs leading-none -mt-1">smart CV matcher</span>
+          </div>
+        </Link>
+
+        {/* Language switch button */}
+        <button
+          onClick={() => setLang(lang === "id" ? "en" : "id")}
+          className="label text-muted hover:text-ink flex items-center gap-1 rounded-md border border-line bg-paper px-2 py-1 text-xs font-bold shadow-xs md:hidden"
+          title="Ganti Bahasa"
+        >
+          <FiGlobe className="h-3.5 w-3.5" />
+          <span className="uppercase">{lang}</span>
+        </button>
+      </div>
+
+      {/* Navigation items */}
+      <nav className="flex flex-1 flex-row gap-1.5 overflow-x-auto pb-1 md:flex-col md:pb-0 scrollbar-none">
         {items.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href)
           return (
             <Link
               key={href}
               href={href}
-              className={`label flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap transition-colors ${
-                active ? "bg-ink text-paper rotate-[-1deg]" : "text-ink hover:bg-line/40"
-              }`}
+              className={cn(
+                "label relative flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold whitespace-nowrap transition-all select-none",
+                active
+                  ? "bg-ink text-paper shadow-paper -rotate-1"
+                  : "text-ink hover:bg-line/40 hover:text-ink"
+              )}
             >
-              <Icon aria-hidden /> {label}
+              <Icon className={cn("h-4 w-4 shrink-0", active ? "text-yellow" : "text-muted")} />
+              <span>{label}</span>
+              {active && (
+                <motion.span
+                  layoutId="activeSidebarIndicator"
+                  className="bg-yellow absolute right-2 h-2 w-2 rounded-full hidden md:block"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
             </Link>
           )
         })}
       </nav>
-      <button
-        onClick={async () => {
-          await signOut()
-          router.push("/")
-        }}
-        className="label text-muted hover:text-red flex items-center gap-2 rounded-md px-3 py-2 text-sm"
-      >
-        <FiLogOut aria-hidden /> <span className="hidden md:inline">{t("logout")}</span>
-      </button>
+
+      {/* Footer controls (desktop) */}
+      <div className="hidden md:flex flex-col gap-2 pt-4 border-t border-line mt-auto">
+        <div className="flex items-center justify-between px-2">
+          <button
+            onClick={() => setLang(lang === "id" ? "en" : "id")}
+            className="label text-muted hover:text-ink flex items-center gap-1.5 rounded-lg border border-line bg-paper px-3 py-1.5 text-xs font-bold shadow-xs"
+          >
+            <FiGlobe className="h-4 w-4" />
+            <span className="uppercase">{lang === "id" ? "Bahasa Indonesia" : "English"}</span>
+          </button>
+        </div>
+
+        <button
+          onClick={async () => {
+            await signOut()
+            router.push("/")
+          }}
+          className="label text-muted hover:text-red hover:bg-red/10 flex items-center gap-2.5 rounded-xl px-3.5 py-2 text-sm font-bold transition-colors"
+        >
+          <FiLogOut className="h-4 w-4" />
+          <span>{t("logout")}</span>
+        </button>
+      </div>
     </aside>
   )
 }
