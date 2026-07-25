@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { FiCheckCircle, FiLayers } from "react-icons/fi"
+import { FiCheckCircle, FiLayers, FiMic } from "react-icons/fi"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -97,6 +97,16 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
           <Link href={`/app/cv/${session.revisedCvId}/compare?with=${session.cvId}`}>
             <Button variant="outline" icon={<FiLayers />}>
               Compare Sebelum / Sesudah
+            </Button>
+          </Link>
+        )}
+        {/* CTA jembatan ke modul Live Mock Interview (M5e) — hanya bila ada lowongan */}
+        {session.jobPostingId && (
+          <Link
+            href={`/app/interview/new?cvId=${session.revisedCvId ?? session.cvId ?? ""}&jobId=${session.jobPostingId}${session.analysisId ? `&analysisId=${session.analysisId}` : ""}`}
+          >
+            <Button variant="yellow" icon={<FiMic />}>
+              Latihan Interview untuk Posisi Ini
             </Button>
           </Link>
         )}

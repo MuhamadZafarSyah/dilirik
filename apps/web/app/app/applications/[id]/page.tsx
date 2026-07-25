@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { FiArrowLeft, FiTrash2, FiCheck, FiFileText, FiZap, FiEdit3 } from "react-icons/fi"
+import { FiArrowLeft, FiTrash2, FiCheck, FiFileText, FiZap, FiEdit3, FiMic } from "react-icons/fi"
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS, type ApplicationStatus, type JobParsed } from "@dilirik/shared"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
@@ -138,6 +138,22 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           })}
         </div>
       </Card>
+
+      {/* CTA jembatan: status Interview → latihan live mock interview (M5e) */}
+      {item.status === "INTERVIEW" && (
+        <Sticky tone="blue" rotate={-0.5}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="scrawl text-lg font-bold">
+              🎙️ Ada jadwal interview? Latihan dulu bareng pewawancara AI biar makin siap.
+            </p>
+            <Link href={`/app/interview/new?cvId=${item.cv.id}&jobId=${item.jobPosting.id}`}>
+              <Button variant="primary" icon={<FiMic />}>
+                Mulai Latihan Interview
+              </Button>
+            </Link>
+          </div>
+        </Sticky>
+      )}
 
       {/* Info CV & Analysis */}
       <div className="grid gap-6 md:grid-cols-2">
