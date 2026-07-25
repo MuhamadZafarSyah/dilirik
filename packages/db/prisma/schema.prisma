@@ -20,16 +20,21 @@ model User {
   analysisQuota          Int?      @default(10)
   analysisUsedThisPeriod Int       @default(0)
   quotaResetAt           DateTime?
+  // Kuota latihan interview (PRD §7.7): null = unlimited; default 5/bulan
+  interviewQuota          Int?      @default(5)
+  interviewUsedThisPeriod Int       @default(0)
+  interviewQuotaResetAt   DateTime?
   uiLanguage             String?   @default("id")
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  sessions         Session[]
-  accounts         Account[]
-  cvs              Cv[]
-  jobPostings      JobPosting[]
-  applications     Application[]
-  analysisSessions AnalysisSession[]
+  sessions          Session[]
+  accounts          Account[]
+  cvs               Cv[]
+  jobPostings       JobPosting[]
+  applications      Application[]
+  analysisSessions  AnalysisSession[]
+  interviewSessions InterviewSession[]
 
   @@map("user")
 }
@@ -193,4 +198,34 @@ model AnalysisSession {
 
   @@index([userId, status])
   @@map("analysis_session")
+}
+
+// Sesi latihan live mock interview (PRD §7.7, M5) — modul TERPISAH dari wizard
+// analisis. Referensi cv/job/analysis disimpan sebagai id longgar (tanpa FK),
+// konsisten dengan AnalysisSession: riwayat latihan tetap hidup meski sumbernya
+// dihapus user. Konteks yang dibutuhkan pewawancara sudah dibekukan ke systemPrompt.
+model InterviewSession {
+  id             String    @id @default(cuid())
+  userId         String
+  status         String    @default("CREATED") // CREATED | LIVE | ENDED | FEEDBACK_READY
+  persona        String    @default("NETRAL") // SANTAI | NETRAL | TEGAS | MENEKAN
+  language       String    @default("id")
+  title          String    @default("Latihan Interview")
+  cvId           String?
+  jobPostingId   String?
+  analysisId     String?
+  systemPrompt   String // prompt persona hasil compose server-side (tidak pernah dirakit di browser)
+  durationSec    Int       @default(0)
+  maxDurationSec Int       @default(600) // hard cap biaya per sesi
+  transcriptJson Json? // [{ role: interviewer|candidate, text, at }] — disimpan tepat sekali saat sesi berakhir
+  feedbackJson   Json? // hasil generateInterviewFeedback (schema Zod di @dilirik/ai)
+  startedAt      DateTime?
+  endedAt        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("interview_session")
 }

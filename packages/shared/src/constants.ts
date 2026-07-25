@@ -40,3 +40,51 @@ export function scoreTone(score: number): "red" | "yellow" | "green" {
 /** Batas panjang input untuk kontrol biaya AI (karakter). */
 export const MAX_CV_CHARS = 20_000
 export const MAX_JOB_CHARS = 12_000
+
+// ===== Live Mock Interview (PRD §7.7, M5) =====
+
+/** Kuota sesi latihan interview default per bulan (null = unlimited). */
+export const DEFAULT_INTERVIEW_QUOTA = 5
+
+/** Model Gemini Live untuk percakapan suara realtime (referensi: Career-Vibe). */
+export const INTERVIEW_LIVE_MODEL = "gemini-3.1-flash-live-preview"
+
+/** Durasi maksimum satu sesi interview — hard cap biaya (detik). */
+export const INTERVIEW_MAX_DURATION_SEC = 600
+
+/**
+ * Frasa penutup baku — persona diinstruksikan menutup sesi dengan kalimat yang
+ * MENGANDUNG salah satu frasa ini, dan FE memakai frasa yang sama untuk auto-end.
+ */
+export const INTERVIEW_CLOSING_PHRASES = [
+  "sesi interview kita selesai",
+  "our interview session is complete",
+] as const
+
+export const INTERVIEW_PERSONAS = ["SANTAI", "NETRAL", "TEGAS", "MENEKAN"] as const
+export type InterviewPersona = (typeof INTERVIEW_PERSONAS)[number]
+
+export const INTERVIEW_PERSONA_LABELS: Record<
+  InterviewPersona,
+  { id: string; en: string; hint: { id: string; en: string }; emoji: string }
+> = {
+  SANTAI: {
+    id: "Santai", en: "Casual", emoji: "😄",
+    hint: { id: "Ngobrol hangat — cocok buat pemanasan", en: "Warm chat — good for warming up" },
+  },
+  NETRAL: {
+    id: "Netral", en: "Neutral", emoji: "🙂",
+    hint: { id: "HR profesional pada umumnya", en: "Typical professional HR" },
+  },
+  TEGAS: {
+    id: "Tegas", en: "Strict", emoji: "🧐",
+    hint: { id: "To the point, menggali detail jawaban", en: "To the point, digs into details" },
+  },
+  MENEKAN: {
+    id: "Menekan", en: "Pressure", emoji: "🔥",
+    hint: { id: "Menantang & menguji ketahanan argumen", en: "Challenging & stress-tests your answers" },
+  },
+}
+
+export const INTERVIEW_STATUSES = ["CREATED", "LIVE", "ENDED", "FEEDBACK_READY"] as const
+export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number]
