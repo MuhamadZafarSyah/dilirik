@@ -36,7 +36,7 @@ type AnalysisDetail = {
   id: string
   matchScore: number
   gapsJson: Gap[]
-  suggestionsJson: { suggestions: Suggestion[] }
+  suggestionsJson: { suggestions: Suggestion[]; careerNote?: string; mode?: string }
   language: string
 }
 
@@ -47,6 +47,13 @@ const STEPS: Array<{ key: SessionStep; label: string }> = [
   { key: "REVISE", label: "Revisi" },
   { key: "FINISH", label: "Selesai" },
 ]
+
+/** Label taksonomi gap (engine v2) — data lama tanpa field ini tetap aman (guard). */
+const FIXABILITY_LABELS: Record<string, string> = {
+  fixable_by_editing: "✏︎ bisa dijawab revisi teks",
+  requires_experience: "🧗 butuh pengalaman nyata",
+  fit_constraint: "🧩 faktor kecocokan",
+}
 
 /* ================= Helpers ================= */
 
@@ -158,36 +165,6 @@ function StepCv({ patch }: { patch: Patch }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile) {
-      const ext = droppedFile.name.toLowerCase()
-      if (ext.endsWith(".pdf") || ext.endsWith(".docx")) {
-        setFile(droppedFile)
-        setError(null)
-      } else {
-        setError("Format file harus PDF atau DOCX.")
-      }
-    }
-  }
-
   useEffect(() => {
     api.get<{ cvs: CvOption[] }>("/api/cv").then((r) => {
       setCvs(r.data.cvs)
@@ -258,20 +235,9 @@ function StepCv({ patch }: { patch: Patch }) {
       )}
 
       {tab === "upload" ? (
-        <label
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed block cursor-pointer rounded-md p-8 text-center transition-all ${
-            isDragging
-              ? "border-ink bg-yellow/30 scale-[1.02] shadow-paper -rotate-1"
-              : "border-line bg-paper hover:border-ink"
-          }`}
-        >
+        <label className="border-line bg-paper block cursor-pointer rounded-md border-2 border-dashed p-8 text-center">
           <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <span className="hand text-2xl">
-            {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}
-          </span>
+          <span className="hand text-2xl">{file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}</span>
           <p className="text-muted mt-1 text-xs">Maks. 5MB · otomatis tersimpan juga ke master CV</p>
         </label>
       ) : null}
@@ -449,6 +415,7 @@ function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }
   const realGaps = analysis.gapsJson.filter((g) => g.type === "real")
   const presentationGaps = analysis.gapsJson.filter((g) => g.type !== "real")
   const suggestions = analysis.suggestionsJson.suggestions ?? []
+  const careerNote = analysis.suggestionsJson.careerNote
 
   return (
     <div className="space-y-8">
@@ -462,6 +429,14 @@ function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }
         </div>
       </div>
 
+      {/* Catatan jujur — satu pemikiran dengan gaps & saran (engine v2) */}
+      {careerNote ? (
+        <Sticky tone="yellow" className="max-w-2xl">
+          <p className="label text-xs font-bold uppercase">🧭 catatan jujur dilirik</p>
+          <p className="mt-1 text-sm">{careerNote}</p>
+        </Sticky>
+      ) : null}
+
       <section className="space-y-3">
         <h3 className="scrawl text-2xl">Yang kurang / perlu ditonjolkan</h3>
         {analysis.gapsJson.length === 0 ? (
@@ -470,14 +445,26 @@ function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }
           <div className="grid gap-4 sm:grid-cols-2">
             {realGaps.map((gap, i) => (
               <Sticky key={`r-${i}`} tone="red" className="space-y-1 text-sm">
-                <p className="label text-xs font-bold uppercase">{t("realGap")} · {gap.skill}</p>
+                <p className="label text-xs font-bold uppercase">
+                  {t("realGap")} · {gap.skill}
+                  {gap.severity ? ` · ${gap.severity === "must" ? "WAJIB" : "nice-to-have"}` : ""}
+                </p>
+                {gap.fixability && FIXABILITY_LABELS[gap.fixability] ? (
+                  <p className="label text-muted text-[10px] uppercase">{FIXABILITY_LABELS[gap.fixability]}</p>
+                ) : null}
                 <p>{gap.explanation}</p>
                 <p className="font-bold">💡 {gap.advice}</p>
               </Sticky>
             ))}
             {presentationGaps.map((gap, i) => (
               <Sticky key={`p-${i}`} tone="yellow" className="space-y-1 text-sm">
-                <p className="label text-xs font-bold uppercase">{t("presentationGap")} · {gap.skill}</p>
+                <p className="label text-xs font-bold uppercase">
+                  {t("presentationGap")} · {gap.skill}
+                  {gap.severity ? ` · ${gap.severity === "must" ? "WAJIB" : "nice-to-have"}` : ""}
+                </p>
+                {gap.fixability && FIXABILITY_LABELS[gap.fixability] ? (
+                  <p className="label text-muted text-[10px] uppercase">{FIXABILITY_LABELS[gap.fixability]}</p>
+                ) : null}
                 <p>{gap.explanation}</p>
                 <p className="font-bold">💡 {gap.advice}</p>
               </Sticky>
@@ -489,13 +476,18 @@ function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }
       <section className="space-y-3">
         <h3 className="scrawl text-2xl">Saran revisi ({suggestions.length})</h3>
         {suggestions.length === 0 ? (
-          <p className="text-muted text-sm">Tidak ada saran revisi yang lolos cek fakta.</p>
+          <p className="text-muted text-sm">
+            Tidak ada revisi teks yang jujur DAN relevan untuk lowongan ini — lihat catatan jujur di atas. Memoles kalimat tidak akan menolong di sini; guardrail sengaja tidak memaksakan saran.
+          </p>
         ) : (
           <ul className="space-y-3">
             {suggestions.map((s, i) => (
               <li key={i}>
                 <Card className="space-y-2 text-sm">
                   <p className="label text-xs font-bold uppercase">{s.section}</p>
+                  {s.targetRequirement ? (
+                    <p className="label text-green text-xs font-bold uppercase">🎯 menjawab: {s.targetRequirement}</p>
+                  ) : null}
                   <p className="text-muted line-through">{s.before}</p>
                   <p className="font-bold">{s.after}</p>
                 </Card>
@@ -506,7 +498,11 @@ function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }
       </section>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => patch({ step: "REVISE" })}>✏︎ Lanjut revisi CV →</Button>
+        {suggestions.length > 0 ? (
+          <Button onClick={() => patch({ step: "REVISE" })}>✏︎ Lanjut revisi CV →</Button>
+        ) : (
+          <Button onClick={() => patch({ step: "REVISE" })} variant="secondary">✏︎ Tetap edit teks manual →</Button>
+        )}
         <Button variant="secondary" onClick={() => patch({ step: "JOB", analysisId: null })}>← ganti lowongan</Button>
       </div>
     </div>
@@ -598,6 +594,9 @@ function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }
                 <li key={i}>
                   <Card className="space-y-2 text-sm">
                     <p className="label text-xs font-bold uppercase">{s.section}</p>
+                    {s.targetRequirement ? (
+                      <p className="label text-green text-xs font-bold uppercase">🎯 menjawab: {s.targetRequirement}</p>
+                    ) : null}
                     <p className="text-muted line-through">{s.before}</p>
                     <p className="font-bold">{s.after}</p>
                     {applied[i] === "ok" ? (
