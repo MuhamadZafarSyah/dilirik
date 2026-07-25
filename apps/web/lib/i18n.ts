@@ -8,6 +8,7 @@ export type Lang = "id" | "en"
 const dict = {
   id: {
     dashboard: "Dashboard", cv: "CV", jobs: "Lowongan", analyze: "Analisis",
+    interview: "Latihan Interview",
     applications: "Lamaran", settings: "Settings", logout: "Keluar",
     quotaLeft: "sisa kuota", unlimited: "unlimited", loading: "Memuat…",
     emptyCvTitle: "Belum ada CV", emptyCvCta: "Tambah CV pertamamu",
@@ -20,6 +21,7 @@ const dict = {
   },
   en: {
     dashboard: "Dashboard", cv: "CVs", jobs: "Jobs", analyze: "Analyze",
+    interview: "Mock Interview",
     applications: "Applications", settings: "Settings", logout: "Sign out",
     quotaLeft: "quota left", unlimited: "unlimited", loading: "Loading…",
     emptyCvTitle: "No CV yet", emptyCvCta: "Add your first CV",

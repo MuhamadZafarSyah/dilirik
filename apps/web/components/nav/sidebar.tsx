@@ -9,6 +9,7 @@ import {
   FiFileText,
   FiLayers,
   FiLogOut,
+  FiMic,
   FiSettings,
   FiZap,
   FiUser,
@@ -28,6 +29,7 @@ export function Sidebar() {
     { href: "/app/cv", label: t("cv"), icon: FiFileText },
     { href: "/app/jobs", label: t("jobs"), icon: FiBriefcase },
     { href: "/app/analyze", label: t("analyze"), icon: FiZap },
+    { href: "/app/interview", label: t("interview"), icon: FiMic },
     { href: "/app/applications", label: t("applications"), icon: FiLayers },
     { href: "/app/settings", label: t("settings"), icon: FiSettings },
   ]
