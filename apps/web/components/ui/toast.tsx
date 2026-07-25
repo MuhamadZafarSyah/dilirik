@@ -37,31 +37,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-[100] flex flex-col gap-2 max-w-sm pointer-events-none">
+      <div className="fixed bottom-5 right-5 z-[100] flex flex-col gap-2.5 max-w-sm pointer-events-none">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
               key={t.id}
-              initial={{ opacity: 0, y: 20, scale: 0.9, rotate: -2 }}
-              animate={{ opacity: 1, y: 0, scale: 1, rotate: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              initial={{ opacity: 0, y: 20, scale: 0.92, rotate: -1 }}
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, y: 10, scale: 0.92 }}
               transition={{ type: "spring", stiffness: 350, damping: 25 }}
               className={cn(
-                "pointer-events-auto flex items-center justify-between gap-3 p-4 rounded-xl border-2 shadow-lift bg-panel border-line text-ink",
-                t.type === "success" && "border-green/50 bg-green/10 text-green",
-                t.type === "error" && "border-red/50 bg-red/10 text-red",
-                t.type === "info" && "border-blue/50 bg-blue/10 text-blue"
+                "pointer-events-auto flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl border-2 shadow-lift text-ink",
+                t.type === "success" && "border-green bg-green/30 text-ink",
+                t.type === "error" && "border-red bg-red/30 text-ink",
+                t.type === "info" && "border-blue bg-blue/30 text-ink"
               )}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold">
+              <div className="flex items-center gap-2.5 text-sm font-bold text-ink">
                 {t.type === "success" && <FiCheckCircle className="h-5 w-5 shrink-0 text-green" />}
                 {t.type === "error" && <FiAlertCircle className="h-5 w-5 shrink-0 text-red" />}
                 {t.type === "info" && <FiInfo className="h-5 w-5 shrink-0 text-blue" />}
-                <span>{t.message}</span>
+                <span className="leading-snug">{t.message}</span>
               </div>
               <button
                 onClick={() => removeToast(t.id)}
-                className="rounded-full p-1 hover:bg-ink/10 transition-colors"
+                className="rounded-lg p-1 text-muted hover:text-ink hover:bg-ink/10 transition-colors"
+                aria-label="Tutup notifikasi"
               >
                 <FiX className="h-4 w-4" />
               </button>
