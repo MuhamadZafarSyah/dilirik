@@ -19,8 +19,13 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
   DITOLAK: { id: "Ditolak", en: "Rejected" },
 }
 
-/** Versi mesin analisis — naikkan saat prompt/pipeline berubah agar cache invalid. */
-export const ENGINE_VERSION = "1.0.0"
+/**
+ * Versi mesin analisis — naikkan saat prompt/pipeline berubah agar cache invalid.
+ * v2.0.0: gaps+suggestions+careerNote digabung jadi SATU panggilan LLM (satu
+ * rantai pemikiran), mode adaptif (optimize/reframe/honest_pivot) dari coverage
+ * must-have, taksonomi gap, dan guardrail relevansi/anti-kosmetik.
+ */
+export const ENGINE_VERSION = "2.0.0"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
