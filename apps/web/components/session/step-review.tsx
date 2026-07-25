@@ -10,7 +10,7 @@ import { Card, Sticky } from "@/components/ui/card"
 import { ScoreGauge } from "@/components/ui/gauge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useI18n } from "@/lib/i18n"
-import type { AnalysisDetail, Patch, SessionDetail } from "./types"
+import { FIXABILITY_LABELS, type AnalysisDetail, type Patch, type SessionDetail } from "./types"
 
 export function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const { t } = useI18n()
@@ -72,6 +72,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
   const realGaps = analysis ? analysis.gapsJson.filter((g) => g.type === "real") : []
   const presentationGaps = analysis ? analysis.gapsJson.filter((g) => g.type !== "real") : []
   const suggestions = analysis ? (analysis.suggestionsJson.suggestions ?? []) : []
+  const careerNote = analysis?.suggestionsJson.careerNote
 
   return (
     <Skeleton name="step-review-analysis" loading={!analysis} animate="shimmer" fallback={<StepReviewSkeleton />}>
@@ -93,12 +94,29 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                 <strong className="text-yellow">{presentationGaps.length} Gap Penyajian</strong> yang bisa langsung diperbaiki tanpa perlu memalsukan fakta.
               </p>
               <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-                <Button variant="danger" icon={<FiEdit3 />} onClick={() => patch({ step: "REVISE" })}>
-                  ✏︎ Lanjut ke Revisi Teks CV →
+                {suggestions.length > 0 ? (
+                  <Button variant="danger" icon={<FiEdit3 />} onClick={() => patch({ step: "REVISE" })}>
+                    ✏︎ Lanjut ke Revisi Teks CV →
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => patch({ step: "REVISE" })}>
+                    ✏︎ Tetap Edit Teks Manual →
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={() => patch({ step: "JOB", analysisId: null })}>
+                  ← Ganti Lowongan
                 </Button>
               </div>
             </div>
           </Card>
+
+          {/* Catatan jujur Dilirik */}
+          {careerNote && (
+            <Sticky tone="yellow" className="space-y-1">
+              <p className="label text-xs font-bold uppercase">🧭 Catatan Jujur Dilirik</p>
+              <p className="text-xs leading-relaxed font-medium">{careerNote}</p>
+            </Sticky>
+          )}
 
           {/* Tabs: Gap Breakdown */}
           <Tabs defaultValue="all" className="w-full">
@@ -115,7 +133,11 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                   <Sticky key={`r-${i}`} tone="red" rotate={i % 2 === 0 ? -0.8 : 0.8} className="space-y-2">
                     <span className="label bg-red/20 text-red px-2 py-0.5 rounded text-[10px] font-bold uppercase">
                       {t("realGap")} · {gap.skill}
+                      {gap.severity ? ` · ${gap.severity === "must" ? "WAJIB" : "NICE-TO-HAVE"}` : ""}
                     </span>
+                    {gap.fixability && FIXABILITY_LABELS[gap.fixability] && (
+                      <p className="label text-muted text-[10px] uppercase font-bold">{FIXABILITY_LABELS[gap.fixability]}</p>
+                    )}
                     <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
                     <div className="pt-1 border-t border-red/30 text-xs font-bold text-ink">
                       💡 Saran Jujur: {gap.advice}
@@ -126,7 +148,11 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                   <Sticky key={`p-${i}`} tone="yellow" rotate={i % 2 === 0 ? 0.8 : -0.8} className="space-y-2">
                     <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold uppercase">
                       {t("presentationGap")} · {gap.skill}
+                      {gap.severity ? ` · ${gap.severity === "must" ? "WAJIB" : "NICE-TO-HAVE"}` : ""}
                     </span>
+                    {gap.fixability && FIXABILITY_LABELS[gap.fixability] && (
+                      <p className="label text-muted text-[10px] uppercase font-bold">{FIXABILITY_LABELS[gap.fixability]}</p>
+                    )}
                     <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
                     <div className="pt-1 border-t border-yellow/40 text-xs font-bold text-ink">
                       💡 Cara Menonjolkan: {gap.advice}
@@ -166,17 +192,32 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
 
             <TabsContent value="suggestions">
               <div className="space-y-3">
-                {suggestions.map((s, i) => (
-                  <Card key={i} rotate={i % 2 === 0 ? 0.4 : -0.4} className="space-y-2">
-                    <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                      Bagian: {s.section}
-                    </span>
-                    <p className="text-muted line-through text-xs font-mono">{s.before}</p>
-                    <p className="text-ink font-bold text-xs font-mono bg-green/10 p-2 rounded-lg border border-green/30">
-                      {s.after}
+                {suggestions.length === 0 ? (
+                  <Card className="py-6 text-center">
+                    <p className="text-muted text-xs">
+                      Tidak ada revisi teks yang jujur DAN relevan untuk lowongan ini — lihat catatan jujur di atas. Memoles kalimat tidak akan menolong di sini; guardrail sengaja tidak memaksakan saran.
                     </p>
                   </Card>
-                ))}
+                ) : (
+                  suggestions.map((s, i) => (
+                    <Card key={i} rotate={i % 2 === 0 ? 0.4 : -0.4} className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                          Bagian: {s.section}
+                        </span>
+                        {s.targetRequirement && (
+                          <span className="label bg-green/20 text-green px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                            🎯 Menjawab: {s.targetRequirement}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-muted line-through text-xs font-mono">{s.before}</p>
+                      <p className="text-ink font-bold text-xs font-mono bg-green/10 p-2 rounded-lg border border-green/30">
+                        {s.after}
+                      </p>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>

@@ -7,14 +7,16 @@ import { FiCheckCircle, FiLayers } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { CopyButton } from "@/components/ui/copy-button"
 import { DownloadCvButton } from "@/components/pdf/download-cv-button"
-import { useToast } from "@/components/ui/toast"
+import { useI18n } from "@/lib/i18n"
 import type { CvFull, Patch, SessionDetail } from "./types"
 
 export function StepFinish({ session, patch }: { session: SessionDetail; patch: Patch }) {
-  const { toast } = useToast()
+  const { t } = useI18n()
   const [revised, setRevised] = useState<CvFull | null>(null)
   const [busy, setBusy] = useState(false)
+  const [downloadingDocx, setDownloadingDocx] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -24,6 +26,27 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
       .then((r) => setRevised(r.data.cv))
       .catch(() => {})
   }, [session.revisedCvId])
+
+  const hasDesignDocx = Boolean(revised?.fileKey?.toLowerCase().endsWith(".docx"))
+
+  async function downloadOriginalDocx() {
+    if (!revised) return
+    setDownloadingDocx(true)
+    try {
+      const res = await api.get<Blob>(`/api/cv/${revised.id}/file`, { responseType: "blob" })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement("a")
+      const slug = revised.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
+      a.href = url
+      a.download = `${slug}-v${revised.version}-dilirik.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setDownloadingDocx(false)
+    }
+  }
 
   async function saveApplication() {
     setBusy(true)
@@ -35,7 +58,6 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
         ...(session.analysisId ? { analysisId: session.analysisId } : {}),
       })
       await patch({ applicationId: data.application.id, status: "COMPLETED" })
-      toast("Berhasil disimpan ke Tracker Pelamaran!", "success")
     } catch (err) {
       setError(errorMessage(err))
       setBusy(false)
@@ -43,10 +65,10 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
   }
 
   return (
-    <Card tape="red" pin className="relative space-y-6 text-center py-10 px-6 max-w-2xl mx-auto">
+    <Card tape="red" pin className="relative space-y-6 text-center py-8">
       <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         className="inline-block bg-green text-paper p-4 rounded-full shadow-paper"
       >
@@ -61,9 +83,15 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
+        {hasDesignDocx && (
+          <Button onClick={downloadOriginalDocx} isLoading={downloadingDocx} variant="primary">
+            {downloadingDocx ? "Menyiapkan DOCX…" : "⬇ DOCX (desain asli)"}
+          </Button>
+        )}
         {revised && (
           <DownloadCvButton rawText={revised.rawText} title={revised.title} version={revised.version} language={revised.language} />
         )}
+        {revised && <CopyButton text={revised.rawText} label="📋 Salin Semua Teks Revisi" />}
         {session.revisedCvId && session.cvId && (
           <Link href={`/app/cv/${session.revisedCvId}/compare?with=${session.cvId}`}>
             <Button variant="outline" icon={<FiLayers />}>
@@ -73,22 +101,29 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
         )}
       </div>
 
-      <div className="pt-4 border-t border-line">
-        {session.applicationId ? (
-          <div className="p-3 rounded-xl border border-green bg-green/10 text-green font-bold text-sm flex items-center justify-center gap-2">
-            <FiCheckCircle /> Tersimpan ke Tracker Pelamaran ·{" "}
-            <Link href="/app/applications" className="underline">
-              Lihat Pipeline
-            </Link>
-          </div>
-        ) : (
-          <Button onClick={saveApplication} isLoading={busy} variant="yellow" size="lg" className="w-full sm:w-auto">
-            📌 Simpan Ke Tracker Pelamaran
-          </Button>
-        )}
-      </div>
+      <p className="text-muted mx-auto max-w-xl text-xs leading-relaxed">
+        {hasDesignDocx
+          ? "🎨 DOCX di atas adalah file asli kamu yang teksnya direvisi — desain, font, dan tabel tidak diubah sama sekali. Buka di Word lalu save-as-PDF untuk hasil akhir."
+          : "🎨 Catatan jujur: PDF di atas dirender ulang pakai template Dilirik (file PDF tidak menyimpan struktur desain, jadi tidak bisa diedit langsung). Untuk mempertahankan desain 100%: salin teks revisi ke file Word/Canva asli kamu — atau lain kali upload CV versi .docx agar Dilirik merevisi file-nya langsung."}
+      </p>
 
+      {session.applicationId ? (
+        <p className="scrawl text-green text-2xl font-bold">
+          Tersimpan ke Tracker Lamaran ✓{" "}
+          <Link href="/app/applications" className="underline text-ink hover:text-green">
+            Lihat Semua Lamaran
+          </Link>
+        </p>
+      ) : (
+        <Button onClick={saveApplication} isLoading={busy} variant="primary" size="lg">
+          {busy ? "Menyiapkan…" : `📌 ${t("saveToTracker")}`}
+        </Button>
+      )}
       {error && <p className="text-red text-xs font-semibold">{error}</p>}
+
+      <p className="text-muted text-xs">
+        Sesi ini otomatis masuk ke riwayat — kamu bisa memulai sesi baru kapan saja dari halaman Analisis.
+      </p>
     </Card>
   )
 }

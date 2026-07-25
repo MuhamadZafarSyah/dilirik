@@ -53,7 +53,7 @@ export function StepCv({ patch }: { patch: Patch }) {
         setCvs(r.data.cvs)
         if (r.data.cvs.length === 0) setTab("upload")
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   async function submit() {
@@ -69,37 +69,32 @@ export function StepCv({ patch }: { patch: Patch }) {
         const { data } = await api.post<{ cv: { id: string } }>("/api/cv/upload", form)
         newCvId = data.cv.id
       } else if (tab === "paste") {
-        const { data } = await api.post<{ cv: { id: string } }>("/api/cv", { title: title || "CV Master", rawText })
+        const { data } = await api.post<{ cv: { id: string } }>("/api/cv", { title: title || "CV Saya", rawText })
         newCvId = data.cv.id
       }
       await patch({ cvId: newCvId, step: "JOB" })
     } catch (err) {
-      setError(err instanceof Error && err.message === "__PILIH_FILE__" ? "Pilih file PDF/DOCX terlebih dahulu." : errorMessage(err))
+      setError(err instanceof Error && err.message === "__PILIH_FILE__" ? "Pilih file dulu ya" : errorMessage(err))
       setBusy(false)
     }
   }
 
   return (
-    <Card tape="yellow" pin className="space-y-6">
-      <div>
-        <h2 className="hand text-3xl font-bold">Langkah 1 — Pilih atau Input CV Kamu 📄</h2>
-        <p className="scrawl text-muted text-lg mt-0.5">
-          Gunakan Master CV yang sudah tersimpan, atau upload PDF/DOCX baru.
-        </p>
-      </div>
+    <Card className="relative space-y-5">
+      <span className="tape" aria-hidden />
+      <h2 className="hand text-3xl font-bold">Langkah 1 — CV kamu 📄</h2>
 
       <div className="flex flex-wrap gap-2">
         {([
-          ["pilih", "🗂 Pilih Master CV"],
-          ["upload", "📎 Upload File PDF/DOCX"],
-          ["paste", "✏︎ Paste Teks Mentah"],
+          ["pilih", "🗂 Pilih master CV"],
+          ["upload", "📎 Upload file PDF/DOCX"],
+          ["paste", "✏︎ Paste teks mentah"],
         ] as const).map(([m, label]) => (
           <button
             key={m}
             onClick={() => setTab(m)}
-            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              tab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
-            }`}
+            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${tab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
+              }`}
           >
             {label}
           </button>
@@ -109,11 +104,11 @@ export function StepCv({ patch }: { patch: Patch }) {
       {tab === "pilih" ? (
         <div className="space-y-2">
           <label className="label text-xs font-bold uppercase tracking-wider block text-ink">
-            Master CV Tersimpan
+            Master CV tersimpan
           </label>
           <Select value={cvId} onValueChange={setCvId}>
             <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl">
-              <SelectValue placeholder="— Pilih Document CV —" />
+              <SelectValue placeholder="— pilih CV —" />
             </SelectTrigger>
             <SelectContent>
               {cvs.map((cv) => (
@@ -124,7 +119,7 @@ export function StepCv({ patch }: { patch: Patch }) {
             </SelectContent>
           </Select>
           {cvs.length === 0 && (
-            <p className="text-muted text-xs">Belum ada CV tersimpan — silakan pakai tab Upload atau Paste.</p>
+            <p className="text-muted text-xs">Belum ada CV tersimpan — pakai tab upload / paste.</p>
           )}
         </div>
       ) : (
@@ -133,29 +128,33 @@ export function StepCv({ patch }: { patch: Patch }) {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Judul CV (misal: CV Fullstack Developer 2026)"
+            placeholder='Judul CV (mis. “CV Frontend 2026”)'
             className="w-full px-3.5 py-2.5 rounded-xl border-2 border-line bg-paper text-ink text-sm font-semibold outline-none focus:border-ink shadow-inner"
           />
         </div>
       )}
 
       {tab === "upload" && (
-        <label
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed block cursor-pointer rounded-2xl p-8 text-center transition-all ${
-            isDragging
-              ? "border-ink bg-yellow/30 scale-[1.02] shadow-paper -rotate-1"
-              : "border-line bg-paper/60 hover:border-ink"
-          }`}
-        >
-          <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <span className="hand text-2xl font-bold text-ink">
-            {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan File PDF / DOCX di Sini 📄"}
-          </span>
-          <p className="text-muted mt-1 text-xs">Maksimal 5MB · Otomatis tersimpan ke daftar master CV kamu</p>
-        </label>
+        <>
+          <label
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed block cursor-pointer rounded-2xl p-8 text-center transition-all ${isDragging
+                ? "border-ink bg-yellow/30 scale-[1.02] shadow-paper -rotate-1"
+                : "border-line bg-paper/60 hover:border-ink"
+              }`}
+          >
+            <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <span className="hand text-2xl font-bold text-ink">
+              {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}
+            </span>
+            <p className="text-muted mt-1 text-xs">Maksimal 5MB · otomatis tersimpan juga ke master CV</p>
+          </label>
+          <p className="text-muted text-xs">
+            💡 Tips: upload versi <span className="font-bold">.docx</span> — Dilirik bisa merevisi file-nya langsung tanpa mengubah desain, font, dan tabelnya.
+          </p>
+        </>
       )}
 
       {tab === "paste" && (
@@ -163,7 +162,7 @@ export function StepCv({ patch }: { patch: Patch }) {
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           rows={10}
-          placeholder="Paste seluruh informasi CV kamu di sini..."
+          placeholder="Paste seluruh isi CV kamu di sini…"
           className="w-full p-4 rounded-xl border-2 border-line bg-paper text-ink font-mono text-xs leading-relaxed outline-none focus:border-ink shadow-inner"
         />
       )}
@@ -178,7 +177,7 @@ export function StepCv({ patch }: { patch: Patch }) {
         size="lg"
         className="w-full"
       >
-        Lanjut ke Input Lowongan →
+        {busy ? "Memproses CV…" : "Lanjut ke lowongan →"}
       </Button>
     </Card>
   )

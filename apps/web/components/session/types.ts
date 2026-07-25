@@ -17,13 +17,27 @@ export type SessionDetail = {
 export type Patch = (input: Record<string, unknown>) => Promise<void>
 export type CvOption = { id: string; title: string; version: number }
 export type JobOption = { id: string; parsedJson: JobParsed }
-export type CvFull = { id: string; title: string; version: number; language: string; rawText: string; structuredJson: CvStructured }
+export type CvFull = {
+  id: string
+  title: string
+  version: number
+  language: string
+  rawText: string
+  structuredJson: CvStructured
+  fileKey: string | null
+}
 export type AnalysisDetail = {
   id: string
   matchScore: number
   gapsJson: Gap[]
-  suggestionsJson: { suggestions: Suggestion[] }
+  suggestionsJson: { suggestions: Suggestion[]; careerNote?: string; mode?: string }
   language: string
+}
+
+export const FIXABILITY_LABELS: Record<string, string> = {
+  fixable_by_editing: "✏︎ bisa dijawab revisi teks",
+  requires_experience: "🧗 butuh pengalaman nyata",
+  fit_constraint: "🧩 faktor kecocokan",
 }
 
 export function squash(text: string) {

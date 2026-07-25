@@ -11,3 +11,6 @@ coverage/
 playwright-report/
 test-results/
 prisma/*.db
+.agents/
+.claude/
+apps/web/skills-lock.json
