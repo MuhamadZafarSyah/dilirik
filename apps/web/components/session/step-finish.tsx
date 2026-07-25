@@ -62,7 +62,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
 
       <div className="flex flex-wrap justify-center gap-3">
         {revised && (
-          <DownloadCvButton cv={revised.structuredJson} title={revised.title} version={revised.version} language={revised.language} />
+          <DownloadCvButton rawText={revised.rawText} title={revised.title} version={revised.version} language={revised.language} />
         )}
         {session.revisedCvId && session.cvId && (
           <Link href={`/app/cv/${session.revisedCvId}/compare?with=${session.cvId}`}>

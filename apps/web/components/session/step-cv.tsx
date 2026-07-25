@@ -14,8 +14,37 @@ export function StepCv({ patch }: { patch: Patch }) {
   const [title, setTitle] = useState("")
   const [rawText, setRawText] = useState("")
   const [file, setFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) {
+      const ext = droppedFile.name.toLowerCase()
+      if (ext.endsWith(".pdf") || ext.endsWith(".docx")) {
+        setFile(droppedFile)
+        setError(null)
+      } else {
+        setError("Format file harus PDF atau DOCX.")
+      }
+    }
+  }
 
   useEffect(() => {
     api
@@ -111,9 +140,20 @@ export function StepCv({ patch }: { patch: Patch }) {
       )}
 
       {tab === "upload" && (
-        <label className="border-2 border-dashed border-line bg-paper/60 hover:border-ink block cursor-pointer rounded-2xl p-8 text-center transition-colors">
+        <label
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed block cursor-pointer rounded-2xl p-8 text-center transition-all ${
+            isDragging
+              ? "border-ink bg-yellow/30 scale-[1.02] shadow-paper -rotate-1"
+              : "border-line bg-paper/60 hover:border-ink"
+          }`}
+        >
           <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <span className="hand text-2xl font-bold text-ink">{file ? file.name : "Jatuhkan File PDF / DOCX di Sini 📄"}</span>
+          <span className="hand text-2xl font-bold text-ink">
+            {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan File PDF / DOCX di Sini 📄"}
+          </span>
           <p className="text-muted mt-1 text-xs">Maksimal 5MB · Otomatis tersimpan ke daftar master CV kamu</p>
         </label>
       )}

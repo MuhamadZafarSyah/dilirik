@@ -158,6 +158,36 @@ function StepCv({ patch }: { patch: Patch }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) {
+      const ext = droppedFile.name.toLowerCase()
+      if (ext.endsWith(".pdf") || ext.endsWith(".docx")) {
+        setFile(droppedFile)
+        setError(null)
+      } else {
+        setError("Format file harus PDF atau DOCX.")
+      }
+    }
+  }
+
   useEffect(() => {
     api.get<{ cvs: CvOption[] }>("/api/cv").then((r) => {
       setCvs(r.data.cvs)
@@ -228,9 +258,20 @@ function StepCv({ patch }: { patch: Patch }) {
       )}
 
       {tab === "upload" ? (
-        <label className="border-line bg-paper block cursor-pointer rounded-md border-2 border-dashed p-8 text-center">
+        <label
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed block cursor-pointer rounded-md p-8 text-center transition-all ${
+            isDragging
+              ? "border-ink bg-yellow/30 scale-[1.02] shadow-paper -rotate-1"
+              : "border-line bg-paper hover:border-ink"
+          }`}
+        >
           <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <span className="hand text-2xl">{file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}</span>
+          <span className="hand text-2xl">
+            {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}
+          </span>
           <p className="text-muted mt-1 text-xs">Maks. 5MB · otomatis tersimpan juga ke master CV</p>
         </label>
       ) : null}
