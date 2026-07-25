@@ -49,6 +49,12 @@ export async function updateCvTitle(userId: string, cvId: string, title: string)
   return prisma.cv.update({ where: { id: cvId }, data: { title } })
 }
 
+/** Set fileKey (file desain asli hasil revisi DOCX native) pada sebuah versi CV. */
+export async function setCvFileKey(userId: string, cvId: string, fileKey: string) {
+  await getCv(userId, cvId) // ownership check
+  return prisma.cv.update({ where: { id: cvId }, data: { fileKey } })
+}
+
 /** Hapus manual (PRD §12 Privasi) — versi lain TIDAK ikut terhapus (SetNull). */
 export async function deleteCv(userId: string, cvId: string) {
   await getCv(userId, cvId)

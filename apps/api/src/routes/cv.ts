@@ -5,7 +5,7 @@ import { requireAuth } from "../middleware/requireAuth"
 import { rateLimit } from "../middleware/rateLimit"
 import { HttpError } from "../middleware/errorHandler"
 import { extractText } from "../services/extractText"
-import { storeCvFile } from "../lib/storage"
+import { getCvFile, storeCvFile } from "../lib/storage"
 import * as cvService from "../services/cvService"
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
@@ -49,6 +49,23 @@ cvRouter.post("/upload", rateLimit("cv-upload", 5, 60), upload.single("file"), a
     const title = (req.body.title as string | undefined) || req.file.originalname.replace(/\.[^.]+$/, "")
     const cv = await cvService.createCv({ userId: req.userId!, title, rawText, fileKey })
     res.status(201).json({ cv })
+  } catch (e) { next(e) }
+})
+
+// Download file desain ASLI (PDF/DOCX yang di-upload, atau DOCX hasil revisi native)
+cvRouter.get("/:id/file", async (req, res, next) => {
+  try {
+    const cv = await cvService.getCv(req.userId!, req.params.id!)
+    if (!cv.fileKey) {
+      throw new HttpError(404, "NO_FILE", "CV ini tidak punya file desain asli (dibuat via paste teks)")
+    }
+    const file = await getCvFile(cv.fileKey)
+    if (!file) throw new HttpError(404, "NO_FILE", "File tidak ditemukan di storage")
+    const ext = cv.fileKey.toLowerCase().endsWith(".docx") ? "docx" : "pdf"
+    const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
+    res.setHeader("Content-Type", file.contentType ?? "application/octet-stream")
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.${ext}"`)
+    res.send(file.buffer)
   } catch (e) { next(e) }
 })
 

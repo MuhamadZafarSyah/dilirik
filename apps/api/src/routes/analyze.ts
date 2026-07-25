@@ -4,9 +4,13 @@ import { z } from "zod"
 import { requireAuth } from "../middleware/requireAuth"
 import { rateLimit } from "../middleware/rateLimit"
 import { HttpError } from "../middleware/errorHandler"
+import { getCvFile, storeCvFile } from "../lib/storage"
+import { reviseDocx } from "../services/docxRevise"
 import * as analysisService from "../services/analysisService"
 import * as cvService from "../services/cvService"
 import { checkEntitlement } from "../services/quota"
+
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 export const analyzeRouter = Router()
 analyzeRouter.use(requireAuth)
@@ -58,6 +62,40 @@ analyzeRouter.post("/:id/apply", async (req, res, next) => {
       sourceCvId: analysis.cvId,
       newRawText,
     })
-    res.status(201).json({ cv: newCv })
+
+    // ===== Fase 1b — jalur DOCX native (best-effort, TIDAK boleh menggagalkan apply) =====
+    // Sumber kebenaran tetap rawText; file DOCX hanyalah render target.
+    // Saran dianggap "diterapkan user" bila teks `after`-nya ada di newRawText.
+    let designFileKey: string | null = null
+    try {
+      if (source.fileKey?.toLowerCase().endsWith(".docx")) {
+        const original = await getCvFile(source.fileKey)
+        const sj = analysis.suggestionsJson as
+          | { suggestions?: Array<{ before?: string; after?: string }> }
+          | null
+        const appliedNow = (sj?.suggestions ?? [])
+          .filter((s) => Boolean(s.before && s.after) && squash(newRawText).includes(squash(s.after!)))
+          .map((s) => ({ before: s.before!, after: s.after! }))
+        if (original && appliedNow.length > 0) {
+          const revised = await reviseDocx({ buffer: original.buffer, replacements: appliedNow })
+          if (revised.applied.length > 0) {
+            designFileKey = await storeCvFile({
+              userId: req.userId!,
+              buffer: revised.buffer,
+              contentType: DOCX_MIME,
+              originalName: `${newCv.title}-v${newCv.version}.docx`,
+            })
+            if (designFileKey) {
+              await cvService.setCvFileKey(req.userId!, newCv.id, designFileKey)
+            }
+          }
+        }
+      }
+    } catch {
+      designFileKey = null // revisi desain gagal — versi teks tetap tersimpan
+    }
+
+    const cvOut = designFileKey ? { ...newCv, fileKey: designFileKey } : newCv
+    res.status(201).json({ cv: cvOut, designFilePreserved: Boolean(designFileKey) })
   } catch (e) { next(e) }
 })
