@@ -39,6 +39,8 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
       })
       // Seed cache di key permanen + sinkronkan analysisId ke sesi (key berganti tanpa refetch).
       queryClient.setQueryData(["analysis", r.data.analysis.id], r.data.analysis)
+      // Kuota terpakai satu — refresh pill kuota di header.
+      queryClient.invalidateQueries({ queryKey: ["quota"] })
       await patch({ analysisId: r.data.analysis.id })
       return r.data.analysis
     },
