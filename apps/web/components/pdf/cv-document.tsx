@@ -1,23 +1,8 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
-import type { CvStructured } from "@dilirik/shared"
 
-const LABELS = {
-  id: {
-    about: "Tentang",
-    skills: "Keahlian",
-    experience: "Pengalaman",
-    achievements: "Pencapaian",
-    education: "Pendidikan",
-    footer: "Dibuat dengan Dilirik — bikin CV-mu dilirik.",
-  },
-  en: {
-    about: "About",
-    skills: "Skills",
-    experience: "Experience",
-    achievements: "Achievements",
-    education: "Education",
-    footer: "Made with Dilirik — get your CV noticed.",
-  },
+const FOOTER = {
+  id: "Dibuat dengan Dilirik — bikin CV-mu dilirik.",
+  en: "Made with Dilirik — get your CV noticed.",
 } as const
 
 // Hanya font bawaan PDF (Helvetica) — tanpa fetch font eksternal, 100% offline & gratis.
@@ -31,10 +16,8 @@ const styles = StyleSheet.create({
     paddingBottom: 56,
     paddingHorizontal: 52,
   },
-  name: { fontFamily: "Helvetica-Bold", fontSize: 22, marginBottom: 2 },
-  headline: { fontSize: 11, color: "#6f6a5f" },
-  section: { marginTop: 16 },
-  sectionTitle: {
+  name: { fontFamily: "Helvetica-Bold", fontSize: 20, marginBottom: 6 },
+  heading: {
     fontFamily: "Helvetica-Bold",
     fontSize: 11,
     textTransform: "uppercase",
@@ -42,24 +25,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#d8d3c6",
     paddingBottom: 3,
-    marginBottom: 8,
+    marginTop: 14,
+    marginBottom: 6,
   },
-  skillsRow: { flexDirection: "row", flexWrap: "wrap" },
-  skill: {
-    fontSize: 9,
-    backgroundColor: "#f1ede2",
-    borderRadius: 3,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    marginRight: 4,
-    marginBottom: 4,
-  },
-  item: { marginBottom: 8 },
-  itemTitle: { fontFamily: "Helvetica-Bold", fontSize: 10.5 },
-  itemMeta: { fontSize: 9, color: "#6f6a5f", marginBottom: 2 },
+  text: { marginBottom: 1 },
   bulletRow: { flexDirection: "row", marginBottom: 1 },
-  bullet: { width: 10 },
+  bullet: { width: 12 },
   bulletText: { flex: 1 },
+  gap: { height: 6 },
   footer: {
     position: "absolute",
     bottom: 24,
@@ -71,108 +44,94 @@ const styles = StyleSheet.create({
   },
 })
 
+type Line =
+  | { kind: "name"; text: string }
+  | { kind: "heading"; text: string }
+  | { kind: "bullet"; text: string }
+  | { kind: "text"; text: string }
+  | { kind: "gap" }
+
+/**
+ * Typesetting ringan dari teks mentah CV — TANPA merangkum, TANPA mengubah
+ * urutan. Setiap baris rawText dirender apa adanya; heuristik hanya dipakai
+ * untuk gaya visual:
+ * - baris pertama → nama (judul besar)
+ * - baris FULL KAPITAL pendek → judul section (SUMMARY, WORK EXPERIENCES, …)
+ * - baris berawalan • - – * ▪ → bullet
+ * - sisanya → paragraf biasa
+ */
+function parseRawText(rawText: string): Line[] {
+  const lines: Line[] = []
+  let nameAssigned = false
+  for (const raw of rawText.replace(/\r\n?/g, "\n").split("\n")) {
+    const line = raw.trim()
+    if (!line) {
+      if (lines.length > 0 && lines[lines.length - 1]!.kind !== "gap") lines.push({ kind: "gap" })
+      continue
+    }
+    if (!nameAssigned) {
+      lines.push({ kind: "name", text: line })
+      nameAssigned = true
+      continue
+    }
+    const bulletMatch = line.match(/^[\u2022\u25cf\u25aa\u2023\u00b7*\u2013\u2014-]\s+(.*)$/)
+    if (bulletMatch) {
+      lines.push({ kind: "bullet", text: bulletMatch[1]! })
+      continue
+    }
+    const letters = line.replace(/[^A-Za-z\u00c0-\u00ff]/g, "")
+    const isHeading =
+      line.length <= 48 &&
+      letters.length >= 3 &&
+      line === line.toUpperCase() &&
+      /[A-Z\u00c0-\u00dd]/.test(line)
+    lines.push(isHeading ? { kind: "heading", text: line } : { kind: "text", text: line })
+  }
+  // Buang gap di ujung
+  while (lines.length > 0 && lines[lines.length - 1]!.kind === "gap") lines.pop()
+  return lines
+}
+
 type Props = {
-  cv: CvStructured
+  rawText: string
   title: string
   language: string
 }
 
 /**
- * Template PDF CV ATS-friendly (1 kolom, font standar, tanpa grafis) yang
- * dirender dari structuredJson versi CV — dipakai untuk fitur "Download PDF"
- * hasil revisi. Dirender sepenuhnya di browser (client-side).
- * Ikut memuat "about" dan section dinamis (Bahasa, Sertifikasi, dll).
+ * PDF CV dari TEKS MENTAH (rawText) — sumber yang sama dengan yang ditimpa
+ * saat revisi. Hasilnya: isi, urutan section, dan kalimat 100% sama dengan
+ * teks CV + revisi yang diterapkan; tidak ada bagian yang dirangkum/hilang.
+ * structuredJson TIDAK dipakai di sini — perannya hanya untuk analisis &
+ * kartu "Hasil baca AI". Dirender sepenuhnya di browser (client-side, gratis).
  */
-export function CvDocument({ cv, title, language }: Props) {
-  const t = language.toLowerCase().startsWith("en") ? LABELS.en : LABELS.id
+export function CvDocument({ rawText, title, language }: Props) {
+  const footer = language.toLowerCase().startsWith("en") ? FOOTER.en : FOOTER.id
+  const lines = parseRawText(rawText)
 
   return (
-    <Document title={title} author={cv.fullName || "Dilirik"} creator="Dilirik" producer="Dilirik">
+    <Document title={title} creator="Dilirik" producer="Dilirik">
       <Page size="A4" style={styles.page}>
-        <Text style={styles.name}>{cv.fullName || title}</Text>
-        {cv.headline ? <Text style={styles.headline}>{cv.headline}</Text> : null}
-
-        {cv.about ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t.about}</Text>
-            <Text>{cv.about}</Text>
-          </View>
-        ) : null}
-
-        {cv.skills.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t.skills}</Text>
-            <View style={styles.skillsRow}>
-              {cv.skills.map((skill, i) => (
-                <Text key={i} style={styles.skill}>{skill}</Text>
-              ))}
-            </View>
-          </View>
-        ) : null}
-
-        {cv.experiences.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t.experience}</Text>
-            {cv.experiences.map((exp, i) => (
-              <View key={i} style={styles.item}>
-                <Text style={styles.itemTitle}>
-                  {exp.title}
-                  {exp.company ? ` — ${exp.company}` : ""}
-                </Text>
-                {exp.period ? <Text style={styles.itemMeta}>{exp.period}</Text> : null}
-                {(exp.highlights ?? []).map((h, j) => (
-                  <View key={j} style={styles.bulletRow}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.bulletText}>{h}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {(cv.achievements ?? []).length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t.achievements}</Text>
-            {(cv.achievements ?? []).map((a, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>{a}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {cv.education.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t.education}</Text>
-            {cv.education.map((edu, i) => (
-              <View key={i} style={styles.item}>
-                <Text style={styles.itemTitle}>{edu.institution}</Text>
-                <Text style={styles.itemMeta}>
-                  {[edu.degree, edu.period].filter(Boolean).join(" · ") || "—"}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {/* Section dinamis dari CV user: Bahasa, Sertifikasi, Proyek, dll */}
-        {(cv.sections ?? []).map((section, i) =>
-          section.items.length > 0 ? (
-            <View key={i} style={styles.section}>
-              <Text style={styles.sectionTitle}>{section.label}</Text>
-              {section.items.map((item, j) => (
-                <View key={j} style={styles.bulletRow}>
+        {lines.map((line, i) => {
+          switch (line.kind) {
+            case "name":
+              return <Text key={i} style={styles.name}>{line.text}</Text>
+            case "heading":
+              return <Text key={i} style={styles.heading}>{line.text}</Text>
+            case "bullet":
+              return (
+                <View key={i} style={styles.bulletRow}>
                   <Text style={styles.bullet}>•</Text>
-                  <Text style={styles.bulletText}>{item}</Text>
+                  <Text style={styles.bulletText}>{line.text}</Text>
                 </View>
-              ))}
-            </View>
-          ) : null,
-        )}
-
-        <Text style={styles.footer} fixed>{t.footer}</Text>
+              )
+            case "gap":
+              return <View key={i} style={styles.gap} />
+            default:
+              return <Text key={i} style={styles.text}>{line.text}</Text>
+          }
+        })}
+        <Text style={styles.footer} fixed>{footer}</Text>
       </Page>
     </Document>
   )

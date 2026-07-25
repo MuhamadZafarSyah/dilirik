@@ -2,21 +2,21 @@
 
 import { useState } from "react"
 import { FiDownload } from "react-icons/fi"
-import type { CvStructured } from "@dilirik/shared"
 
 type Props = {
-  cv: CvStructured
+  rawText: string
   title: string
   version: number
   language: string
 }
 
 /**
- * Tombol "Download PDF": generate PDF dari structuredJson sepenuhnya di
- * browser via @react-pdf/renderer (dynamic import — tidak membebani bundle
- * awal, tidak menyentuh server/kuota, dan tidak perlu storage).
+ * Tombol "Download PDF": generate PDF dari rawText (teks CV utuh + revisi
+ * yang sudah diterapkan) sepenuhnya di browser via @react-pdf/renderer
+ * (dynamic import — tidak membebani bundle awal, tidak menyentuh
+ * server/kuota, dan tidak perlu storage).
  */
-export function DownloadCvButton({ cv, title, version, language }: Props) {
+export function DownloadCvButton({ rawText, title, version, language }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
@@ -28,7 +28,7 @@ export function DownloadCvButton({ cv, title, version, language }: Props) {
         import("@react-pdf/renderer"),
         import("./cv-document"),
       ])
-      const blob = await pdf(<CvDocument cv={cv} title={title} language={language} />).toBlob()
+      const blob = await pdf(<CvDocument rawText={rawText} title={title} language={language} />).toBlob()
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cv"
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
