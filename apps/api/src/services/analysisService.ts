@@ -17,6 +17,8 @@ import { getJob } from "./jobService"
  * 1. Ownership check CV + lowongan.
  * 2. Cek cache (Redis + DB) — hit = GRATIS (tidak konsumsi kuota, tidak panggil AI).
  * 3. Miss → cek & konsumsi kuota → pipeline AI → simpan Analysis + cache.
+ * Engine v2: careerNote & mode ikut disimpan DI DALAM suggestionsJson
+ * (kolom JSON yang sama — tidak butuh migrasi Prisma).
  */
 export async function runAnalysis(args: { userId: string; cvId: string; jobPostingId: string }) {
   const [cv, job] = await Promise.all([
@@ -62,6 +64,8 @@ export async function runAnalysis(args: { userId: string; cvId: string; jobPosti
         rejected: result.rejectedSuggestions,
         ruleScore: result.ruleScore,
         semanticScore: result.semanticScore,
+        careerNote: result.careerNote,
+        mode: result.mode,
       },
       language: result.language,
       engineVersion: result.engineVersion,
