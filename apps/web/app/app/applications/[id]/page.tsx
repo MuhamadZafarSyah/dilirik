@@ -5,9 +5,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FiArrowLeft, FiTrash2, FiCheck, FiFileText, FiZap, FiEdit3 } from "react-icons/fi"
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS, type ApplicationStatus, type JobParsed } from "@dilirik/shared"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { useI18n } from "@/lib/i18n"
 import { useToast } from "@/components/ui/toast"
@@ -28,20 +30,51 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const router = useRouter()
   const { lang, t } = useI18n()
   const { toast } = useToast()
-  const [item, setItem] = useState<AppDetail | null>(null)
-  const [notes, setNotes] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [savingNotes, setSavingNotes] = useState(false)
+  const queryClient = useQueryClient()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  // Pola "draft": state hanya menyimpan editan user; nilai dasar dari cache query.
+  const [notesDraft, setNotesDraft] = useState<string | null>(null)
 
+  const itemQuery = useQuery({
+    queryKey: ["application", id],
+    queryFn: async () => {
+      const { data } = await api.get<{ application: AppDetail }>(`/api/applications/${id}`)
+      return data.application
+    },
+  })
+  const item = itemQuery.data ?? null
+  const notes = notesDraft ?? item?.notes ?? ""
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: { status?: ApplicationStatus; notes?: string }) => {
+      const { data } = await api.patch<{ application: AppDetail }>(`/api/applications/${id}`, payload)
+      return data.application
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["application", id], (prev: AppDetail | undefined) =>
+        prev ? { ...prev, ...updated } : updated
+      )
+      queryClient.invalidateQueries({ queryKey: ["applications"] })
+      toast("Status lamaran berhasil diperbarui!", "success")
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/api/applications/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] })
+      toast("Lamaran dihapus dari tracker.", "success")
+      router.push("/app/applications")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
+
+  // Satu-satunya effect: navigasi keluar bila lamaran tidak ditemukan (bukan data-fetching).
   useEffect(() => {
-    api
-      .get<{ application: AppDetail }>(`/api/applications/${id}`)
-      .then((r) => {
-        setItem(r.data.application)
-        setNotes(r.data.application.notes ?? "")
-      })
-      .catch(() => router.push("/app/applications"))
-  }, [id, router])
+    if (itemQuery.isError) router.push("/app/applications")
+  }, [itemQuery.isError, router])
 
   if (!item) {
     return (
@@ -52,18 +85,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     )
   }
 
-  async function update(payload: { status?: ApplicationStatus; notes?: string }) {
-    setError(null)
-    if (payload.notes !== undefined) setSavingNotes(true)
-    try {
-      const { data } = await api.patch<{ application: AppDetail }>(`/api/applications/${id}`, payload)
-      setItem((prev) => (prev ? { ...prev, ...data.application } : prev))
-      toast("Status lamaran berhasil diperbarui!", "success")
-    } catch (err) {
-      setError(errorMessage(err))
-    } finally {
-      setSavingNotes(false)
-    }
+  const savingNotes = updateMutation.isPending && updateMutation.variables?.notes !== undefined
+  const error = updateMutation.error ? errorMessage(updateMutation.error) : null
+
+  function update(payload: { status?: ApplicationStatus; notes?: string }) {
+    updateMutation.mutate(payload)
   }
 
   return (
@@ -160,7 +186,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         </h3>
         <textarea
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => setNotesDraft(e.target.value)}
           rows={5}
           placeholder="Misal: Interview HR tanggal 28 Juli via Google Meet, persiapkan portofolio UI/UX..."
           className="w-full p-4 rounded-xl border-2 border-line bg-paper text-ink text-sm font-medium outline-none focus:border-ink shadow-inner leading-relaxed"
@@ -178,19 +204,22 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         <Link href="/app/applications">
           <Button variant="outline">← Kembali ke Semua Lamaran</Button>
         </Link>
-        <Button
-          variant="danger"
-          icon={<FiTrash2 />}
-          onClick={async () => {
-            if (confirm("Hapus lamaran ini dari tracker?")) {
-              await api.delete(`/api/applications/${id}`)
-              router.push("/app/applications")
-            }
-          }}
-        >
+        <Button variant="danger" icon={<FiTrash2 />} onClick={() => setConfirmDelete(true)}>
           Hapus Lamaran
         </Button>
       </div>
+
+      {/* Konfirmasi hapus — pengganti window.confirm */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Hapus lamaran ini dari tracker?"
+        description="CV dan lowongan yang terkait tidak ikut terhapus — hanya catatan lamaran ini yang hilang."
+        confirmLabel="Ya, hapus lamaran"
+        onConfirm={async () => {
+          await deleteMutation.mutateAsync().catch(() => {})
+        }}
+      />
     </div>
   )
 }

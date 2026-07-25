@@ -1,13 +1,16 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { FiZap, FiPlus, FiTrash2, FiArrowRight, FiCheckCircle, FiClock } from "react-icons/fi"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
 
 type SessionItem = {
@@ -32,27 +35,23 @@ function AnalyzeHub() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useI18n()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const cvIdParam = searchParams.get("cvId")
   const jobIdParam = searchParams.get("jobId")
-  const [sessions, setSessions] = useState<SessionItem[] | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [sessionToDelete, setSessionToDelete] = useState<SessionItem | null>(null)
 
-  const load = useCallback(() => {
-    api
-      .get<{ sessions: SessionItem[] }>("/api/sessions")
-      .then((r) => setSessions(r.data.sessions))
-      .catch((err) => setError(errorMessage(err)))
-  }, [])
+  const sessionsQuery = useQuery({
+    queryKey: ["sessions"],
+    queryFn: async () => {
+      const { data } = await api.get<{ sessions: SessionItem[] }>("/api/sessions")
+      return data.sessions
+    },
+  })
+  const sessions = sessionsQuery.data ?? null
 
-  useEffect(() => {
-    load()
-  }, [load])
-
-  async function startSession() {
-    setBusy(true)
-    setError(null)
-    try {
+  const startMutation = useMutation({
+    mutationFn: async () => {
       const { data } = await api.post<{ session: { id: string } }>("/api/sessions", {})
       const patchData: Record<string, unknown> = {}
       if (cvIdParam) patchData.cvId = cvIdParam
@@ -63,18 +62,31 @@ function AnalyzeHub() {
       if (Object.keys(patchData).length > 0) {
         await api.patch(`/api/sessions/${data.session.id}`, patchData)
       }
-      router.push(`/app/analyze/session/${data.session.id}`)
-    } catch (err) {
-      setError(errorMessage(err))
-      setBusy(false)
-    }
-  }
+      return data.session.id
+    },
+    onSuccess: (sessionId) => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] })
+      router.push(`/app/analyze/session/${sessionId}`)
+    },
+  })
 
-  async function removeSession(id: string) {
-    if (!confirm("Hapus draft sesi ini? CV & lowongan tersimpan aman.")) return
-    await api.delete(`/api/sessions/${id}`)
-    load()
-  }
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/sessions/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] })
+      toast("Draft sesi dihapus. CV & lowongan tetap aman.", "success")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
+
+  const busy = startMutation.isPending
+  const error = sessionsQuery.isError
+    ? errorMessage(sessionsQuery.error)
+    : startMutation.error
+      ? errorMessage(startMutation.error)
+      : null
 
   const drafts = (sessions ?? []).filter((s) => s.status === "DRAFT")
   const completed = (sessions ?? []).filter((s) => s.status === "COMPLETED").slice(0, 5)
@@ -107,7 +119,7 @@ function AnalyzeHub() {
         </div>
         <div className="pt-2">
           <Button
-            onClick={startSession}
+            onClick={() => startMutation.mutate()}
             isLoading={busy}
             variant="danger"
             size="lg"
@@ -164,7 +176,7 @@ function AnalyzeHub() {
                     size="sm"
                     variant="ghost"
                     icon={<FiTrash2 />}
-                    onClick={() => removeSession(s.id)}
+                    onClick={() => setSessionToDelete(s)}
                     className="text-red hover:bg-red/10"
                   >
                     Hapus
@@ -209,6 +221,20 @@ function AnalyzeHub() {
           </div>
         </section>
       )}
+
+      {/* Konfirmasi hapus draft — pengganti window.confirm */}
+      <ConfirmDialog
+        open={sessionToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setSessionToDelete(null)
+        }}
+        title="Hapus draft sesi ini?"
+        description="CV & lowongan yang sudah tersimpan tidak ikut terhapus — hanya progres draft sesi ini yang hilang."
+        confirmLabel="Ya, hapus draft"
+        onConfirm={async () => {
+          if (sessionToDelete) await deleteMutation.mutateAsync(sessionToDelete.id).catch(() => {})
+        }}
+      />
     </div>
   )
 }

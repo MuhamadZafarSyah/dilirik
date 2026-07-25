@@ -1,21 +1,25 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { FiZap, FiAlertTriangle } from "react-icons/fi"
+import { useQuery } from "@tanstack/react-query"
 import { api, type QuotaInfo } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-/** Sisa kuota SELALU terlihat di header dengan animasi (Flow E). */
+/** Sisa kuota SELALU terlihat di header dengan animasi (Flow E). Di-refresh otomatis via invalidasi ["quota"] setelah analisis baru. */
 export function QuotaPill() {
   const { t } = useI18n()
-  const [quota, setQuota] = useState<QuotaInfo | null>(null)
 
-  useEffect(() => {
-    api.get<QuotaInfo>("/api/analyze/quota").then((r) => setQuota(r.data)).catch(() => {})
-  }, [])
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: async () => {
+      const { data } = await api.get<QuotaInfo>("/api/analyze/quota")
+      return data
+    },
+  })
+  const quota = quotaQuery.data ?? null
 
   if (!quota) return null
   const isUnlimited = quota.quota === null

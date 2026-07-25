@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { FiFileText, FiPlus, FiZap, FiSearch, FiArrowRight } from "react-icons/fi"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { Skeleton } from "boneyard-js/react"
 import { Polaroid } from "@/components/ui/card"
@@ -32,12 +33,16 @@ const itemVariants = {
 
 export default function CvListPage() {
   const { t } = useI18n()
-  const [cvs, setCvs] = useState<CvItem[] | null>(null)
   const [search, setSearch] = useState("")
 
-  useEffect(() => {
-    api.get<{ cvs: CvItem[] }>("/api/cv").then((r) => setCvs(r.data.cvs)).catch(() => setCvs([]))
-  }, [])
+  const cvsQuery = useQuery({
+    queryKey: ["cvs"],
+    queryFn: async () => {
+      const { data } = await api.get<{ cvs: CvItem[] }>("/api/cv")
+      return data.cvs
+    },
+  })
+  const cvs = cvsQuery.data ?? (cvsQuery.isError ? [] : null)
 
   const roots = cvs?.filter((cv) => !cv.parentCvId) ?? []
   const versionsOf = (rootId: string) => cvs?.filter((cv) => cv.parentCvId === rootId) ?? []

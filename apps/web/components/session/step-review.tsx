@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { FiAlertTriangle, FiEdit3 } from "react-icons/fi"
 import { Skeleton } from "boneyard-js/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
@@ -14,38 +14,41 @@ import { FIXABILITY_LABELS, type AnalysisDetail, type Patch, type SessionDetail 
 
 export function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const { t } = useI18n()
-  const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null)
-  const [quotaError, setQuotaError] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        if (session.analysisId) {
-          const r = await api.get<{ analysis: AnalysisDetail }>(`/api/analyze/${session.analysisId}`)
-          if (!cancelled) setAnalysis(r.data.analysis)
-        } else {
-          const r = await api.post<{ analysis: AnalysisDetail }>("/api/analyze", {
-            cvId: session.cvId,
-            jobPostingId: session.jobPostingId,
-          })
-          if (cancelled) return
-          setAnalysis(r.data.analysis)
-          await patch({ analysisId: r.data.analysis.id })
-        }
-      } catch (err) {
-        if (isQuotaExceeded(err)) setQuotaError(true)
-        else setError(errorMessage(err))
+  /**
+   * Satu query "get-or-create":
+   * - Jika analysisId sudah ada → GET detail analisis (cache per id, immutable).
+   * - Jika belum → POST /api/analyze. TanStack Query men-DEDUPE request dengan
+   *   queryKey sama, jadi double-mount StrictMode tidak pernah mengirim 2 POST.
+   * - retry: false → kegagalan POST tidak di-retry otomatis (hemat kuota analisis).
+   */
+  const analysisQuery = useQuery({
+    queryKey: ["analysis", session.analysisId ?? `new:${session.cvId}:${session.jobPostingId}`],
+    enabled: Boolean(session.analysisId ?? (session.cvId && session.jobPostingId)),
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async () => {
+      if (session.analysisId) {
+        const r = await api.get<{ analysis: AnalysisDetail }>(`/api/analyze/${session.analysisId}`)
+        return r.data.analysis
       }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [session.analysisId, session.cvId, session.jobPostingId, patch])
+      const r = await api.post<{ analysis: AnalysisDetail }>("/api/analyze", {
+        cvId: session.cvId,
+        jobPostingId: session.jobPostingId,
+      })
+      // Seed cache di key permanen + sinkronkan analysisId ke sesi (key berganti tanpa refetch).
+      queryClient.setQueryData(["analysis", r.data.analysis.id], r.data.analysis)
+      // Kuota terpakai satu — refresh pill kuota di header.
+      queryClient.invalidateQueries({ queryKey: ["quota"] })
+      await patch({ analysisId: r.data.analysis.id })
+      return r.data.analysis
+    },
+  })
 
-  if (quotaError) {
+  const analysis = analysisQuery.data ?? null
+
+  if (analysisQuery.isError && isQuotaExceeded(analysisQuery.error)) {
     return (
       <Sticky tone="red" className="space-y-3 py-6 text-center">
         <FiAlertTriangle className="mx-auto h-10 w-10 text-red animate-bounce" />
@@ -58,10 +61,10 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
     )
   }
 
-  if (error) {
+  if (analysisQuery.isError) {
     return (
       <Card className="space-y-3 text-center py-6">
-        <p className="text-red text-sm font-semibold">{error}</p>
+        <p className="text-red text-sm font-semibold">{errorMessage(analysisQuery.error)}</p>
         <Button variant="secondary" onClick={() => patch({ step: "JOB" })}>
           ← Kembali ke Input Lowongan
         </Button>
