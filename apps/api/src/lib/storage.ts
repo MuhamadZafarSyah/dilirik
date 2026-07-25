@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 import { randomUUID } from "node:crypto"
 import { env } from "./env"
 
@@ -34,4 +34,16 @@ export async function storeCvFile(args: {
     }),
   )
   return key
+}
+
+/** Ambil file CV dari R2 (untuk download desain asli & revisi DOCX native). */
+export async function getCvFile(
+  key: string,
+): Promise<{ buffer: Buffer; contentType?: string } | null> {
+  const client = getClient()
+  if (!client) return null
+  const res = await client.send(new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: key }))
+  const bytes = await res.Body?.transformToByteArray()
+  if (!bytes) return null
+  return { buffer: Buffer.from(bytes), contentType: res.ContentType }
 }
