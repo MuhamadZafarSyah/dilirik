@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -8,25 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { JobOption, Patch, SessionDetail } from "./types"
 
 export function StepJob({ session, patch }: { session: SessionDetail; patch: Patch }) {
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState<"paste" | "pilih">("paste")
-  const [jobs, setJobs] = useState<JobOption[]>([])
   const [jobId, setJobId] = useState("")
   const [rawText, setRawText] = useState("")
   const [sourceUrl, setSourceUrl] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    api
-      .get<{ jobs: JobOption[] }>("/api/jobs")
-      .then((r) => setJobs(r.data.jobs))
-      .catch(() => {})
-  }, [])
+  const jobsQuery = useQuery({
+    queryKey: ["jobs"],
+    queryFn: async () => {
+      const { data } = await api.get<{ jobs: JobOption[] }>("/api/jobs")
+      return data.jobs
+    },
+  })
+  const jobs = jobsQuery.data ?? []
 
-  async function submit() {
-    setBusy(true)
-    setError(null)
-    try {
+  const submitMutation = useMutation({
+    mutationFn: async () => {
       let id = jobId
       if (tab === "paste") {
         const { data } = await api.post<{ job: { id: string } }>("/api/jobs", {
@@ -34,14 +33,15 @@ export function StepJob({ session, patch }: { session: SessionDetail; patch: Pat
           ...(sourceUrl ? { sourceUrl } : {}),
         })
         id = data.job.id
+        queryClient.invalidateQueries({ queryKey: ["jobs"] })
       }
       // Ganti lowongan = hasil analisis & revisi lama tidak berlaku lagi
       await patch({ jobPostingId: id, analysisId: null, revisedCvId: null, step: "REVIEW" })
-    } catch (err) {
-      setError(errorMessage(err))
-      setBusy(false)
-    }
-  }
+    },
+  })
+
+  const busy = submitMutation.isPending
+  const error = submitMutation.error ? errorMessage(submitMutation.error) : null
 
   return (
     <Card className="relative space-y-5">
@@ -106,7 +106,7 @@ export function StepJob({ session, patch }: { session: SessionDetail; patch: Pat
       {error && <p className="text-red text-xs font-semibold">{error}</p>}
 
       <Button
-        onClick={submit}
+        onClick={() => submitMutation.mutate()}
         isLoading={busy}
         disabled={busy || (tab === "paste" ? rawText.trim().length < 30 : !jobId)}
         variant="primary"

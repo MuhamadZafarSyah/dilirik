@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -15,28 +16,52 @@ import {
 } from "./types"
 
 export function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }) {
-  const [cvFull, setCvFull] = useState<CvFull | null>(null)
-  const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null)
-  const [text, setText] = useState("")
+  const queryClient = useQueryClient()
+  // Pola "draft": state hanya menyimpan editan user; teks dasar diambil dari cache query (tanpa effect sinkronisasi).
+  const [draft, setDraft] = useState<string | null>(null)
   const [applied, setApplied] = useState<Record<number, "ok" | "manual">>({})
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!session.cvId || !session.analysisId) return
-    Promise.all([
-      api.get<{ cv: CvFull }>(`/api/cv/${session.cvId}`),
-      api.get<{ analysis: AnalysisDetail }>(`/api/analyze/${session.analysisId}`),
-    ])
-      .then(([cvR, aR]) => {
-        setCvFull(cvR.data.cv)
-        setAnalysis(aR.data.analysis)
-        setText(cvR.data.cv.rawText)
+  const cvQuery = useQuery({
+    queryKey: ["cv", session.cvId],
+    enabled: Boolean(session.cvId),
+    queryFn: async () => {
+      const { data } = await api.get<{ cv: CvFull }>(`/api/cv/${session.cvId}`)
+      return data.cv
+    },
+  })
+
+  const analysisQuery = useQuery({
+    queryKey: ["analysis", session.analysisId],
+    enabled: Boolean(session.analysisId),
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data } = await api.get<{ analysis: AnalysisDetail }>(`/api/analyze/${session.analysisId}`)
+      return data.analysis
+    },
+  })
+
+  const cvFull = cvQuery.data ?? null
+  const analysis = analysisQuery.data ?? null
+  const text = draft ?? cvFull?.rawText ?? ""
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<{ cv: { id: string } }>(`/api/analyze/${session.analysisId}/apply`, {
+        newRawText: text,
       })
-      .catch(() => setError("Gagal memuat data revisi — coba muat ulang halaman"))
-  }, [session.cvId, session.analysisId])
+      return data.cv.id
+    },
+    onSuccess: async (revisedCvId) => {
+      queryClient.invalidateQueries({ queryKey: ["cvs"] })
+      await patch({ revisedCvId, step: "FINISH" })
+    },
+  })
 
-  if (error && !cvFull) return <p className="text-red text-xs font-semibold">{error}</p>
+  const loadError = cvQuery.isError || analysisQuery.isError ? "Gagal memuat data revisi — coba muat ulang halaman" : null
+  const busy = saveMutation.isPending
+  const error = loadError ?? (saveMutation.error ? errorMessage(saveMutation.error) : null)
+
+  if (loadError && !cvFull) return <p className="text-red text-xs font-semibold">{loadError}</p>
   if (!cvFull || !analysis) return <p className="scrawl text-2xl">Memuat…</p>
 
   const suggestions = analysis.suggestionsJson.suggestions ?? []
@@ -48,7 +73,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
     if (!suggestion) return
     const res = applySuggestionToText(text, suggestion)
     setApplied((prev) => ({ ...prev, [i]: res.applied ? "ok" : "manual" }))
-    if (res.applied) setText(res.text)
+    if (res.applied) setDraft(res.text)
   }
 
   function applyAll() {
@@ -59,22 +84,8 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
       state[i] = res.applied ? "ok" : "manual"
       if (res.applied) current = res.text
     })
-    setText(current)
+    setDraft(current)
     setApplied(state)
-  }
-
-  async function save() {
-    setBusy(true)
-    setError(null)
-    try {
-      const { data } = await api.post<{ cv: { id: string } }>(`/api/analyze/${session.analysisId}/apply`, {
-        newRawText: text,
-      })
-      await patch({ revisedCvId: data.cv.id, step: "FINISH" })
-    } catch (err) {
-      setError(errorMessage(err))
-      setBusy(false)
-    }
   }
 
   return (
@@ -148,18 +159,18 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
           <h3 className="scrawl text-2xl font-bold">Teks CV (bisa diedit)</h3>
           <textarea
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setDraft(e.target.value)}
             rows={22}
             className="w-full p-4 rounded-xl border-2 border-line bg-paper text-ink font-mono text-xs leading-relaxed outline-none focus:border-ink shadow-inner"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={save} isLoading={busy} disabled={busy || !changed} variant="primary">
+            <Button onClick={() => saveMutation.mutate()} isLoading={busy} disabled={busy || !changed} variant="primary">
               {busy ? "Menyimpan versi baru…" : "💾 Simpan sebagai versi baru →"}
             </Button>
             <Button
               variant="secondary"
               onClick={() => {
-                setText(cvFull.rawText)
+                setDraft(null)
                 setApplied({})
               }}
             >
