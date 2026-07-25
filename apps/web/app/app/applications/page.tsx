@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
@@ -12,6 +12,7 @@ import {
   type ApplicationStatus,
   type JobParsed,
 } from "@dilirik/shared"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { Skeleton } from "boneyard-js/react"
 import { Card } from "@/components/ui/card"
@@ -47,18 +48,18 @@ function ApplicationsList() {
   const [filter, setFilter] = useState<ApplicationStatus | "">(
     (params.get("status") as ApplicationStatus) ?? ""
   )
-  const [items, setItems] = useState<AppItem[] | null>(null)
 
-  const load = useCallback(() => {
-    api
-      .get<{ applications: AppItem[] }>(`/api/applications${filter ? `?status=${filter}` : ""}`)
-      .then((r) => setItems(r.data.applications))
-      .catch(() => setItems([]))
-  }, [filter])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  // Filter jadi bagian dari queryKey — tiap status punya cache sendiri, ganti filter = otomatis fetch/reuse.
+  const itemsQuery = useQuery({
+    queryKey: ["applications", filter],
+    queryFn: async () => {
+      const { data } = await api.get<{ applications: AppItem[] }>(
+        `/api/applications${filter ? `?status=${filter}` : ""}`
+      )
+      return data.applications
+    },
+  })
+  const items = itemsQuery.data ?? (itemsQuery.isError ? [] : null)
 
   return (
     <div className="space-y-8">
