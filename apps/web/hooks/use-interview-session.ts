@@ -25,8 +25,8 @@ const KICKOFF_TEXT = "(Sesi dimulai — sapa kandidat dengan singkat lalu ajukan
 
 /**
  * Orkestrasi SATU sesi live (T-M5-09): ambil ephemeral token → connect →
- * mic in / audio out → kumpulkan transkrip → auto-end (frasa penutup / hard cap /
- * koneksi putus) → simpan transkrip TEPAT SEKALI → redirect ke halaman hasil.
+ * mic in / audio out → kumpulkan transkrip → auto-end (tunggu giliran & audio penutup selesai penuh) →
+ * simpan transkrip TEPAT SEKALI → redirect ke halaman hasil.
  */
 export function useInterviewSession(sessionId: string) {
   const router = useRouter()
@@ -80,10 +80,13 @@ export function useInterviewSession(sessionId: string) {
       setPhaseSafe("ending")
       if (timerRef.current) clearInterval(timerRef.current)
       mic.stop()
+
       if (reason === "closing") {
-        await playback.waitUntilDrained() // biarkan kalimat penutup selesai terdengar
-        await new Promise((r) => setTimeout(r, 800))
+        // Biarkan seluruh suara penutup AI terputar hingga habis di speaker user
+        await playback.waitUntilDrained(15000)
+        await new Promise((r) => setTimeout(r, 1000))
       }
+
       clientRef.current?.disconnect()
       playback.dispose()
       commitBuffers()
@@ -138,16 +141,19 @@ export function useInterviewSession(sessionId: string) {
           },
           onOutputTranscript: (text) => {
             outputBufferRef.current += text
-            // Auto-end: pewawancara mengucapkan frasa penutup baku → tunggu audio → tutup.
+            // Tandai frasa penutup baku — tunggu giliran audio selesai penuh baru di-end
             const spoken = outputBufferRef.current.toLowerCase()
             if (!closingDetectedRef.current && INTERVIEW_CLOSING_PHRASES.some((p) => spoken.includes(p))) {
               closingDetectedRef.current = true
-              void endSession("closing")
             }
           },
           onTurnComplete: () => {
             setInterviewerSpeaking(false)
             commitBuffers()
+            // Jika frasa penutup terdeteksi & giliran selesai, akhiri sesi setelah audio drained
+            if (closingDetectedRef.current && !endingRef.current) {
+              void endSession("closing")
+            }
           },
           onInterrupted: () => {
             playback.flush() // kandidat memotong — buang audio yang belum terputar
@@ -157,7 +163,7 @@ export function useInterviewSession(sessionId: string) {
             if (phaseRef.current === "connecting" || phaseRef.current === "live") setError(message)
           },
           onClose: () => {
-            if (phaseRef.current === "live") void endSession("connection")
+            if (phaseRef.current === "live" && !endingRef.current) void endSession("connection")
           },
         },
       })
@@ -170,7 +176,7 @@ export function useInterviewSession(sessionId: string) {
       timerRef.current = setInterval(() => {
         const elapsed = Math.round((Date.now() - startedAtRef.current) / 1000)
         setElapsedSec(elapsed)
-        if (elapsed >= maxDurationRef.current) void endSession("timeout") // hard cap biaya
+        if (elapsed >= maxDurationRef.current && !endingRef.current) void endSession("timeout")
       }, 1000)
     } catch (err) {
       mic.stop()
