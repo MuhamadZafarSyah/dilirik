@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "lint": "next lint"
+    "lint": "eslint app components hooks lib middleware.ts"
   },
   "dependencies": {
     "@dilirik/shared": "workspace:*",
