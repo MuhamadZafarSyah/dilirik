@@ -333,8 +333,8 @@ export default function LandingPage() {
                 setActiveDemo(idx)
               }}
               className={`label rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer select-none ${activeDemo === idx
-                  ? "bg-ink text-paper shadow-paper -rotate-1 scale-105"
-                  : "bg-panel border-2 border-line text-ink hover:border-ink"
+                ? "bg-ink text-paper shadow-paper -rotate-1 scale-105"
+                : "bg-panel border-2 border-line text-ink hover:border-ink"
                 }`}
             >
               {s.role} @ {s.company}

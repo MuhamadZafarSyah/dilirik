@@ -3,6 +3,14 @@
 /* Dark mode berbasis class (html.dark) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Hide browser cursor everywhere when custom cursor is enabled */
+html.cursor-none,
+html.cursor-none *,
+html.cursor-none *::before,
+html.cursor-none *::after {
+  cursor: none !important;
+}
+
 /* ── Design tokens (Tailwind v4, CSS-first) ───────────── */
 @theme {
   --color-paper: #f2e8d5;

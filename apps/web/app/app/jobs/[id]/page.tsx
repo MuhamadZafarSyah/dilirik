@@ -8,6 +8,7 @@ import type { JobParsed } from "@dilirik/shared"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useI18n } from "@/lib/i18n"
 
@@ -18,6 +19,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const router = useRouter()
   const { t } = useI18n()
   const [job, setJob] = useState<JobDetail | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     api.get<{ job: JobDetail }>(`/api/jobs/${id}`).then((r) => setJob(r.data.job)).catch(() => router.push("/app/jobs"))
@@ -75,12 +77,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <Button
             variant="ghost"
             icon={<FiTrash2 />}
-            onClick={async () => {
-              if (confirm("Hapus lowongan ini?")) {
-                await api.delete(`/api/jobs/${job.id}`)
-                router.push("/app/jobs")
-              }
-            }}
+            onClick={() => setConfirmDelete(true)}
             className="text-red hover:bg-red/10"
           >
             Hapus
@@ -167,6 +164,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Hapus lowongan ini?"
+        description="Lowongan pekerjaan yang dihapus tidak dapat dikembalikan."
+        confirmLabel="Ya, Hapus Lowongan"
+        cancelLabel="Batal"
+        onConfirm={async () => {
+          await api.delete(`/api/jobs/${job.id}`)
+          router.push("/app/jobs")
+        }}
+      />
     </div>
   )
 }
