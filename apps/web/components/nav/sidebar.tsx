@@ -12,7 +12,6 @@ import {
   FiMic,
   FiSettings,
   FiZap,
-  FiUser,
   FiGlobe,
 } from "react-icons/fi"
 import { signOut } from "@/lib/auth-client"
@@ -63,7 +62,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation items */}
-      <nav className="flex flex-1 flex-row gap-1.5 overflow-x-auto pb-1 md:flex-col md:pb-0 scrollbar-none">
+      <nav className="flex flex-1 flex-row gap-1.5 overflow-x-auto pb-1 md:flex-col md:pb-0 scrollbar-none relative">
         {items.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href)
           return (
@@ -71,19 +70,24 @@ export function Sidebar() {
               key={href}
               href={href}
               className={cn(
-                "label relative flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold whitespace-nowrap transition-all select-none",
-                active
-                  ? "bg-ink text-paper shadow-paper -rotate-1"
-                  : "text-ink hover:bg-line/40 hover:text-ink"
+                "label relative flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold whitespace-nowrap transition-colors select-none",
+                active ? "text-paper z-10" : "text-ink hover:bg-line/30"
               )}
             >
-              <Icon className={cn("h-4 w-4 shrink-0", active ? "text-yellow" : "text-muted")} />
-              <span>{label}</span>
+              {active && (
+                <motion.div
+                  layoutId="activeSidebarBg"
+                  className="absolute inset-0 bg-ink rounded-xl shadow-paper -rotate-1 z-0 pointer-events-none"
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                />
+              )}
+              <Icon className={cn("h-4 w-4 shrink-0 z-10", active ? "text-yellow" : "text-muted")} />
+              <span className="z-10">{label}</span>
               {active && (
                 <motion.span
-                  layoutId="activeSidebarIndicator"
-                  className="bg-yellow absolute right-2 h-2 w-2 rounded-full hidden md:block"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  layoutId="activeSidebarDot"
+                  className="bg-yellow absolute right-3.5 h-2 w-2 rounded-full hidden md:block z-10 pointer-events-none"
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 />
               )}
             </Link>

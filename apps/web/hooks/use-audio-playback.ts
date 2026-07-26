@@ -48,7 +48,7 @@ export function useAudioPlayback() {
       const samples = pcm16ToFloat32(base64ToArrayBuffer(base64Pcm24k))
       if (samples.length === 0) return
       const buffer = context.createBuffer(1, samples.length, OUTPUT_SAMPLE_RATE)
-      buffer.copyToChannel(samples, 0)
+      buffer.getChannelData(0).set(samples)
       const source = context.createBufferSource()
       source.buffer = buffer
       source.connect(gainRef.current!)
