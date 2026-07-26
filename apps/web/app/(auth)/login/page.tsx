@@ -1,11 +1,11 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { useEffect, Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { FaGithub, FaGoogle } from "react-icons/fa6"
-import { signIn } from "@/lib/auth-client"
+import { signIn, useSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -13,10 +13,17 @@ function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const next = params.get("next") ?? "/app"
+  const { data: session } = useSession()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (session) {
+      router.replace(next)
+    }
+  }, [session, next, router])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

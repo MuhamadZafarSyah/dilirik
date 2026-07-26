@@ -1,19 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { FaGithub, FaGoogle } from "react-icons/fa6"
-import { signIn, signUp } from "@/lib/auth-client"
+import { signIn, signUp, useSession } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
 export default function RegisterPage() {
+  const router = useRouter()
+  const { data: session } = useSession()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (session) {
+      router.replace("/app")
+    }
+  }, [session, router])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

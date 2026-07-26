@@ -4,7 +4,18 @@ import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FiArrowLeft, FiMic } from "react-icons/fi"
+import { motion } from "framer-motion"
+import {
+  FiArrowLeft,
+  FiMic,
+  FiFileText,
+  FiBriefcase,
+  FiCheckCircle,
+  FiZap,
+  FiAward,
+  FiTarget,
+  FiCpu,
+} from "react-icons/fi"
 import { INTERVIEW_PERSONAS, INTERVIEW_PERSONA_LABELS, type InterviewPersona } from "@dilirik/shared"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -16,9 +27,16 @@ import { cn } from "@/lib/utils"
 type CvItem = { id: string; title: string; version: number; language: string }
 type JobItem = { id: string; parsedJson: { jobTitle?: string; company?: string } | null; rawText: string }
 
+const DIFFICULTY_MAP: Record<InterviewPersona, { level: string; color: string; badge: string }> = {
+  SANTAI: { level: "⭐ Level 1 — Suportif", color: "border-green/60 bg-green/10 text-green", badge: "EASY" },
+  NETRAL: { level: "⭐⭐ Level 2 — Standar HR", color: "border-blue/60 bg-blue/10 text-blue", badge: "MEDIUM" },
+  TEGAS: { level: "⭐⭐⭐ Level 3 — Tech Lead", color: "border-yellow/60 bg-yellow/20 text-ink", badge: "HARD" },
+  MENEKAN: { level: "💥 Level 4 — Boss Challenge", color: "border-red/60 bg-red/15 text-red", badge: "EXPERT" },
+}
+
 export default function NewInterviewPage() {
   return (
-    <Suspense fallback={<p className="p-8 text-center">Memuat…</p>}>
+    <Suspense fallback={<p className="scrawl text-2xl text-center py-20">Memuat Arena Interview…</p>}>
       <NewInterviewForm />
     </Suspense>
   )
@@ -30,7 +48,6 @@ function NewInterviewForm() {
   const queryClient = useQueryClient()
   const { lang } = useI18n()
 
-  // Prefill dari CTA jembatan (wizard Finish / tracker status Interview)
   const prefCvId = params.get("cvId")
   const prefJobId = params.get("jobId")
   const analysisId = params.get("analysisId")
@@ -49,7 +66,6 @@ function NewInterviewForm() {
     queryFn: async () => (await api.get<{ jobs: JobItem[] }>("/api/jobs")).data.jobs,
   })
 
-  // Kalau CV prefill sudah tidak ada (mis. dihapus), lepas pilihan.
   useEffect(() => {
     if (cvId && cvsQuery.data && !cvsQuery.data.some((cv) => cv.id === cvId)) setCvId(null)
   }, [cvId, cvsQuery.data])
@@ -78,127 +94,244 @@ function NewInterviewForm() {
   const cvs = cvsQuery.data ?? []
   const jobs = jobsQuery.data ?? []
 
+  const isReady = Boolean(cvId)
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
-      <div className="flex items-center gap-3">
-        <Link href="/app/interview" className="inline-flex items-center gap-1 text-sm underline">
-          <FiArrowLeft /> {lang === "id" ? "Kembali" : "Back"}
+    <div className="mx-auto max-w-4xl space-y-8 p-4 md:p-8">
+      {/* Header Nav */}
+      <div className="flex items-center justify-between">
+        <Link href="/app/interview" className="label text-xs font-bold text-muted hover:text-ink flex items-center gap-1">
+          <FiArrowLeft /> {lang === "id" ? "Kembali ke Riwayat" : "Back to History"}
         </Link>
+        <span className="label bg-yellow/40 border border-yellow/70 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+          🎮 Mode Simulasi Suara Live
+        </span>
       </div>
-      <div>
-        <h1 className="scrawl text-3xl font-bold">🎙️ {lang === "id" ? "Latihan Interview Baru" : "New Mock Interview"}</h1>
-        <p className="mt-1 opacity-70">
+
+      {/* Hero Banner */}
+      <div className="text-center space-y-3">
+        <h1 className="hand text-4xl sm:text-6xl font-bold text-ink">
+          Arena Latihan Interview AI 🎙️
+        </h1>
+        <p className="scrawl text-muted text-xl max-w-xl mx-auto">
           {lang === "id"
-            ? "Pewawancara AI akan menyapa lewat suara — siapkan mic dan tempat yang tenang."
-            : "The AI interviewer talks to you by voice — grab your mic and a quiet spot."}
+            ? "Pilih Karakter CV, Arena Lowongan, dan Tantang Boss Pewawancara AI!"
+            : "Pick your CV Character, Target Job Arena, and Challenge the AI Boss Interviewer!"}
         </p>
       </div>
 
-      {/* 1. Pilih CV (wajib) */}
-      <Card tape="yellow">
-        <h2 className="mb-3 font-bold">1. {lang === "id" ? "Pilih CV" : "Pick a CV"}</h2>
+      {/* Step 1: Character CV Selection */}
+      <Card tape="yellow" pin rotate={-0.5} className="space-y-4 p-6 sm:p-8">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-ink text-paper h-7 w-7 rounded-lg flex items-center justify-center font-bold text-sm">
+              1
+            </span>
+            <h2 className="hand text-2xl font-bold text-ink">
+              {lang === "id" ? "Pilih Karakter CV Kamu 📄" : "Choose Your CV Character 📄"}
+            </h2>
+          </div>
+          {cvId && <span className="label bg-green/20 text-green px-2.5 py-0.5 rounded-full text-xs font-bold">✓ Terpilih</span>}
+        </div>
+
         {cvsQuery.isLoading ? (
-          <p className="opacity-70">{lang === "id" ? "Memuat CV…" : "Loading CVs…"}</p>
+          <p className="scrawl text-muted text-lg">{lang === "id" ? "Memuat koleksi CV…" : "Loading CVs…"}</p>
         ) : cvs.length === 0 ? (
           <EmptyState
-            title={lang === "id" ? "Belum ada CV" : "No CVs yet"}
-            ctaLabel={lang === "id" ? "Tambah CV dulu" : "Add a CV first"}
+            title={lang === "id" ? "Belum ada CV master" : "No master CV found"}
+            ctaLabel={lang === "id" ? "+ Tambah Master CV Baru" : "+ Add New Master CV"}
             ctaHref="/app/cv/new"
           />
         ) : (
-          <div className="space-y-2">
-            {cvs.map((cv) => (
-              <button
-                key={cv.id}
-                type="button"
-                onClick={() => setCvId(cv.id)}
-                className={cn(
-                  "block w-full rounded-lg border-2 border-ink/20 px-4 py-2 text-left transition",
-                  cvId === cv.id ? "border-ink bg-paper-yellow font-bold" : "hover:border-ink/50",
-                )}
-              >
-                {cv.title} <span className="text-sm opacity-60">v{cv.version}</span>
-              </button>
-            ))}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {cvs.map((cv) => {
+              const selected = cvId === cv.id
+              return (
+                <motion.button
+                  key={cv.id}
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setCvId(cv.id)}
+                  className={cn(
+                    "relative text-left p-4 rounded-xl border-2 transition-all select-none cursor-pointer",
+                    selected
+                      ? "border-ink bg-ink text-paper shadow-paper -rotate-1"
+                      : "border-line bg-paper/80 hover:border-ink text-ink shadow-xs",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="hand text-xl font-bold truncate">{cv.title}</span>
+                    <span className={cn("label px-2 py-0.5 rounded text-[10px] uppercase font-bold", selected ? "bg-yellow text-ink" : "bg-panel text-muted")}>
+                      v{cv.version}
+                    </span>
+                  </div>
+                  <p className={cn("text-xs mt-1", selected ? "text-paper/80" : "text-muted")}>
+                    Bahasa: {cv.language.toUpperCase()}
+                  </p>
+                </motion.button>
+              )
+            })}
           </div>
         )}
       </Card>
 
-      {/* 2. Lowongan (opsional) */}
-      <Card tape="blue">
-        <h2 className="mb-3 font-bold">
-          2. {lang === "id" ? "Lowongan (opsional)" : "Job posting (optional)"}
-        </h2>
-        <div className="space-y-2">
-          <button
+      {/* Step 2: Battle Arena (Job Posting) */}
+      <Card tape="blue" rotate={0.5} className="space-y-4 p-6 sm:p-8">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-ink text-paper h-7 w-7 rounded-lg flex items-center justify-center font-bold text-sm">
+              2
+            </span>
+            <h2 className="hand text-2xl font-bold text-ink">
+              {lang === "id" ? "Target Arena Lowongan 🎯" : "Target Job Arena 🎯"}
+            </h2>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* General Arena Option */}
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setJobId(null)}
             className={cn(
-              "block w-full rounded-lg border-2 border-ink/20 px-4 py-2 text-left transition",
-              jobId === null ? "border-ink bg-paper-yellow font-bold" : "hover:border-ink/50",
+              "relative text-left p-4 rounded-xl border-2 transition-all select-none cursor-pointer",
+              jobId === null
+                ? "border-ink bg-ink text-paper shadow-paper -rotate-1"
+                : "border-line bg-paper/80 hover:border-ink text-ink shadow-xs",
             )}
           >
-            {lang === "id" ? "Interview umum (tanpa lowongan spesifik)" : "General interview (no specific job)"}
-          </button>
-          {jobs.map((job) => (
-            <button
-              key={job.id}
-              type="button"
-              onClick={() => setJobId(job.id)}
-              className={cn(
-                "block w-full rounded-lg border-2 border-ink/20 px-4 py-2 text-left transition",
-                jobId === job.id ? "border-ink bg-paper-yellow font-bold" : "hover:border-ink/50",
-              )}
-            >
-              {job.parsedJson?.jobTitle || job.rawText.slice(0, 60)}
-              {job.parsedJson?.company ? <span className="text-sm opacity-60"> — {job.parsedJson.company}</span> : null}
-            </button>
-          ))}
+            <span className="hand text-xl font-bold block">
+              🌐 {lang === "id" ? "Arena Umum (Pertanyaan HR General)" : "General Arena (HR General Questions)"}
+            </span>
+            <p className={cn("text-xs mt-1", jobId === null ? "text-paper/80" : "text-muted")}>
+              Cocok untuk latihan bebas tanpa fokus ke lowongan tertentu.
+            </p>
+          </motion.button>
+
+          {/* Specific Jobs */}
+          {jobs.map((job) => {
+            const selected = jobId === job.id
+            const title = job.parsedJson?.jobTitle || job.rawText.slice(0, 50)
+            const company = job.parsedJson?.company
+            return (
+              <motion.button
+                key={job.id}
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setJobId(job.id)}
+                className={cn(
+                  "relative text-left p-4 rounded-xl border-2 transition-all select-none cursor-pointer",
+                  selected
+                    ? "border-ink bg-ink text-paper shadow-paper -rotate-1"
+                    : "border-line bg-paper/80 hover:border-ink text-ink shadow-xs",
+                )}
+              >
+                <span className="hand text-xl font-bold block truncate">{title}</span>
+                <p className={cn("text-xs mt-1 truncate", selected ? "text-paper/80" : "text-muted")}>
+                  🏢 {company ? company : "Perusahaan Target"}
+                </p>
+              </motion.button>
+            )
+          })}
         </div>
       </Card>
 
-      {/* 3. Persona pewawancara */}
-      <Card tape="red">
-        <h2 className="mb-3 font-bold">3. {lang === "id" ? "Gaya pewawancara" : "Interviewer style"}</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {/* Step 3: Boss Interviewer Style Selection */}
+      <Card tape="red" pin rotate={-0.5} className="space-y-4 p-6 sm:p-8">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-ink text-paper h-7 w-7 rounded-lg flex items-center justify-center font-bold text-sm">
+              3
+            </span>
+            <h2 className="hand text-2xl font-bold text-ink">
+              {lang === "id" ? "Pilih Boss Pewawancara 🎭" : "Select Boss Interviewer Style 🎭"}
+            </h2>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           {INTERVIEW_PERSONAS.map((p) => {
             const label = INTERVIEW_PERSONA_LABELS[p]
+            const diff = DIFFICULTY_MAP[p]
+            const selected = persona === p
+
             return (
-              <button
+              <motion.button
                 key={p}
                 type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setPersona(p)}
                 className={cn(
-                  "rounded-lg border-2 border-ink/20 px-4 py-3 text-left transition",
-                  persona === p ? "border-ink bg-paper-yellow" : "hover:border-ink/50",
+                  "relative text-left p-5 rounded-2xl border-2 transition-all select-none cursor-pointer flex flex-col justify-between space-y-3",
+                  selected
+                    ? "border-ink bg-panel shadow-lift ring-2 ring-ink -rotate-1"
+                    : "border-line bg-paper/60 hover:border-ink shadow-paper",
                 )}
               >
-                <span className="font-bold">
-                  {label.emoji} {lang === "id" ? label.id : label.en}
-                </span>
-                <span className="mt-1 block text-sm opacity-70">{lang === "id" ? label.hint.id : label.hint.en}</span>
-              </button>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-3xl">{label.emoji}</span>
+                    <span className={cn("label px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border", diff.color)}>
+                      {diff.badge}
+                    </span>
+                  </div>
+
+                  <h3 className="hand text-2xl font-bold text-ink">
+                    {lang === "id" ? label.id : label.en}
+                  </h3>
+
+                  <p className="text-muted text-xs leading-relaxed mt-1">
+                    {lang === "id" ? label.hint.id : label.hint.en}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-line/60 flex items-center justify-between text-xs font-bold">
+                  <span className="text-muted">{diff.level}</span>
+                  {selected && <span className="text-green font-bold flex items-center gap-1">✓ Siap Ditantang</span>}
+                </div>
+              </motion.button>
             )
           })}
         </div>
       </Card>
 
       {error && (
-        <Sticky tone="red" rotate={-0.5}>
-          <p className="font-bold">{error}</p>
+        <Sticky tone="red" rotate={-0.5} className="text-center py-4">
+          <p className="hand text-2xl font-bold text-red">{error}</p>
         </Sticky>
       )}
 
-      <div className="flex justify-end">
+      {/* Gamified Action Footer */}
+      <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-panel border-2 border-line rounded-2xl p-6 shadow-paper">
+        <div className="text-center sm:text-left">
+          <p className="hand text-2xl font-bold text-ink">
+            {isReady ? "Siapkan Microfon & Tempat Tenang 🎧" : "Pilih CV Terlebih Dahulu ⚠️"}
+          </p>
+          <p className="scrawl text-muted text-sm">
+            AI akan menyapa lewat audio live secara dua arah.
+          </p>
+        </div>
+
         <Button
-          variant="primary"
+          variant="danger"
           size="lg"
           icon={<FiMic />}
+          tape="red"
           isLoading={createMutation.isPending}
-          disabled={!cvId || createMutation.isPending}
+          disabled={!isReady || createMutation.isPending}
           onClick={() => createMutation.mutate()}
+          className="w-full sm:w-auto px-8"
         >
-          {lang === "id" ? "Mulai Sesi Latihan" : "Start Practice Session"}
+          {createMutation.isPending
+            ? "Menyiapkan Arena…"
+            : lang === "id"
+            ? "🔥 MULAI TANDING SEKARANG 🎙️"
+            : "🔥 START LIVE INTERVIEW 🎙️"}
         </Button>
       </div>
     </div>
