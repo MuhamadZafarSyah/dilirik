@@ -248,4 +248,34 @@ export function LandingHero() {
             className="absolute -bottom-2 -left-4 z-10 sm:-left-8"
           >
             <Sticky tone="red" rotate={-5} className="w-44 p-4">
-              <p className="scrawl
+              <p className="scrawl text-xl leading-tight text-ink">
+                1 gap presentasi ketemu! pindahkan metrikmu ke atas 📌
+              </p>
+            </Sticky>
+          </motion.div>
+
+          <span className="label absolute -right-2 -top-5 z-10 inline-block rotate-3 animate-wiggle rounded-full border-2 border-green/50 bg-green/20 px-3 py-1.5 text-xs font-bold uppercase text-green shadow-paper sm:-right-4">
+            ✓ 100% Fakta — Guardrail ON
+          </span>
+        </motion.div>
+      </div>
+
+      {/* ===== Marquee perusahaan target ===== */}
+      <div className="overflow-hidden border-y-2 border-line bg-panel/60 py-5">
+        <p className="label mb-3 text-center text-xs font-bold uppercase tracking-widest text-muted">
+          Disiapkan untuk kandidat yang menargetkan perusahaan top Indonesia 🇮🇩
+        </p>
+        <div className="flex animate-marquee gap-8 whitespace-nowrap">
+          {[...TARGET_COMPANIES, ...TARGET_COMPANIES].map((company, idx) => (
+            <span
+              key={idx}
+              className="label inline-flex items-center gap-2 rounded-lg border border-line bg-paper px-4 py-1.5 text-xs font-bold uppercase text-ink shadow-paper"
+            >
+              🏢 {company}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
