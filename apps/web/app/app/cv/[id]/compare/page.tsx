@@ -73,8 +73,8 @@ function ComparePageInner({ id }: { id: string }) {
         <div className="border-line bg-panel shadow-paper inline-flex items-center gap-1 rounded-lg border-2 p-1">
           {(
             [
-              ["design", "\ud83c\udfa8 Desain (PDF)"],
-              ["text", "\ud83d\udcdd Teks"],
+              ["design", "🎨 Desain (PDF)"],
+              ["text", "📝 Teks"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -128,7 +128,7 @@ function ComparePageInner({ id }: { id: string }) {
       </div>
 
       <p className="text-muted text-xs">
-        \ud83d\udca1 Panel di atas merender file desain asli tiap versi — DOCX otomatis dikonversi ke PDF, jadi yang kamu lihat sama persis dengan hasil download. Versi tanpa file desain ditampilkan sebagai teks.
+        💡 Panel di atas merender file desain asli tiap versi — DOCX otomatis dikonversi ke PDF, jadi yang kamu lihat sama persis dengan hasil download. Versi tanpa file desain ditampilkan sebagai teks.
       </p>
     </div>
   )

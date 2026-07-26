@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import type { CvStructured } from "@dilirik/shared"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
-import { DownloadCvButton } from "@/components/pdf/download-cv-button"
+import { CvDesignPanel } from "@/components/pdf/cv-design-panel"
+import { DownloadCvMenu } from "@/components/pdf/download-cv-menu"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -21,12 +22,13 @@ type CvDetail = {
   parentCvId: string | null
   rawText: string
   structuredJson: CvStructured
+  fileKey: string | null
   createdAt: string
 }
 
 type CvListItem = { id: string; version: number; parentCvId: string | null }
 
-/** Detail CV: hasil parsing terstruktur + teks asli + aksi (analisis, compare, download PDF, hapus). */
+/** Detail CV: desain asli (PDF) + hasil parsing terstruktur + aksi (analisis, compare, download Word/PDF, hapus). */
 export default function CvDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -34,6 +36,7 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [designTab, setDesignTab] = useState<"design" | "text">("design")
 
   const cvQuery = useQuery({
     queryKey: ["cv", id],
@@ -91,8 +94,8 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
           <h1 className="hand text-4xl">{cv.title}</h1>
           <p className="label text-muted text-xs uppercase">bahasa: {cv.language} · versi {cv.version}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <DownloadCvButton rawText={cv.rawText} title={cv.title} version={cv.version} language={cv.language} />
+        <div className="flex flex-wrap items-center gap-2">
+          <DownloadCvMenu cv={cv} />
           <Link href={`/app/analyze?cvId=${cv.id}`} className="label bg-red text-paper rounded-md px-4 py-2 text-sm font-bold">⚡ Analisis dengan lowongan</Link>
           {siblings.length > 0 ? (
             <Link href={`/app/cv/${cv.id}/compare?with=${siblings[0]!.id}`} className="label bg-panel border-line rounded-md border-2 px-4 py-2 text-sm font-bold">{t("compare")}</Link>
@@ -182,14 +185,42 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
           ))}
 
           <Sticky tone="blue" className="text-xs">
-            Semua kartu di atas mengikuti isi CV-mu dan ikut jadi bahan analisis. Hasil baca kurang akurat? Analisis tetap memakai teks asli CV sebagai sumber fakta — dan PDF di-download dari teks asli, bukan dari kartu ini.
+            Semua kartu di atas mengikuti isi CV-mu dan ikut jadi bahan analisis. Hasil baca kurang akurat? Analisis tetap memakai teks asli CV sebagai sumber fakta — dan file yang kamu download tetap memakai desain aslinya, bukan kartu ini.
           </Sticky>
         </div>
 
-        {/* Teks asli */}
-        <div>
-          <h2 className="scrawl text-2xl">Teks asli</h2>
-          <pre className="card bg-paper border-line mt-4 max-h-[32rem] overflow-auto rounded-lg border-2 p-4 text-xs whitespace-pre-wrap">{cv.rawText}</pre>
+        {/* Desain asli (PDF) + teks asli — upload DOCX otomatis dikonversi ke PDF */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="scrawl text-2xl">CV kamu</h2>
+            {cv.fileKey ? (
+              <div className="border-line bg-panel inline-flex items-center gap-1 rounded-lg border-2 p-1">
+                {(
+                  [
+                    ["design", "🎨 Desain asli"],
+                    ["text", "📝 Teks"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setDesignTab(value)}
+                    aria-pressed={designTab === value}
+                    className={`label rounded-md px-3 py-1 text-xs font-bold uppercase transition-colors ${
+                      designTab === value ? "bg-ink text-paper" : "text-muted hover:bg-line/40"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {cv.fileKey && designTab === "design" ? (
+            <CvDesignPanel cvId={cv.id} fileKey={cv.fileKey} fallbackText={cv.rawText} maxHeightClassName="max-h-[44rem]" />
+          ) : (
+            <pre className="card bg-paper border-line max-h-[32rem] overflow-auto rounded-lg border-2 p-4 text-xs leading-relaxed whitespace-pre-wrap">{cv.rawText}</pre>
+          )}
         </div>
       </div>
 
