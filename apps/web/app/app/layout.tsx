@@ -16,10 +16,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="paper-texture flex min-h-screen flex-col md:flex-row">
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="border-line bg-panel/50 flex items-center justify-between gap-3 border-b-2 px-4 py-3 md:px-8 backdrop-blur-xs">
-              <div className="md:hidden flex items-center gap-2">
-                <span className="hand text-2xl font-bold">Dilirik 👀</span>
-              </div>
+            <header className="border-line bg-panel/50 hidden md:flex items-center justify-between gap-3 border-b-2 px-8 py-3 backdrop-blur-xs">
               <div className="flex items-center gap-3 ml-auto">
                 <QuotaPill />
               </div>

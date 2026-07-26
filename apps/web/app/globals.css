@@ -202,7 +202,7 @@ textarea:focus-visible:not(.outline-none) {
     @apply bg-panel p-3 pb-12 shadow-paper;
     border: 1px solid color-mix(in srgb, var(--color-line) 80%, transparent);
   }
-  .sticky {
+  .sticky-note {
     @apply p-5 shadow-paper;
     background: #fbe89a;
     background-image: linear-gradient(180deg, #ffe98f, #f6d96b);

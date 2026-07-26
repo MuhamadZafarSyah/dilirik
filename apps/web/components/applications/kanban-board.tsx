@@ -178,13 +178,13 @@ export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
                     <header className={cn("flex items-center justify-between gap-2 px-4 py-3 border-b border-line rounded-t-xl shrink-0", columnHeaderBg[status])}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", columnDot[status])} />
-                        <h2 className="label text-xs font-bold uppercase tracking-wider truncate">
-                          {APPLICATION_STATUS_LABELS[status][lang]} ({colItems.length})
+                        <h2 className="label text-xs font-bold uppercase tracking-wider ">
+                          {APPLICATION_STATUS_LABELS[status][lang]}
                         </h2>
                       </div>
-                      <button className="text-muted hover:text-ink transition-colors p-1 rounded-md">
-                        <FiMoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <h2 className="label text-xs font-bold uppercase tracking-wider truncate">
+                        ({colItems.length})
+                      </h2>
                     </header>
 
                     {/* Cards Container */}
