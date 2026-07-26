@@ -3,7 +3,7 @@
 import { useRef } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { FiChevronLeft, FiChevronRight, FiFileText } from "react-icons/fi"
+import { FiChevronLeft, FiChevronRight, FiFileText, FiMessageSquare, FiPaperclip, FiUser } from "react-icons/fi"
 import { scoreTone, type ApplicationStatus, type JobParsed } from "@dilirik/shared"
 import { cn } from "@/lib/utils"
 
@@ -16,24 +16,17 @@ export type KanbanItem = {
   jobPosting: { id: string; parsedJson: JobParsed }
 }
 
-/** Warna sticky note per kolom status — selaras dengan StatusBadge & Sticky. */
-const noteTone: Record<ApplicationStatus, string> = {
-  DISIMPAN: "bg-panel border-line",
-  DILAMAR: "bg-blue/10 border-blue/60",
-  SCREENING: "bg-yellow/25 border-yellow/70",
-  INTERVIEW: "bg-blue/20 border-blue/70",
-  OFFER: "bg-green/15 border-green/60",
-  DITOLAK: "bg-red/10 border-red/60",
+const statusDotColor: Record<ApplicationStatus, string> = {
+  DISIMPAN: "bg-blue-500",
+  DILAMAR: "bg-yellow-500",
+  SCREENING: "bg-purple-500",
+  INTERVIEW: "bg-blue-600",
+  OFFER: "bg-green-500",
+  DITOLAK: "bg-red-500",
 }
 
 const scoreText = { red: "text-red", yellow: "text-yellow", green: "text-green" } as const
 
-/**
- * Kartu lamaran bergaya sticky note.
- * Root-nya div biasa (bukan motion.div) karena framer-motion membajak prop
- * onDragStart/onDragEnd untuk gesture-nya sendiri — drag & drop native HTML5
- * butuh event DOM asli.
- */
 export function KanbanCard({
   item,
   rotate,
@@ -54,6 +47,8 @@ export function KanbanCard({
   const router = useRouter()
   const dragHappened = useRef(false)
   const title = item.jobPosting.parsedJson.jobTitle || "Posisi Tanpa Judul"
+  const company = item.jobPosting.parsedJson.company ?? "Perusahaan"
+  const initial = company.charAt(0).toUpperCase()
 
   const openDetail = () => {
     if (dragHappened.current) return
@@ -83,50 +78,67 @@ export function KanbanCard({
       tabIndex={0}
       aria-label={`Buka detail lamaran ${title}`}
       className={cn(
-        "group cursor-grab select-none outline-none transition-opacity active:cursor-grabbing",
-        isDragging && "opacity-40"
+        "group cursor-grab select-none outline-none transition-all active:cursor-grabbing",
+        isDragging && "opacity-30"
       )}
-      style={{ transform: `rotate(${rotate}deg)` }}
+      style={{ transform: `rotate(${rotate * 0.4}deg)` }}
     >
       <motion.div
-        whileHover={{ rotate: 0, scale: 1.03, y: -3 }}
+        whileHover={{ scale: 1.02, y: -2 }}
         transition={{ type: "spring", stiffness: 350, damping: 22 }}
-        className={cn(
-          "sticky-note relative rounded-sm border-l-4 p-3.5 shadow-paper backdrop-blur-xs",
-          noteTone[item.status]
-        )}
+        className="bg-paper border-2 border-line/80 rounded-2xl p-4 shadow-paper space-y-2.5 hover:border-ink transition-colors relative"
       >
-        <h3 className="hand line-clamp-2 text-xl font-bold leading-tight text-ink transition-colors group-hover:text-blue">
+        {/* Top Header: Dot + Date */}
+        <div className="flex items-center justify-between text-[11px] text-muted font-bold">
+          <div className="flex items-center gap-1.5">
+            <span className={cn("h-2 w-2 rounded-full", statusDotColor[item.status])} />
+            <span>
+              {new Date(item.updatedAt).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          <span className="label bg-panel border border-line px-1.5 py-0.5 rounded text-[9px] font-bold text-muted">
+            {company}
+          </span>
+        </div>
+
+        {/* Title */}
+        <h3 className="hand text-lg font-bold leading-snug text-ink line-clamp-2 group-hover:text-blue transition-colors">
           {title}
         </h3>
-        <p className="label mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-muted">
-          {item.jobPosting.parsedJson.company ?? "Perusahaan"}
-        </p>
 
-        <p className="mt-2 flex items-center gap-1 truncate text-[11px] text-muted">
-          <FiFileText className="h-3 w-3 shrink-0" />
-          <span className="truncate">
-            {item.cv.title} · v{item.cv.version}
+        {/* Sub Info: CV details */}
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <FiFileText className="h-3.5 w-3.5 text-ink shrink-0" />
+          <span className="truncate text-[11px]">
+            {item.cv.title} <span className="opacity-75">(v{item.cv.version})</span>
           </span>
-        </p>
+        </div>
 
-        <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-line/70 pt-2">
-          <span className="text-[10px] text-muted">
-            {new Date(item.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
-          </span>
-
-          <div className="flex items-center gap-1.5">
-            {item.matchScore !== null && (
+        {/* Bottom Footer: Icons & Avatar */}
+        <div className="pt-2 border-t border-line/50 flex items-center justify-between text-xs text-muted">
+          <div className="flex items-center gap-3">
+            {item.matchScore !== null ? (
               <span
-                className={cn("hand text-xl font-bold leading-none", scoreText[scoreTone(item.matchScore)])}
+                className={cn("hand text-lg font-bold leading-none", scoreText[scoreTone(item.matchScore)])}
                 title="Match Score"
               >
-                {item.matchScore}
+                {item.matchScore}<span className="text-[10px] text-muted font-sans font-normal">/100</span>
               </span>
+            ) : (
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="flex items-center gap-1"><FiMessageSquare className="h-3 w-3" /> 0</span>
+                <span className="flex items-center gap-1"><FiPaperclip className="h-3 w-3" /> 1</span>
+              </div>
             )}
+          </div>
 
-            {/* Fallback tanpa drag (layar sentuh / keyboard): pindah kolom via panah */}
-            <div className="flex gap-0.5 opacity-70 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+          <div className="flex items-center gap-2">
+            {/* Quick Move Buttons for Touch / Fallback */}
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               {onMovePrev && (
                 <button
                   onClick={(e) => {
@@ -134,7 +146,7 @@ export function KanbanCard({
                     onMovePrev()
                   }}
                   aria-label="Pindah ke status sebelumnya"
-                  className="rounded-md border border-line bg-paper/80 p-1 text-ink transition-colors hover:bg-ink hover:text-paper"
+                  className="rounded-md border border-line bg-panel p-1 text-ink hover:bg-ink hover:text-paper"
                 >
                   <FiChevronLeft className="h-3 w-3" />
                 </button>
@@ -146,11 +158,19 @@ export function KanbanCard({
                     onMoveNext()
                   }}
                   aria-label="Pindah ke status berikutnya"
-                  className="rounded-md border border-line bg-paper/80 p-1 text-ink transition-colors hover:bg-ink hover:text-paper"
+                  className="rounded-md border border-line bg-panel p-1 text-ink hover:bg-ink hover:text-paper"
                 >
                   <FiChevronRight className="h-3 w-3" />
                 </button>
               )}
+            </div>
+
+            {/* Avatar Pill */}
+            <div
+              className="h-6 w-6 rounded-full bg-ink text-paper flex items-center justify-center font-bold text-[10px] shadow-xs shrink-0"
+              title={company}
+            >
+              {initial}
             </div>
           </div>
         </div>

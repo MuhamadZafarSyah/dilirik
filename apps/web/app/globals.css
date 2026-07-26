@@ -445,3 +445,15 @@ textarea:focus-visible:not(.outline-none) {
   pointer-events: none;
   border-radius: 2px;
 }
+
+/* Ensure Boneyard-js Skeleton containers stretch full height when needed */
+[data-boneyard-name="applications-kanban"],
+.boneyard-kanban-container {
+  height: 100% !important;
+  width: 100% !important;
+  flex: 1 1 0% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
