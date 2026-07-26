@@ -7,6 +7,7 @@ import { HttpError } from "../middleware/errorHandler"
 import { extractText } from "../services/extractText"
 import { getCvFile, storeCvFile } from "../lib/storage"
 import * as cvService from "../services/cvService"
+import * as previewService from "../services/previewService"
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
 export const cvRouter = Router()
@@ -66,6 +67,20 @@ cvRouter.get("/:id/file", async (req, res, next) => {
     res.setHeader("Content-Type", file.contentType ?? "application/octet-stream")
     res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.${ext}"`)
     res.send(file.buffer)
+  } catch (e) { next(e) }
+})
+
+// Download file desain sebagai PDF — PDF asli diteruskan apa adanya, DOCX dikonversi
+// via Gotenberg. Hasilnya IDENTIK dengan file Word-nya (bukan render ulang template),
+// jadi user bebas memilih format Word atau PDF dengan desain yang sama.
+cvRouter.get("/:id/file/pdf", rateLimit("cv-file-pdf", 10, 60), async (req, res, next) => {
+  try {
+    const cv = await cvService.getCv(req.userId!, req.params.id!)
+    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
+    const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.pdf"`)
+    res.send(pdf)
   } catch (e) { next(e) }
 })
 

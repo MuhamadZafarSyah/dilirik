@@ -8,7 +8,7 @@ import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CopyButton } from "@/components/ui/copy-button"
-import { DownloadCvButton } from "@/components/pdf/download-cv-button"
+import { DownloadCvMenu } from "@/components/pdf/download-cv-menu"
 import { useI18n } from "@/lib/i18n"
 import type { CvFull, Patch, SessionDetail } from "./types"
 
@@ -28,20 +28,6 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
 
   const hasDesignDocx = Boolean(revised?.fileKey?.toLowerCase().endsWith(".docx"))
 
-  const docxMutation = useMutation({
-    mutationFn: async () => {
-      if (!revised) return
-      const res = await api.get<Blob>(`/api/cv/${revised.id}/file`, { responseType: "blob" })
-      const url = URL.createObjectURL(res.data)
-      const a = document.createElement("a")
-      const slug = revised.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
-      a.href = url
-      a.download = `${slug}-v${revised.version}-dilirik.docx`
-      a.click()
-      URL.revokeObjectURL(url)
-    },
-  })
-
   const saveMutation = useMutation({
     mutationFn: async () => {
       const { data } = await api.post<{ application: { id: string } }>("/api/applications", {
@@ -58,12 +44,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
   })
 
   const busy = saveMutation.isPending
-  const downloadingDocx = docxMutation.isPending
-  const error = docxMutation.error
-    ? errorMessage(docxMutation.error)
-    : saveMutation.error
-      ? errorMessage(saveMutation.error)
-      : null
+  const error = saveMutation.error ? errorMessage(saveMutation.error) : null
 
   return (
     <Card tape="red" pin className="relative space-y-6 text-center py-8">
@@ -83,15 +64,9 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3">
-        {hasDesignDocx && (
-          <Button onClick={() => docxMutation.mutate()} isLoading={downloadingDocx} variant="primary">
-            {downloadingDocx ? "Menyiapkan DOCX…" : "⬇ DOCX (desain asli)"}
-          </Button>
-        )}
-        {revised && (
-          <DownloadCvButton rawText={revised.rawText} title={revised.title} version={revised.version} language={revised.language} />
-        )}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* Word & PDF memakai desain asli yang sama — PDF dikonversi dari file DOCX-nya */}
+        {revised && <DownloadCvMenu cv={revised} />}
         {revised && <CopyButton text={revised.rawText} label="📋 Salin Semua Teks Revisi" />}
         {session.revisedCvId && session.cvId && (
           <Link href={`/app/cv/${session.revisedCvId}/compare?with=${session.cvId}`}>
@@ -114,7 +89,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
 
       <p className="text-muted mx-auto max-w-xl text-xs leading-relaxed">
         {hasDesignDocx
-          ? "🎨 DOCX di atas adalah file asli kamu yang teksnya direvisi — desain, font, dan tabel tidak diubah sama sekali. Buka di Word lalu save-as-PDF untuk hasil akhir."
+          ? "🎨 PDF & Word di atas memakai desain asli kamu — teksnya direvisi, sedangkan layout, font, dan tabel tidak diubah sama sekali. Keduanya identik, tinggal pilih format yang dibutuhkan."
           : "🎨 Catatan jujur: PDF di atas dirender ulang pakai template Dilirik (file PDF tidak menyimpan struktur desain, jadi tidak bisa diedit langsung). Untuk mempertahankan desain 100%: salin teks revisi ke file Word/Canva asli kamu — atau lain kali upload CV versi .docx agar Dilirik merevisi file-nya langsung."}
       </p>
 
@@ -127,7 +102,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
         </p>
       ) : (
         <Button onClick={() => saveMutation.mutate()} isLoading={busy} variant="primary" size="lg">
-          {busy ? "Menyiapkan…" : `📌 ${t("saveToTracker")}`}
+          {busy ? "Menyiapkan\u2026" : `📌 ${t("saveToTracker")}`}
         </Button>
       )}
       {error && <p className="text-red text-xs font-semibold">{error}</p>}
