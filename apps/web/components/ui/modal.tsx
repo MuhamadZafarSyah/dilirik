@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { FiX } from "react-icons/fi"
 import { cn } from "@/lib/utils"
 
@@ -18,7 +18,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-ink/50 backdrop-blur-xs data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200",
       className
     )}
     {...props}
@@ -34,18 +34,25 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className={cn(
-        "bg-panel border-line shadow-lift fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border-2 p-6 rounded-2xl duration-200 focus:outline-none sm:max-w-xl",
-        className
-      )}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none pointer-events-none"
       {...props}
     >
-      <span className="bg-red shadow-paper absolute -top-3 left-1/2 z-10 h-5 w-5 -translate-x-1/2 rounded-full border border-paper" aria-hidden />
-      {children}
-      <DialogPrimitive.Close className="hover:bg-line/40 focus:outline-none absolute right-4 top-4 rounded-full p-1.5 text-muted hover:text-ink transition-colors">
-        <FiX className="h-5 w-5" />
-        <span className="sr-only">Tutup</span>
-      </DialogPrimitive.Close>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.88, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 26 }}
+        className={cn(
+          "bg-panel border-line shadow-lift relative pointer-events-auto grid w-full max-w-lg gap-4 border-2 p-6 rounded-2xl focus:outline-none sm:max-w-xl",
+          className
+        )}
+      >
+        <span className="bg-red shadow-paper absolute -top-3 left-1/2 z-10 h-5 w-5 -translate-x-1/2 rounded-full border border-paper" aria-hidden />
+        {children}
+        <DialogPrimitive.Close className="hover:bg-line/40 focus:outline-none absolute right-4 top-4 rounded-full p-1.5 text-muted hover:text-ink transition-colors">
+          <FiX className="h-5 w-5" />
+          <span className="sr-only">Tutup</span>
+        </DialogPrimitive.Close>
+      </motion.div>
     </DialogPrimitive.Content>
   </DialogPortal>
 ))

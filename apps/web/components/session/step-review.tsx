@@ -234,7 +234,7 @@ function StepReviewSkeleton() {
   return (
     <div className="space-y-8 animate-pulse">
       <Card tape="yellow" className="text-center py-6 space-y-2 border-2 border-line bg-panel">
-        <div className="inline-block animate-spin text-ink text-3xl">⚡</div>
+        <div className="inline-block  text-ink text-3xl">⚡</div>
         <h2 className="hand text-2xl font-bold">AI Sedang Menganalisis Match CV Kamu...</h2>
         <p className="scrawl text-muted text-base max-w-md mx-auto">
           Mengekstrak kualifikasi, mendeteksi gap penyajian vs fakta asli.

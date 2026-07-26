@@ -32,6 +32,24 @@ const STATUS_BADGES: Record<InterviewStatus, { labelId: string; labelEn: string;
   FEEDBACK_READY: { labelId: "Feedback Siap", labelEn: "Feedback Ready", color: "bg-green/20 text-green border-green/60" },
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 14, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 350, damping: 25 },
+  },
+}
+
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = sec % 60
@@ -68,9 +86,14 @@ export default function InterviewListPage() {
     : null
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-4 md:p-8">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="mx-auto max-w-5xl space-y-8 p-4 md:p-8"
+    >
       {/* Header & CTA */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-line pb-6">
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-line pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="label bg-yellow/40 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
@@ -99,25 +122,27 @@ export default function InterviewListPage() {
             {lang === "id" ? "Mulai Latihan Baru 🔥" : "New Practice Match 🔥"}
           </Button>
         </Link>
-      </div>
+      </motion.div>
 
       {/* Quota Exhausted Warning */}
       {quotaHabis && (
-        <Sticky tone="red" className="text-center py-4 space-y-2">
-          <p className="hand text-2xl font-bold text-red">
-            {lang === "id"
-              ? "⚠️ Kuota latihan bulan ini telah terpakai habis!"
-              : "⚠️ Monthly practice quota exhausted!"}
-          </p>
-          <p className="text-xs text-muted">
-            Kuota akan ter-reset otomatis awal bulan depan.
-          </p>
-        </Sticky>
+        <motion.div variants={itemVariants}>
+          <Sticky tone="red" className="text-center py-4 space-y-2">
+            <p className="hand text-2xl font-bold text-red">
+              {lang === "id"
+                ? "⚠️ Kuota latihan bulan ini telah terpakai habis!"
+                : "⚠️ Monthly practice quota exhausted!"}
+            </p>
+            <p className="text-xs text-muted">
+              Kuota akan ter-reset otomatis awal bulan depan.
+            </p>
+          </Sticky>
+        </motion.div>
       )}
 
       {/* Gamified Summary Stats Widgets */}
       {sessions.length > 0 && (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+        <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 sm:grid-cols-3">
           <Card tape="yellow" className="p-4 text-center space-y-1">
             <span className="label text-muted text-[10px] uppercase font-bold">Total Latihan</span>
             <p className="hand text-4xl font-bold text-ink">{sessions.length}</p>
@@ -130,7 +155,7 @@ export default function InterviewListPage() {
             <span className="label text-muted text-[10px] uppercase font-bold">Status Arena</span>
             <p className="hand text-3xl font-bold text-green">Siap Bertanding ⚡</p>
           </Card>
-        </div>
+        </motion.div>
       )}
 
       {/* Sessions List Showcase */}
@@ -141,18 +166,20 @@ export default function InterviewListPage() {
           ))}
         </div>
       ) : sessions.length === 0 ? (
-        <EmptyState
-          title={lang === "id" ? "Belum ada sesi latihan interview" : "No practice sessions yet"}
-          ctaLabel={lang === "id" ? "🎙️ Mulai Latihan Pertama Kamu" : "🎙️ Start Your First Practice"}
-          ctaHref="/app/interview/new"
-          note={
-            lang === "id"
-              ? "Sesi berlangsung maksimal 10 menit — AI menyapa langsung via suara!"
-              : "Sessions run up to 10 minutes — AI talks directly via live audio!"
-          }
-        />
+        <motion.div variants={itemVariants}>
+          <EmptyState
+            title={lang === "id" ? "Belum ada sesi latihan interview" : "No practice sessions yet"}
+            ctaLabel={lang === "id" ? "🎙️ Mulai Latihan Pertama Kamu" : "🎙️ Start Your First Practice"}
+            ctaHref="/app/interview/new"
+            note={
+              lang === "id"
+                ? "Sesi berlangsung maksimal 10 menit — AI menyapa langsung via suara!"
+                : "Sessions run up to 10 minutes — AI talks directly via live audio!"
+            }
+          />
+        </motion.div>
       ) : (
-        <div className="space-y-4">
+        <motion.div variants={itemVariants} className="space-y-4">
           <h2 className="hand text-3xl font-bold text-ink flex items-center gap-2">
             📜 {lang === "id" ? "Daftar Riwayat Tanding" : "Match History List"}
           </h2>
@@ -228,8 +255,8 @@ export default function InterviewListPage() {
               )
             })}
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   )
 }
