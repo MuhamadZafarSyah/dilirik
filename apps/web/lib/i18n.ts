@@ -10,7 +10,7 @@ const dict = {
   id: {
     dashboard: "Dashboard", cv: "CV", jobs: "Lowongan", analyze: "Analisis",
     interview: "Latihan Interview",
-    applications: "Lamaran", settings: "Settings", logout: "Keluar",
+    applications: "Lamaran", settings: "Pengaturan", logout: "Keluar",
     quotaLeft: "sisa kuota", unlimited: "unlimited", loading: "Memuat…",
     emptyCvTitle: "Belum ada CV", emptyCvCta: "Tambah CV pertamamu",
     emptyJobTitle: "Belum ada lowongan", emptyJobCta: "Tambah lowongan",

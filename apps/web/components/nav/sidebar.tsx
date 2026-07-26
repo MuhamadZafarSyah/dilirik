@@ -18,6 +18,8 @@ import { signOut } from "@/lib/auth-client"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
+const ROTATIONS = [-1.2, 0.8, -0.6, 1.2, -0.8, 0.6, -1.0]
+
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -63,8 +65,10 @@ export function Sidebar() {
 
       {/* Navigation items */}
       <nav className="flex flex-1 flex-row gap-1.5 overflow-x-auto pb-1 md:flex-col md:pb-0 scrollbar-none relative">
-        {items.map(({ href, label, icon: Icon, exact }) => {
+        {items.map(({ href, label, icon: Icon, exact }, index) => {
           const active = exact ? pathname === href : pathname.startsWith(href)
+          const rotateDeg = ROTATIONS[index % ROTATIONS.length]
+
           return (
             <Link
               key={href}
@@ -77,7 +81,9 @@ export function Sidebar() {
               {active && (
                 <motion.div
                   layoutId="activeSidebarBg"
-                  className="absolute inset-0 bg-ink rounded-xl shadow-paper -rotate-1 z-0 pointer-events-none"
+                  initial={false}
+                  animate={{ rotate: rotateDeg }}
+                  className="absolute inset-0 bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 />
               )}
