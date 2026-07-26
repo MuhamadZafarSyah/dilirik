@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -15,11 +16,16 @@ import {
   type SessionDetail,
 } from "./types"
 
+// pdf.js memakai API browser saat import — wajib dimuat tanpa SSR
+const PdfViewer = dynamic(() => import("@/components/pdf/pdf-viewer"), { ssr: false })
+
 export function StepRevise({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const queryClient = useQueryClient()
   // Pola "draft": state hanya menyimpan editan user; teks dasar diambil dari cache query (tanpa effect sinkronisasi).
   const [draft, setDraft] = useState<string | null>(null)
   const [applied, setApplied] = useState<Record<number, "ok" | "manual">>({})
+  // Kunci preview "Sesudah": indeks saran ter-apply (di-debounce → klik beruntun = 1 konversi)
+  const [previewKey, setPreviewKey] = useState("")
 
   const cvQuery = useQuery({
     queryKey: ["cv", session.cvId],
@@ -57,6 +63,65 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
     },
   })
 
+  // ===== Preview desain asli (iLovePDF-style compare) =====
+  const suggestions = analysis?.suggestionsJson.suggestions ?? []
+  const isDocxSource = Boolean(cvFull?.fileKey?.toLowerCase().endsWith(".docx"))
+
+  // Status fitur (Gotenberg dikonfigurasi?) — panggilannya sekaligus warm-up
+  // instance Cloud Run scale-to-zero sebelum user klik "Terapkan".
+  const previewStatusQuery = useQuery({
+    queryKey: ["preview-status"],
+    enabled: Boolean(cvFull?.fileKey),
+    staleTime: 4 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await api.get<{ enabled: boolean }>("/api/preview/status")
+      return data
+    },
+  })
+  const previewEnabled = previewStatusQuery.data?.enabled ?? false
+
+  // Debounce daftar saran ter-apply → previewKey (mis. "0,2,5")
+  useEffect(() => {
+    const key = Object.entries(applied)
+      .filter(([, v]) => v === "ok")
+      .map(([k]) => Number(k))
+      .sort((a, b) => a - b)
+      .join(",")
+    const t = setTimeout(() => setPreviewKey(key), 800)
+    return () => clearTimeout(t)
+  }, [applied])
+
+  // "Sebelum": file asli user apa adanya (PDF passthrough, DOCX dikonversi sekali)
+  const beforePdfQuery = useQuery({
+    queryKey: ["cv-preview", session.cvId],
+    enabled: previewEnabled && Boolean(cvFull?.fileKey),
+    staleTime: Infinity,
+    queryFn: async () => {
+      const res = await api.get<Blob>(`/api/preview/cv/${session.cvId}`, { responseType: "blob" })
+      return res.data
+    },
+  })
+
+  // "Sesudah": DOCX asli dipatch in-memory di server lalu dikonversi — tidak menyimpan apa pun
+  const afterPdfQuery = useQuery({
+    queryKey: ["cv-preview-after", session.cvId, previewKey],
+    enabled: previewEnabled && isDocxSource && previewKey.length > 0,
+    staleTime: Infinity,
+    placeholderData: (prev) => prev, // preview lama tetap tampil selagi konversi baru jalan
+    queryFn: async () => {
+      const replacements = previewKey.split(",").flatMap((i) => {
+        const s = suggestions[Number(i)]
+        return s?.before && s?.after ? [{ before: s.before, after: s.after }] : []
+      })
+      const res = await api.post<Blob>(
+        `/api/preview/cv/${session.cvId}/revised`,
+        { replacements },
+        { responseType: "blob" },
+      )
+      return { blob: res.data, skipped: Number(res.headers["x-preview-skipped"] ?? 0) }
+    },
+  })
+
   const loadError = cvQuery.isError || analysisQuery.isError ? "Gagal memuat data revisi — coba muat ulang halaman" : null
   const busy = saveMutation.isPending
   const error = loadError ?? (saveMutation.error ? errorMessage(saveMutation.error) : null)
@@ -64,9 +129,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
   if (loadError && !cvFull) return <p className="text-red text-xs font-semibold">{loadError}</p>
   if (!cvFull || !analysis) return <p className="scrawl text-2xl">Memuat…</p>
 
-  const suggestions = analysis.suggestionsJson.suggestions ?? []
   const changed = squash(text) !== squash(cvFull.rawText)
-  const isDocxSource = Boolean(cvFull.fileKey?.toLowerCase().endsWith(".docx"))
 
   function applyOne(i: number) {
     const suggestion = suggestions[i]
@@ -185,6 +248,69 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
           {error && <p className="text-red text-xs font-semibold">{error}</p>}
         </div>
       </div>
+
+      {/* ===== Preview Desain Asli — compare Before/After ala iLovePDF ===== */}
+      {previewEnabled && cvFull.fileKey && (
+        <div className="space-y-3 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="scrawl text-2xl font-bold">Preview Desain Asli 📄</h3>
+            {afterPdfQuery.isFetching && (
+              <span className="label text-muted text-[10px] font-bold uppercase animate-pulse">
+                ⏳ Memperbarui preview…
+              </span>
+            )}
+          </div>
+          <p className="text-muted text-xs">
+            {isDocxSource
+              ? "Kiri = file asli kamu. Kanan = file yang SAMA setelah saran diterapkan — hanya teksnya yang diganti, desain/font/tabel tidak disentuh. Catatan: edit manual di textarea tidak ikut ke preview desain (tetap tersimpan di revisi teks)."
+              : 'Ini file PDF asli kamu (tampilan 100% sama). Preview "Sesudah" pada desain asli hanya tersedia untuk sumber .docx — untuk PDF, hasil akhir dirender ulang pakai template Dilirik.'}
+          </p>
+          <div className={`grid gap-6 ${isDocxSource ? "lg:grid-cols-2" : ""}`}>
+            <div className="space-y-2">
+              <span className="label bg-ink text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                Sebelum
+              </span>
+              <PdfViewer
+                file={beforePdfQuery.data ?? null}
+                isLoading={beforePdfQuery.isLoading}
+                error={beforePdfQuery.isError ? "Gagal memuat preview file asli — coba muat ulang halaman" : null}
+              />
+            </div>
+            {isDocxSource && (
+              <div className="space-y-2">
+                <span className="label bg-green text-paper px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                  Sesudah
+                </span>
+                {previewKey.length === 0 ? (
+                  <div className="rounded-xl border-2 border-dashed border-line p-8 text-center">
+                    <p className="scrawl text-muted text-lg">
+                      Terapkan minimal satu saran untuk melihat preview desain hasil revisi ✨
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <PdfViewer
+                      file={afterPdfQuery.data?.blob ?? null}
+                      isLoading={afterPdfQuery.isLoading}
+                      error={
+                        afterPdfQuery.isError
+                          ? "Konversi preview gagal — coba lagi sebentar (service konversi mungkin sedang start)"
+                          : null
+                      }
+                    />
+                    {(afterPdfQuery.data?.skipped ?? 0) > 0 && (
+                      <p className="text-muted text-[11px]">
+                        ⚠️ {afterPdfQuery.data!.skipped} saran tidak bisa dipetakan ke desain (teks di file berbeda) —
+                        tetap masuk ke revisi teks.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
