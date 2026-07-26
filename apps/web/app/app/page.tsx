@@ -12,6 +12,9 @@ import {
   FiPlus,
   FiAlertCircle,
   FiTrendingUp,
+  FiMic,
+  FiCheckCircle,
+  FiBarChart2,
 } from "react-icons/fi"
 import {
   scoreTone,
@@ -20,10 +23,11 @@ import {
 import { api } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { Skeleton } from "boneyard-js/react"
-import { Card } from "@/components/ui/card"
+import { Card, Sticky } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
+import { cn } from "@/lib/utils"
 
 type DashboardData = {
   pipeline: Record<ApplicationStatus, number>
@@ -40,17 +44,17 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
   },
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 15, scale: 0.98 },
+  hidden: { opacity: 0, y: 10, scale: 0.99 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
+    transition: { type: "spring", stiffness: 350, damping: 26 },
   },
 }
 
@@ -58,6 +62,7 @@ export default function DashboardPage() {
   const { lang, t } = useI18n()
   const [data, setData] = useState<DashboardData | null>(null)
   const [failed, setFailed] = useState(false)
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null)
 
   useEffect(() => {
     api
@@ -68,14 +73,14 @@ export default function DashboardPage() {
 
   if (failed) {
     return (
-      <Card pin rotate={-1} className="mx-auto max-w-md text-center py-10">
-        <FiAlertCircle className="mx-auto h-12 w-12 text-red animate-bounce" />
-        <h2 className="hand text-3xl mt-2">Yah, dashboard gagal dimuat 😵</h2>
-        <p className="text-muted mt-2 text-sm">
-          Pastikan API berjalan di <code>localhost:4000</code>, lalu muat ulang halaman ini.
+      <Card pin rotate={-1} className="mx-auto max-w-md text-center py-8 p-6 space-y-4">
+        <FiAlertCircle className="mx-auto h-10 w-10 text-red animate-bounce" />
+        <h2 className="hand text-2xl">Dashboard Gagal Dimuat 😵</h2>
+        <p className="text-muted text-xs leading-relaxed">
+          Pastikan backend API berjalan di <code>localhost:4000</code>.
         </p>
-        <Button variant="secondary" onClick={() => window.location.reload()} className="mt-4">
-          Coba Lagi
+        <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+          Coba Muat Ulang
         </Button>
       </Card>
     )
@@ -84,13 +89,10 @@ export default function DashboardPage() {
   const hasCv = data ? data.counts.cvs > 0 : false
   const avgTone = !data || data.averageScore === null ? null : scoreTone(data.averageScore)
   const isUnlimited = data?.quota.quota === null
+  const usedQuotaPercent = data && data.quota.quota ? Math.min(100, Math.round((data.quota.used / data.quota.quota) * 100)) : 0
 
-  const stats = data
-    ? [
-        { label: "Master CV", value: data.counts.cvs, icon: FiFileText, href: "/app/cv", rotate: -1, color: "text-ink" },
-        { label: "Lowongan Target", value: data.counts.jobs, icon: FiBriefcase, href: "/app/jobs", rotate: 1, color: "text-ink" },
-      ]
-    : []
+  const chartAnalyses = data?.recentAnalyses.slice(0, 7).reverse() ?? []
+  const totalApplications = data ? Object.values(data.pipeline).reduce((a, b) => a + b, 0) : 0
 
   return (
     <Skeleton name="dashboard" loading={!data} animate="shimmer" fallback={<DashboardSkeleton />}>
@@ -99,86 +101,131 @@ export default function DashboardPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-8"
+          className="space-y-6 max-w-5xl mx-auto"
         >
-          {/* ===== Header ===== */}
-          <motion.div variants={itemVariants} className="flex flex-wrap items-end justify-between gap-4">
-            <div>
+          {/* ===== Compact Command Header ===== */}
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-panel border-2 border-line rounded-2xl p-5 shadow-paper"
+          >
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="label bg-yellow/30 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-yellow/60">
-                  Workspace
+                <span className="label bg-yellow/40 border border-yellow/70 text-ink px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                  Command Center
+                </span>
+                <span className="label bg-green/20 text-green px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                  100% Fakta Asli
                 </span>
               </div>
-              <h1 className="hand text-4xl sm:text-5xl font-bold mt-1">
+              <h1 className="hand text-3xl font-bold text-ink">
                 {t("dashboard")} 📌
               </h1>
-              <p className="scrawl text-muted text-xl">Bikin CV-mu dilirik HR tanpa ngarang.</p>
+              <p className="scrawl text-muted text-base">Bikin CV-mu dilirik HR tanpa perlu bohong.</p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link href="/app/cv/new">
-                <Button variant="outline" icon={<FiPlus />}>
-                  Tambah CV
+            {/* Compact Action Pills */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Link href="/app/analyze">
+                <Button variant="danger" size="sm" icon={<FiZap />} tape="red">
+                  ⚡ {t("newAnalysis")}
                 </Button>
               </Link>
-              <Link href="/app/analyze">
-                <Button variant="danger" icon={<FiZap />} tape="red">
-                  {t("newAnalysis")}
+              <Link href="/app/interview/new">
+                <Button variant="primary" size="sm" icon={<FiMic />} tape="yellow">
+                  🎙️ {lang === "id" ? "Latihan Interview" : "Mock Interview"}
+                </Button>
+              </Link>
+              <Link href="/app/cv/new">
+                <Button variant="outline" size="sm" icon={<FiPlus />}>
+                  + CV
                 </Button>
               </Link>
             </div>
           </motion.div>
 
-          {/* ===== KPI Metrics Grid ===== */}
-          <motion.section variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map(({ label, value, icon: Icon, href, rotate }) => (
-              <Link key={href} href={href} className="block">
-                <Card rotate={rotate} className="group cursor-pointer">
-                  <div className="flex items-center justify-between text-muted text-xs font-bold uppercase tracking-wider">
-                    <span className="flex items-center gap-1.5">
-                      <Icon className="h-4 w-4 text-ink" /> {label}
-                    </span>
-                    <FiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </div>
-                  <p className="hand mt-2 text-5xl font-bold">{value}</p>
-                </Card>
-              </Link>
-            ))}
+          {/* ===== High-Density KPI Metrics Grid ===== */}
+          <motion.section variants={itemVariants} className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            {/* 1. Master CV */}
+            <Link href="/app/cv" className="block">
+              <Card rotate={-0.6} className="group cursor-pointer p-4 space-y-2 hover:border-ink">
+                <div className="flex items-center justify-between text-muted text-[10px] font-bold uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-ink font-bold">
+                    <FiFileText className="h-3.5 w-3.5" /> Master CV
+                  </span>
+                  <FiArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <div className="flex items-baseline justify-between pt-1">
+                  <p className="hand text-4xl font-bold text-ink">{data.counts.cvs}</p>
+                  <span className="label bg-panel border border-line px-2 py-0.5 rounded text-[9px] uppercase font-bold text-muted">
+                    File Aktif
+                  </span>
+                </div>
+              </Card>
+            </Link>
 
-            <Card rotate={-0.5}>
-              <div className="text-muted text-xs font-bold uppercase tracking-wider flex items-center justify-between">
-                <span>Skor Rata-Rata</span>
-                <FiTrendingUp className="h-4 w-4" />
+            {/* 2. Lowongan Target */}
+            <Link href="/app/jobs" className="block">
+              <Card rotate={0.6} className="group cursor-pointer p-4 space-y-2 hover:border-ink">
+                <div className="flex items-center justify-between text-muted text-[10px] font-bold uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-ink font-bold">
+                    <FiBriefcase className="h-3.5 w-3.5" /> Lowongan Target
+                  </span>
+                  <FiArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <div className="flex items-baseline justify-between pt-1">
+                  <p className="hand text-4xl font-bold text-ink">{data.counts.jobs}</p>
+                  <span className="label bg-panel border border-line px-2 py-0.5 rounded text-[9px] uppercase font-bold text-muted">
+                    Target HR
+                  </span>
+                </div>
+              </Card>
+            </Link>
+
+            {/* 3. Skor Rata-Rata */}
+            <Card rotate={-0.4} className="p-4 space-y-2">
+              <div className="text-muted text-[10px] font-bold uppercase tracking-wider flex items-center justify-between">
+                <span className="text-ink font-bold flex items-center gap-1">
+                  <FiTrendingUp className="h-3.5 w-3.5" /> Skor Rata-Rata
+                </span>
+                <span className="label bg-green/20 text-green px-1.5 py-0.5 rounded text-[9px] font-bold">
+                  {avgTone === "green" ? "SOLID" : "STABLE"}
+                </span>
               </div>
               {data.averageScore === null ? (
-                <p className="scrawl text-muted mt-3 text-lg">Belum ada analisis</p>
+                <p className="scrawl text-muted text-sm pt-1">Belum ada analisis</p>
               ) : (
-                <div className="flex items-baseline gap-1 mt-1">
-                  <p className={`hand text-5xl font-bold ${avgTone ? toneText[avgTone] : ""}`}>
+                <div className="flex items-baseline gap-1 pt-1">
+                  <p className={`hand text-4xl font-bold ${avgTone ? toneText[avgTone] : ""}`}>
                     {data.averageScore}
                   </p>
-                  <span className="scrawl text-muted text-xl">/100</span>
+                  <span className="scrawl text-muted text-base">/100</span>
                 </div>
               )}
             </Card>
 
-            <Card rotate={0.8} tape="yellow">
-              <div className="text-muted text-xs font-bold uppercase tracking-wider">
-                {t("quotaLeft")}
+            {/* 4. Sisa Kuota Battery Indicator */}
+            <Card rotate={0.4} tape="yellow" className="p-4 space-y-2">
+              <div className="text-muted text-[10px] font-bold uppercase tracking-wider flex items-center justify-between">
+                <span className="text-ink font-bold">{t("quotaLeft")}</span>
+                <span className="label text-[9px] uppercase font-bold text-muted">
+                  Reset {new Date(data.quota.resetAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                </span>
               </div>
-              <div className="flex items-baseline gap-1 mt-1">
-                <p className="hand text-5xl font-bold text-ink">
+              <div className="flex items-baseline gap-1 pt-1">
+                <p className="hand text-4xl font-bold text-ink">
                   {isUnlimited ? "♾︎" : (data.quota.remaining ?? 0)}
                 </p>
-                {!isUnlimited && <span className="scrawl text-muted text-xl">/{data.quota.quota}</span>}
+                {!isUnlimited && <span className="scrawl text-muted text-base">/{data.quota.quota}</span>}
               </div>
-              <p className="text-muted mt-1 text-xs">
-                reset {new Date(data.quota.resetAt).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { day: "numeric", month: "short" })}
-              </p>
+              {!isUnlimited && (
+                <div className="w-full bg-line/30 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-red h-full rounded-full transition-all" style={{ width: `${100 - usedQuotaPercent}%` }} />
+                </div>
+              )}
             </Card>
           </motion.section>
 
-          {/* ===== Onboarding or Dashboard Sections ===== */}
+          {/* ===== Content Section ===== */}
           {!hasCv ? (
             <motion.div variants={itemVariants}>
               <EmptyState
@@ -190,111 +237,220 @@ export default function DashboardPage() {
             </motion.div>
           ) : (
             <>
-              {/* ===== Pipeline Lamaran ===== */}
-              <motion.section variants={itemVariants} className="space-y-3">
+              {/* ===== Compact Match Score Chart & Skill Gaps ===== */}
+              <div className="grid gap-5 lg:grid-cols-3">
+                {/* Compact Bar Chart */}
+                <motion.section variants={itemVariants} className="lg:col-span-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
+                      📊 {lang === "id" ? "Trend Skor Match" : "Match Score Trend"}
+                    </h2>
+                    <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold">
+                      {chartAnalyses.length} Analisis Terakhir
+                    </span>
+                  </div>
+
+                  <Card tape="blue" className="p-5 space-y-4">
+                    {chartAnalyses.length === 0 ? (
+                      <div className="py-8 text-center space-y-2">
+                        <p className="scrawl text-muted text-base">Belum ada data grafik analisis.</p>
+                        <Link href="/app/analyze">
+                          <Button variant="danger" size="sm" icon={<FiZap />}>
+                            ⚡ Jalankan Analisis Pertama
+                          </Button>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Compact Height Bar Chart */}
+                        <div className="h-40 flex items-end justify-between gap-2.5 pt-6 pb-2 border-b border-line px-1 relative">
+                          {/* HR Target Benchmark Line */}
+                          <div className="absolute left-0 right-0 top-[22%] border-t border-dashed border-green/60 z-0 flex items-center justify-between px-1">
+                            <span className="label text-[8px] uppercase font-bold text-green bg-panel px-1 rounded border border-green/40">
+                              🎯 80 Score Target
+                            </span>
+                          </div>
+
+                          {chartAnalyses.map((item, i) => {
+                            const heightPercent = Math.max(15, Math.round((item.matchScore / 100) * 100))
+                            const isHovered = hoveredBarIndex === i
+                            const tone = scoreTone(item.matchScore)
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex-1 flex flex-col items-center gap-1.5 group relative z-10 cursor-pointer"
+                                onMouseEnter={() => setHoveredBarIndex(i)}
+                                onMouseLeave={() => setHoveredBarIndex(null)}
+                              >
+                                {isHovered && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="absolute -top-9 bg-ink text-paper text-[9px] font-bold px-2 py-0.5 rounded shadow-paper whitespace-nowrap z-20"
+                                  >
+                                    {item.cvTitle}: <span className="text-yellow">{item.matchScore}/100</span>
+                                  </motion.div>
+                                )}
+
+                                <span className="hand text-sm font-bold text-ink group-hover:scale-105 transition-transform">
+                                  {item.matchScore}
+                                </span>
+
+                                <motion.div
+                                  initial={{ height: "0%" }}
+                                  animate={{ height: `${heightPercent}%` }}
+                                  transition={{ type: "spring", stiffness: 220, damping: 22, delay: i * 0.04 }}
+                                  className={`w-full max-w-[32px] rounded-t-lg border border-line transition-colors shadow-paper ${tone === "green"
+                                      ? "bg-green/80 hover:bg-green"
+                                      : tone === "yellow"
+                                        ? "bg-yellow/80 hover:bg-yellow"
+                                        : "bg-red/80 hover:bg-red"
+                                    }`}
+                                />
+
+                                <span className="label text-[9px] text-muted truncate max-w-[42px] font-bold">
+                                  {new Date(item.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-muted font-medium pt-0.5">
+                          <span className="flex items-center gap-1">
+                            🟢 Hijau (75+) · 🟡 Kuning (50-74) · 🔴 Merah (&lt;50)
+                          </span>
+                          <Link href="/app/analyze" className="label text-ink text-[10px] font-bold hover:underline">
+                            Jalankan Analisis Baru →
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                </motion.section>
+
+                {/* Top Skill Gaps Identifiers */}
+                <motion.section variants={itemVariants} className="space-y-2 lg:col-span-1">
+                  <div className="flex items-center justify-between">
+                    <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
+                      💡 {lang === "id" ? "Gap Paling Sering" : "Top Skill Gaps"}
+                    </h2>
+                  </div>
+
+                  <Card tape="red" pin className="p-4 space-y-3">
+                    {data.topGaps.length === 0 ? (
+                      <p className="text-muted text-xs py-6 text-center leading-relaxed">
+                        Belum ada data gap. Jalankan analisis match untuk rekomendasi skill!
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {data.topGaps.slice(0, 5).map((g) => {
+                          const maxCount = Math.max(...data.topGaps.map((x) => x.count), 1)
+                          const pct = Math.round((g.count / maxCount) * 100)
+                          return (
+                            <div key={g.skill} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs font-bold">
+                                <span className="text-ink truncate text-[11px]">{g.skill}</span>
+                                <span className="label bg-yellow/40 text-ink rounded px-1.5 py-0.5 text-[9px]">
+                                  {g.count}x
+                                </span>
+                              </div>
+                              <div className="w-full bg-line/25 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-ink h-full rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </Card>
+                </motion.section>
+              </div>
+
+              {/* ===== Pipeline Tracker Kanban Funnel ===== */}
+              <motion.section variants={itemVariants} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="scrawl text-2xl font-bold flex items-center gap-2">
-                    <FiLayers className="text-blue" /> Pipeline Lamaran Target
+                  <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
+                    🎯 Pipeline Tracker Pelamaran ({totalApplications})
                   </h2>
                   <Link
                     href="/app/applications"
-                    className="label text-muted hover:text-ink text-xs font-bold uppercase tracking-wider flex items-center gap-1"
+                    className="label text-muted hover:text-ink text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
                   >
-                    Lihat Semua Tracker <FiArrowRight />
+                    Buka Tracker <FiArrowRight />
                   </Link>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-2.5 grid-cols-2 lg:grid-cols-5">
                   {Object.entries(data.pipeline).map(([status, count]) => (
-                    <Link
-                      key={status}
-                      href={`/app/applications?status=${status}`}
-                      className="block"
-                    >
-                      <Card className="hover:border-ink flex items-center justify-between p-3.5 transition-colors">
-                        <StatusBadge status={status as ApplicationStatus} lang={lang} />
-                        <span className="hand text-2xl font-bold">{count}</span>
-                      </Card>
+                    <Link key={status} href={`/app/applications?status=${status}`} className="block">
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                        <Card className="hover:border-ink flex items-center justify-between p-3 transition-colors">
+                          <StatusBadge status={status as ApplicationStatus} lang={lang} />
+                          <span className="hand text-2xl font-bold text-ink">{count}</span>
+                        </Card>
+                      </motion.div>
                     </Link>
                   ))}
                 </div>
               </motion.section>
 
-              {/* ===== Top Gap & Recent Analyses ===== */}
-              <div className="grid gap-8 lg:grid-cols-3">
-                {/* Top Gaps Identified */}
-                <motion.section variants={itemVariants} className="space-y-3 lg:col-span-1">
-                  <h2 className="scrawl text-2xl font-bold">Gap Paling Sering Disarankan 💡</h2>
-                  <Card className="space-y-3 p-4">
-                    {data.topGaps.length === 0 ? (
-                      <p className="text-muted text-xs">Belum ada data gap dari analisis.</p>
-                    ) : (
-                      data.topGaps.map((g) => (
-                        <div key={g.skill} className="flex items-center justify-between text-xs font-semibold">
-                          <span className="truncate">{g.skill}</span>
-                          <span className="label bg-yellow/40 text-ink rounded px-2 py-0.5 font-bold text-[10px]">
-                            {g.count}x
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </Card>
-                </motion.section>
+              {/* ===== Recent Analyses Section ===== */}
+              <motion.section variants={itemVariants} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
+                    ⚡ {lang === "id" ? "Hasil Analisis Terbaru" : "Recent Match Analyses"}
+                  </h2>
+                  <Link
+                    href="/app/analyze"
+                    className="label text-muted hover:text-ink text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
+                  >
+                    Lihat Semua <FiArrowRight />
+                  </Link>
+                </div>
 
-                {/* Recent Analyses */}
-                <motion.section variants={itemVariants} className="space-y-3 lg:col-span-2">
-                  <div className="flex items-center justify-between">
-                    <h2 className="scrawl text-2xl font-bold flex items-center gap-2">
-                      <FiZap className="text-yellow" /> Analisis Terbaru
-                    </h2>
-                    <Link
-                      href="/app/analyze"
-                      className="label text-muted hover:text-ink text-xs font-bold uppercase tracking-wider flex items-center gap-1"
-                    >
-                      Mulai Analisis <FiArrowRight />
-                    </Link>
-                  </div>
-
-                  <div className="space-y-3">
-                    {data.recentAnalyses.length === 0 ? (
-                      <Card className="py-8 text-center">
-                        <p className="scrawl text-muted text-lg">Belum ada analisis match.</p>
-                        <Link href="/app/analyze" className="inline-block mt-3">
-                          <Button variant="danger" icon={<FiZap />}>
-                            ⚡ Jalankan Analisis Pertama
-                          </Button>
-                        </Link>
-                      </Card>
-                    ) : (
-                      data.recentAnalyses.slice(0, 5).map((a, i) => (
-                        <Link key={a.id} href={`/app/analyze/${a.id}`} className="block">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {data.recentAnalyses.length === 0 ? (
+                    <Card className="py-6 text-center col-span-full">
+                      <p className="scrawl text-muted text-base">Belum ada analisis match.</p>
+                      <Link href="/app/analyze" className="inline-block mt-2">
+                        <Button variant="danger" size="sm" icon={<FiZap />}>
+                          ⚡ Jalankan Analisis Pertama
+                        </Button>
+                      </Link>
+                    </Card>
+                  ) : (
+                    data.recentAnalyses.slice(0, 6).map((a, i) => (
+                      <Link key={a.id} href={`/app/analyze/${a.id}`} className="block">
+                        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                           <Card
-                            rotate={i % 2 ? 0.5 : -0.5}
-                            className="flex items-center justify-between p-4 transition-transform hover:scale-[1.01]"
+                            rotate={i % 2 ? 0.3 : -0.3}
+                            className="p-4 space-y-2 hover:border-ink transition-colors"
                           >
-                            <div className="min-w-0">
-                              <p className="truncate text-base font-bold">{a.cvTitle}</p>
-                              <p className="text-muted text-xs">
-                                {new Date(a.createdAt).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="hand text-xl font-bold text-ink truncate">{a.cvTitle}</span>
+                              <span className={`hand text-2xl font-bold shrink-0 ${toneText[scoreTone(a.matchScore)]}`}>
+                                {a.matchScore}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-muted font-medium pt-1.5 border-t border-line/40">
+                              <span>
+                                {new Date(a.createdAt).toLocaleDateString("id-ID", {
                                   day: "numeric",
                                   month: "short",
                                   year: "numeric",
                                 })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`hand text-3xl font-bold ${toneText[scoreTone(a.matchScore)]}`}>
-                                {a.matchScore}
                               </span>
-                              <span className="scrawl text-muted text-xs">/100</span>
+                              <span className="label text-ink font-bold group-hover:underline">Detail →</span>
                             </div>
                           </Card>
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                </motion.section>
-              </div>
+                        </motion.div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </motion.section>
             </>
           )}
         </motion.div>
@@ -305,46 +461,14 @@ export default function DashboardPage() {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-2">
-          <div className="h-10 w-72 bg-line/40 rounded-xl" />
-          <div className="h-6 w-96 bg-line/25 rounded-lg" />
-        </div>
-        <div className="h-12 w-48 bg-line/40 rounded-xl" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-6 animate-pulse max-w-5xl mx-auto">
+      <div className="h-28 bg-panel/60 border-2 border-line rounded-2xl p-5 shadow-paper" />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-32 border-2 border-line bg-panel/60 rounded-2xl p-5 space-y-3 shadow-paper">
-            <div className="h-4 w-20 bg-line/40 rounded" />
-            <div className="h-8 w-16 bg-line/50 rounded-lg" />
-            <div className="h-3 w-28 bg-line/30 rounded" />
-          </div>
+          <div key={i} className="h-24 border-2 border-line bg-panel/60 rounded-2xl p-4 space-y-2 shadow-paper" />
         ))}
       </div>
-
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="h-8 w-48 bg-line/40 rounded-xl" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-28 border-2 border-line bg-panel/60 rounded-2xl p-4 space-y-2 shadow-paper">
-                <div className="h-4 w-3/4 bg-line/40 rounded" />
-                <div className="h-4 w-1/2 bg-line/30 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div className="h-8 w-40 bg-line/40 rounded-xl" />
-          <div className="h-64 border-2 border-line bg-panel/60 rounded-2xl p-4 space-y-3 shadow-paper">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-line/30 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </div>
+      <div className="h-48 border-2 border-line bg-panel/60 rounded-2xl p-5 shadow-paper" />
     </div>
   )
 }
