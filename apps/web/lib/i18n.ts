@@ -1,6 +1,7 @@
 "use client"
 
 import { create } from "zustand"
+import { persist, createJSONStorage } from "zustand/middleware"
 
 /** i18n ringan ID/EN (PRD §18: UI awal ID + EN). */
 export type Lang = "id" | "en"
@@ -42,8 +43,17 @@ type I18nState = {
   t: (key: DictKey) => string
 }
 
-export const useI18n = create<I18nState>((set, get) => ({
-  lang: "id",
-  setLang: (lang) => set({ lang }),
-  t: (key) => dict[get().lang][key],
-}))
+export const useI18n = create<I18nState>()(
+  persist(
+    (set, get) => ({
+      lang: "id",
+      setLang: (lang) => set({ lang }),
+      t: (key) => dict[get().lang]?.[key] ?? dict["id"][key],
+    }),
+    {
+      name: "dilirik-lang",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ lang: state.lang }),
+    }
+  )
+)

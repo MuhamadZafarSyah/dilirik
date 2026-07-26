@@ -15,6 +15,7 @@ import {
   FiAward,
   FiTarget,
   FiCpu,
+  FiGlobe,
 } from "react-icons/fi"
 import { INTERVIEW_PERSONAS, INTERVIEW_PERSONA_LABELS, type InterviewPersona } from "@dilirik/shared"
 import { api, errorMessage } from "@/lib/api"
@@ -55,6 +56,7 @@ function NewInterviewForm() {
   const [cvId, setCvId] = useState<string | null>(prefCvId)
   const [jobId, setJobId] = useState<string | null>(prefJobId)
   const [persona, setPersona] = useState<InterviewPersona>("NETRAL")
+  const [interviewLang, setInterviewLang] = useState<"id" | "en">(lang)
   const [error, setError] = useState<string | null>(null)
 
   const cvsQuery = useQuery({
@@ -80,6 +82,7 @@ function NewInterviewForm() {
         jobPostingId: jobId ?? undefined,
         analysisId: analysisId ?? undefined,
         persona,
+        language: interviewLang,
       })
       return data.session
     },
@@ -190,7 +193,6 @@ function NewInterviewForm() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {/* General Arena Option */}
           <motion.button
             type="button"
             whileHover={{ scale: 1.02 }}
@@ -211,7 +213,6 @@ function NewInterviewForm() {
             </p>
           </motion.button>
 
-          {/* Specific Jobs */}
           {jobs.map((job) => {
             const selected = jobId === job.id
             const title = job.parsedJson?.jobTitle || job.rawText.slice(0, 50)
@@ -297,6 +298,64 @@ function NewInterviewForm() {
               </motion.button>
             )
           })}
+        </div>
+      </Card>
+
+      {/* Step 4: Interviewer Language Selection */}
+      <Card tape="yellow" rotate={0.3} className="space-y-4 p-6 sm:p-8">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-ink text-paper h-7 w-7 rounded-lg flex items-center justify-center font-bold text-sm">
+              4
+            </span>
+            <h2 className="hand text-2xl font-bold text-ink">
+              {lang === "id" ? "Bahasa Pewawancara 🌐" : "Interviewer Language 🌐"}
+            </h2>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setInterviewLang("id")}
+            className={cn(
+              "relative text-left p-4 rounded-xl border-2 transition-all select-none cursor-pointer flex items-center justify-between",
+              interviewLang === "id"
+                ? "border-ink bg-ink text-paper shadow-paper -rotate-1"
+                : "border-line bg-paper/80 hover:border-ink text-ink shadow-xs",
+            )}
+          >
+            <div>
+              <span className="hand text-xl font-bold block">🇮🇩 Bahasa Indonesia</span>
+              <p className={cn("text-xs mt-1", interviewLang === "id" ? "text-paper/80" : "text-muted")}>
+                Pewawancara bertanya & merespon dalam Bahasa Indonesia.
+              </p>
+            </div>
+            {interviewLang === "id" && <span className="text-yellow text-xl font-bold">✓</span>}
+          </motion.button>
+
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setInterviewLang("en")}
+            className={cn(
+              "relative text-left p-4 rounded-xl border-2 transition-all select-none cursor-pointer flex items-center justify-between",
+              interviewLang === "en"
+                ? "border-ink bg-ink text-paper shadow-paper -rotate-1"
+                : "border-line bg-paper/80 hover:border-ink text-ink shadow-xs",
+            )}
+          >
+            <div>
+              <span className="hand text-xl font-bold block">🇬🇧 English</span>
+              <p className={cn("text-xs mt-1", interviewLang === "en" ? "text-paper/80" : "text-muted")}>
+                The AI interviewer asks & responds entirely in English.
+              </p>
+            </div>
+            {interviewLang === "en" && <span className="text-yellow text-xl font-bold">✓</span>}
+          </motion.button>
         </div>
       </Card>
 
