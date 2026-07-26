@@ -18,6 +18,10 @@ const envSchema = z.object({
   LLM_MODEL: z.string().default("fable-5"),
   // Gemini Live (Live Mock Interview) — hanya untuk mencetak ephemeral token; TIDAK pernah ke browser
   GEMINI_API_KEY: z.string().optional(),
+  // Gotenberg (preview desain DOCX→PDF) — service internal; jangan diekspos publik
+  GOTENBERG_URL: z.string().optional(),
+  GOTENBERG_BASIC_AUTH_USERNAME: z.string().optional(),
+  GOTENBERG_BASIC_AUTH_PASSWORD: z.string().optional(),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
