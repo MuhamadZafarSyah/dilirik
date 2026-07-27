@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
+import { FiMaximize2 } from "react-icons/fi"
+import { Button } from "@/components/ui/button"
+import { PdfNativeModal } from "./pdf-native-modal"
 
 // Worker pdf.js di-bundle webpack dari pdfjs-dist (dependency react-pdf)
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -14,16 +17,20 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
  * Before/After. Text layer & annotation layer dimatikan — murni preview visual,
  * jadi tidak perlu import CSS react-pdf.
  *
+ * Dilengkapi tombol aksi untuk membuka Modal dengan render Embed Native PDF.
+ *
  * Komponen ini HARUS dimuat via next/dynamic dengan ssr: false, karena pdf.js
  * memakai API browser (DOMMatrix dkk.) saat import.
  */
 export function PdfViewer({
   file,
+  title = "Preview PDF",
   isLoading = false,
   error = null,
   maxHeightClassName = "max-h-[560px]",
 }: {
   file: Blob | null
+  title?: string
   isLoading?: boolean
   error?: string | null
   maxHeightClassName?: string
@@ -31,6 +38,7 @@ export function PdfViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [numPages, setNumPages] = useState(0)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Lebar halaman mengikuti lebar kontainer (responsive, tanpa horizontal scroll)
   useEffect(() => {
@@ -44,41 +52,70 @@ export function PdfViewer({
   }, [])
 
   return (
-    <div
-      ref={containerRef}
-      className={`rounded-xl border-2 border-line bg-white shadow-inner overflow-y-auto overflow-x-hidden p-3 ${maxHeightClassName}`}
-    >
-      {error ? (
-        <p className="text-red text-xs font-semibold p-4">{error}</p>
-      ) : isLoading || (!file && !error) ? (
-        <div className="space-y-3 p-2" aria-label="Memuat preview PDF">
-          <div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />
-          <p className="scrawl text-muted text-center text-sm">Menyiapkan preview…</p>
+    <div className="space-y-2">
+      {/* Top Action Header: Button to open Modal with Native PDF Embed */}
+      {file && !isLoading && !error && (
+        <div className="flex items-center justify-between px-1">
+          <span className="label text-[11px] text-muted font-bold uppercase">
+            {numPages > 0 ? `${numPages} Halaman` : "Preview PDF"}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<FiMaximize2 className="h-3.5 w-3.5" />}
+            onClick={() => setIsModalOpen(true)}
+            className="text-xs font-bold"
+          >
+            Layar Penuh (Native PDF)
+          </Button>
         </div>
-      ) : file ? (
-        <Document
-          file={file}
-          onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-          loading={<div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />}
-          error={<p className="text-red text-xs font-semibold p-4">Gagal membaca file PDF</p>}
-        >
-          <div className="space-y-3">
-            {Array.from({ length: numPages }, (_, i) => (
-              <div key={i} className="border border-line/60 shadow-sm">
-                <Page
-                  pageNumber={i + 1}
-                  width={width || undefined}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  loading={<div className="bg-line/20 h-48 w-full animate-pulse" />}
-                />
-              </div>
-            ))}
+      )}
+
+      <div
+        ref={containerRef}
+        className={`rounded-xl border-2 border-line bg-white shadow-inner overflow-y-auto overflow-x-hidden p-3 ${maxHeightClassName}`}
+      >
+        {error ? (
+          <p className="text-red text-xs font-semibold p-4">{error}</p>
+        ) : isLoading || (!file && !error) ? (
+          <div className="space-y-3 p-2" aria-label="Memuat preview PDF">
+            <div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />
+            <p className="scrawl text-muted text-center text-sm">Menyiapkan preview…</p>
           </div>
-        </Document>
-      ) : null}
+        ) : file ? (
+          <Document
+            file={file}
+            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+            loading={<div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />}
+            error={<p className="text-red text-xs font-semibold p-4">Gagal membaca file PDF</p>}
+          >
+            <div className="space-y-3">
+              {Array.from({ length: numPages }, (_, i) => (
+                <div key={i} className="border border-line/60 shadow-sm">
+                  <Page
+                    pageNumber={i + 1}
+                    width={width || undefined}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    loading={<div className="bg-line/20 h-48 w-full animate-pulse" />}
+                  />
+                </div>
+              ))}
+            </div>
+          </Document>
+        ) : null}
+      </div>
+
+      {/* Modal with Embed Native PDF */}
+      <PdfNativeModal
+        file={file}
+        title={title}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   )
 }
 
 export default PdfViewer
+

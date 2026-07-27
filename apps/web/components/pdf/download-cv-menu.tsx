@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { FiDownload, FiFileText } from "react-icons/fi"
+import { FiDownload, FiFileText, FiMaximize2 } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { DownloadCvButton } from "./download-cv-button"
+import { PdfNativeModal } from "./pdf-native-modal"
 
 type CvLike = {
   id: string
@@ -30,24 +32,34 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 /**
- * Opsi download CV dengan desain yang KONSISTEN antar format:
- * - "PDF (desain asli)" — file asli dikonversi apa adanya (DOCX via Gotenberg),
- *   hasilnya identik dengan file Word-nya, BUKAN render ulang template.
+ * Opsi download & preview CV dengan desain yang KONSISTEN antar format:
+ * - "PDF (desain asli)" — file asli dikonversi apa adanya (DOCX via Gotenberg).
+ * - "Preview PDF Native" — membuka modal dengan embed native PDF.
  * - "Word (.docx)" — file .docx asli.
  * - CV tanpa file desain (paste teks) → fallback PDF template Dilirik.
- *
- * compact: dipakai di header kartu (compare) — tombol outline kecil,
- * tanpa fallback template supaya kartu tetap bersih.
  */
 export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: boolean }) {
   const { toast } = useToast()
   const isDocx = Boolean(cv.fileKey?.toLowerCase().endsWith(".docx"))
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const pdfMutation = useMutation({
     mutationFn: async () => {
       const res = await api.get<Blob>(`/api/cv/${cv.id}/file/pdf`, { responseType: "blob" })
       saveBlob(res.data, `${slugOf(cv.title)}-v${cv.version}-dilirik.pdf`)
     },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
+
+  const previewMutation = useMutation({
+    mutationFn: async () => {
+      if (pdfBlob) return pdfBlob
+      const res = await api.get<Blob>(`/api/cv/${cv.id}/file/pdf`, { responseType: "blob" })
+      setPdfBlob(res.data)
+      return res.data
+    },
+    onSuccess: () => setIsModalOpen(true),
     onError: (err) => toast(errorMessage(err), "error"),
   })
 
@@ -69,16 +81,30 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
+        variant="outline"
+        size={compact ? "sm" : "md"}
+        icon={<FiMaximize2 />}
+        isLoading={previewMutation.isPending}
+        onClick={() => previewMutation.mutate()}
+        title="Buka PDF di Modal Embed Native"
+      >
+        {previewMutation.isPending ? "Menyiapkan\u2026" : compact ? "Modal PDF" : "Preview PDF (Modal)"}
+      </Button>
+
+      <Button
         variant={compact ? "outline" : "primary"}
+        size={compact ? "sm" : "md"}
         icon={<FiDownload />}
         isLoading={pdfMutation.isPending}
         onClick={() => pdfMutation.mutate()}
       >
         {pdfMutation.isPending ? "Menyiapkan PDF\u2026" : compact ? "PDF" : "PDF (desain asli)"}
       </Button>
+
       {isDocx && (
         <Button
           variant="outline"
+          size={compact ? "sm" : "md"}
           icon={<FiFileText />}
           isLoading={docxMutation.isPending}
           onClick={() => docxMutation.mutate()}
@@ -86,6 +112,14 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
           {docxMutation.isPending ? "Menyiapkan\u2026" : compact ? "Word" : "Word (.docx)"}
         </Button>
       )}
+
+      <PdfNativeModal
+        file={pdfBlob}
+        title={`${cv.title} (v${cv.version})`}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   )
 }
+
