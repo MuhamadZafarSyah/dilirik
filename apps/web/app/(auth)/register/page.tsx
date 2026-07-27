@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FaGithub, FaGoogle } from "react-icons/fa6"
 import { signIn, signUp, useSession } from "@/lib/auth-client"
+import { getCaptchaToken } from "@/lib/captcha"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -28,7 +29,12 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error: err } = await signUp.email({ name, email, password })
+    // Token CAPTCHA (reCAPTCHA v3 / Turnstile) — diverifikasi API sebelum sign-up (anti bot)
+    const captchaToken = await getCaptchaToken("register")
+    const { error: err } = await signUp.email(
+      { name, email, password },
+      { headers: captchaToken ? { "x-captcha-token": captchaToken } : {} },
+    )
     setLoading(false)
     if (err) {
       setError(err.message ?? "Gagal mendaftar, silakan coba lagi.")
