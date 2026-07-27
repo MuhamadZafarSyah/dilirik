@@ -36,6 +36,29 @@ export async function storeCvFile(args: {
   return key
 }
 
+/**
+ * Simpan file pada KEY yang sudah ditentukan caller (bukan key acak) — dipakai
+ * untuk menaruh DOCX hasil konversi Adobe di sebelah PDF aslinya (`<pdfKey>.docx`),
+ * sehingga relasi original↔konversi bisa diturunkan dari key tanpa migrasi DB.
+ */
+export async function putCvFile(args: {
+  key: string
+  buffer: Buffer
+  contentType: string
+}): Promise<boolean> {
+  const client = getClient()
+  if (!client) return false
+  await client.send(
+    new PutObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: args.key,
+      Body: args.buffer,
+      ContentType: args.contentType,
+    }),
+  )
+  return true
+}
+
 /** Ambil file CV dari R2 (untuk download desain asli & revisi DOCX native). */
 export async function getCvFile(
   key: string,
