@@ -334,7 +334,7 @@ export default function InterviewLivePage({ params }: { params: Promise<{ id: st
       {/* Phase 5: Ended / Transitioning (Fixes Blank Screen Bug!) */}
       {(live.phase === "ended" || (live.phase === "ending" && live.transcript.length === 0)) && (
         <Card tape="yellow" className="text-center py-10 space-y-3">
-          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }} className="text-4xl inline-block">
+          <motion.div className="text-4xl inline-block">
             ⌛
           </motion.div>
           <h2 className="hand text-3xl font-bold text-ink">
