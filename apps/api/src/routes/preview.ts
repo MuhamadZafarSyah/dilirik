@@ -27,17 +27,20 @@ previewRouter.get("/cv/:id", rateLimit("preview-original", 30, 60), async (req, 
   } catch (e) { next(e) }
 })
 
-// PDF hasil revisi ("After") — murni preview, tidak menyimpan versi/file apa pun
+// PDF hasil revisi ("After") — murni preview, tidak menyimpan versi/file apa pun.
+// `highlight: true` menyorot teks pengganti (stabilo kuning ala Word) — hanya
+// memengaruhi preview ini; file final dari flow apply TIDAK pernah disorot.
 const revisedPreviewSchema = z.object({
   replacements: z
     .array(z.object({ before: z.string().min(1).max(2000), after: z.string().min(1).max(2000) }))
     .min(1)
     .max(50),
+  highlight: z.boolean().optional().default(false),
 })
 previewRouter.post("/cv/:id/revised", rateLimit("preview-revised", 20, 60), async (req, res, next) => {
   try {
-    const { replacements } = revisedPreviewSchema.parse(req.body)
-    const result = await previewService.getRevisedPdfPreview(req.userId!, req.params.id!, replacements)
+    const { replacements, highlight } = revisedPreviewSchema.parse(req.body)
+    const result = await previewService.getRevisedPdfPreview(req.userId!, req.params.id!, replacements, { highlight })
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Access-Control-Expose-Headers", "X-Preview-Applied, X-Preview-Skipped")
     res.setHeader("X-Preview-Applied", String(result.appliedCount))
