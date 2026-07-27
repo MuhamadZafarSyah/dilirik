@@ -22,6 +22,10 @@ const envSchema = z.object({
   GOTENBERG_URL: z.string().optional(),
   GOTENBERG_BASIC_AUTH_USERNAME: z.string().optional(),
   GOTENBERG_BASIC_AUTH_PASSWORD: z.string().optional(),
+  // Adobe PDF Services (konversi PDF→DOCX agar desain asli CV dipertahankan) — opsional.
+  // Kosongkan untuk menonaktifkan; upload PDF akan memakai template Dilirik seperti biasa.
+  PDF_SERVICES_CLIENT_ID: z.string().optional(),
+  PDF_SERVICES_CLIENT_SECRET: z.string().optional(),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

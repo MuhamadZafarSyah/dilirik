@@ -5,9 +5,13 @@ import { requireAuth } from "../middleware/requireAuth"
 import { rateLimit } from "../middleware/rateLimit"
 import { HttpError } from "../middleware/errorHandler"
 import { extractText } from "../services/extractText"
-import { getCvFile, storeCvFile } from "../lib/storage"
+import { getCvFile, putCvFile, storeCvFile } from "../lib/storage"
+import { adobePdfEnabled, convertPdfToDocx } from "../lib/adobePdf"
+import { logger } from "../lib/logger"
 import * as cvService from "../services/cvService"
 import * as previewService from "../services/previewService"
+
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
 export const cvRouter = Router()
@@ -41,15 +45,37 @@ cvRouter.post("/upload", rateLimit("cv-upload", 5, 60), upload.single("file"), a
     if (rawText.length > MAX_CV_CHARS) {
       throw new HttpError(400, "TOO_LONG", `Teks CV melebihi ${MAX_CV_CHARS} karakter`)
     }
-    const fileKey = await storeCvFile({
+    let fileKey = await storeCvFile({
       userId: req.userId!,
       buffer: req.file.buffer,
       contentType: req.file.mimetype,
       originalName: req.file.originalname,
     })
+
+    // ===== PDF → DOCX (Adobe PDF Services) — pertahankan desain asli =====
+    // Konversi hanya 1x per upload; DOCX hasilnya disimpan di `<pdfKey>.docx` dan
+    // dijadikan fileKey CV, sehingga SELURUH pipeline revisi DOCX-native yang sudah
+    // ada (reviseDocx, preview compare, download Word/PDF) otomatis berlaku juga
+    // untuk upload PDF. Best-effort: kalau gagal/kuota habis/fitur mati → fallback
+    // ke jalur template seperti sebelumnya, upload TETAP sukses.
+    const isPdf =
+      req.file.mimetype === "application/pdf" ||
+      req.file.originalname.toLowerCase().endsWith(".pdf")
+    if (fileKey && isPdf && adobePdfEnabled()) {
+      try {
+        const docx = await convertPdfToDocx(req.file.buffer)
+        const docxKey = `${fileKey}.docx`
+        const stored = await putCvFile({ key: docxKey, buffer: docx, contentType: DOCX_MIME })
+        if (stored) fileKey = docxKey
+      } catch (err) {
+        logger.warn({ err }, "Konversi PDF→DOCX gagal — fallback ke jalur template")
+      }
+    }
+
     const title = (req.body.title as string | undefined) || req.file.originalname.replace(/\.[^.]+$/, "")
     const cv = await cvService.createCv({ userId: req.userId!, title, rawText, fileKey })
-    res.status(201).json({ cv })
+    // designPreserved: frontend bisa menampilkan badge "desain asli dipertahankan"
+    res.status(201).json({ cv, designPreserved: Boolean(fileKey?.toLowerCase().endsWith(".docx")) })
   } catch (e) { next(e) }
 })
 

@@ -7,6 +7,8 @@ import * as cvService from "./cvService"
 /**
  * Preview desain (iLovePDF-style compare):
  * - "Before": file asli user — PDF diteruskan apa adanya, DOCX dikonversi ke PDF.
+ *   Khusus CV hasil konversi Adobe (fileKey `*.pdf.docx`), "Before" memakai PDF
+ *   ASLI yang tersimpan di sebelahnya (key tanpa sufiks `.docx`) — pixel-perfect.
  * - "After": DOCX asli dipatch in-memory dengan engine reviseDocx (hanya isi <w:t>
  *   yang diganti — styling, font, dan tabel tidak disentuh) lalu dikonversi ke PDF.
  *
@@ -27,6 +29,16 @@ export async function getOriginalPdfPreview(userId: string, cvId: string): Promi
   const cv = await cvService.getCv(userId, cvId)
   if (!cv.fileKey) {
     throw new HttpError(404, "NO_FILE", "CV ini tidak punya file desain asli (dibuat via paste teks)")
+  }
+  // CV dari upload PDF yang dikonversi Adobe: PDF asli ada di key tanpa ".docx".
+  // Best-effort — kalau PDF aslinya tidak ada, jatuh ke konversi DOCX di bawah.
+  if (cv.fileKey.toLowerCase().endsWith(".pdf.docx")) {
+    try {
+      const original = await getCvFile(cv.fileKey.slice(0, -".docx".length))
+      if (original) return original.buffer
+    } catch {
+      // PDF asli hilang dari storage — lanjut pakai DOCX hasil konversi
+    }
   }
   const file = await getCvFile(cv.fileKey)
   if (!file) throw new HttpError(404, "NO_FILE", "File tidak ditemukan di storage")
