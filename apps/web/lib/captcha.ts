@@ -11,6 +11,9 @@
 const TURNSTILE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 const RECAPTCHA_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 
+const RECAPTCHA_BASE = "https://www.google.com/recaptcha/api.js"
+const TURNSTILE_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+
 export const captchaEnabled = Boolean(TURNSTILE_KEY || RECAPTCHA_KEY)
 
 type GrecaptchaLike = {
@@ -42,7 +45,7 @@ function loadScript(src: string): Promise<void> {
     el.src = src
     el.async = true
     el.onload = () => resolve()
-    el.onerror = () => reject(new Error(`Gagal memuat ${src}`))
+    el.onerror = () => reject(new Error("Gagal memuat script CAPTCHA"))
     document.head.appendChild(el)
   })
   scriptPromises.set(src, promise)
@@ -50,7 +53,7 @@ function loadScript(src: string): Promise<void> {
 }
 
 async function getRecaptchaToken(action: string): Promise<string | null> {
-  await loadScript(`https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_KEY}`)
+  await loadScript(RECAPTCHA_BASE + "?render=" + encodeURIComponent(RECAPTCHA_KEY ?? ""))
   const grecaptcha = (window as unknown as { grecaptcha?: GrecaptchaLike }).grecaptcha
   if (!grecaptcha) return null
   await new Promise<void>((resolve) => grecaptcha.ready(resolve))
@@ -58,7 +61,7 @@ async function getRecaptchaToken(action: string): Promise<string | null> {
 }
 
 async function getTurnstileToken(): Promise<string | null> {
-  await loadScript("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit")
+  await loadScript(TURNSTILE_SRC)
   const turnstile = (window as unknown as { turnstile?: TurnstileLike }).turnstile
   if (!turnstile) return null
   const container = document.createElement("div")

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { FaGithub, FaGoogle } from "react-icons/fa6"
 import { signIn, useSession } from "@/lib/auth-client"
+import { getCaptchaToken } from "@/lib/captcha"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -29,7 +30,12 @@ function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error: err } = await signIn.email({ email, password })
+    // Token CAPTCHA (reCAPTCHA v3 / Turnstile) — diverifikasi API sebelum sign-in
+    const captchaToken = await getCaptchaToken("login")
+    const { error: err } = await signIn.email(
+      { email, password },
+      { headers: captchaToken ? { "x-captcha-token": captchaToken } : {} },
+    )
     setLoading(false)
     if (err) {
       setError(err.message ?? "Email atau password salah")
