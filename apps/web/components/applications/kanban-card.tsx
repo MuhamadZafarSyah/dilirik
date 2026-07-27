@@ -31,16 +31,24 @@ export function KanbanCard({
   item,
   rotate,
   isDragging,
+  dropIndicator,
   onDragStart,
   onDragEnd,
+  onDragOverCard,
+  onDragLeaveCard,
+  onDropOnCard,
   onMovePrev,
   onMoveNext,
 }: {
   item: KanbanItem
   rotate: number
   isDragging: boolean
+  dropIndicator?: "before" | "after" | null
   onDragStart: () => void
   onDragEnd: () => void
+  onDragOverCard?: (e: React.DragEvent, position: "before" | "after") => void
+  onDragLeaveCard?: (e: React.DragEvent) => void
+  onDropOnCard?: (e: React.DragEvent, position: "before" | "after") => void
   onMovePrev?: () => void
   onMoveNext?: () => void
 }) {
@@ -53,6 +61,25 @@ export function KanbanCard({
   const openDetail = () => {
     if (dragHappened.current) return
     router.push(`/app/applications/${item.id}`)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = "move"
+    const rect = e.currentTarget.getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    const position = e.clientY < midY ? "before" : "after"
+    onDragOverCard?.(e, position)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    const position = e.clientY < midY ? "before" : "after"
+    onDropOnCard?.(e, position)
   }
 
   return (
@@ -70,6 +97,12 @@ export function KanbanCard({
         }, 80)
         onDragEnd()
       }}
+      onDragOver={handleDragOver}
+      onDragLeave={(e) => {
+        e.stopPropagation()
+        onDragLeaveCard?.(e)
+      }}
+      onDrop={handleDrop}
       onClick={openDetail}
       onKeyDown={(e) => {
         if (e.key === "Enter") openDetail()
@@ -78,15 +111,22 @@ export function KanbanCard({
       tabIndex={0}
       aria-label={`Buka detail lamaran ${title}`}
       className={cn(
-        "group cursor-grab select-none outline-none transition-all active:cursor-grabbing",
+        "group cursor-grab select-none outline-none transition-all active:cursor-grabbing relative",
         isDragging && "opacity-30"
       )}
       style={{ transform: `rotate(${rotate * 0.4}deg)` }}
     >
+      {dropIndicator === "before" && (
+        <div className="absolute -top-2 left-0 right-0 h-1 bg-blue rounded-full shadow-sm z-20 animate-pulse pointer-events-none" />
+      )}
+
       <motion.div
         whileHover={{ scale: 1.02, y: -2 }}
         transition={{ type: "spring", stiffness: 350, damping: 22 }}
-        className="bg-paper border-2 border-line/80 rounded-2xl p-4 shadow-paper space-y-2.5 hover:border-ink transition-colors relative"
+        className={cn(
+          "bg-paper border-2 border-line/80 rounded-2xl p-4 shadow-paper space-y-2.5 hover:border-ink transition-colors relative",
+          dropIndicator && "border-blue ring-2 ring-blue/30"
+        )}
       >
         {/* Top Header: Dot + Date */}
         <div className="flex items-center justify-between text-[11px] text-muted font-bold">
@@ -175,6 +215,10 @@ export function KanbanCard({
           </div>
         </div>
       </motion.div>
+
+      {dropIndicator === "after" && (
+        <div className="absolute -bottom-2 left-0 right-0 h-1 bg-blue rounded-full shadow-sm z-20 animate-pulse pointer-events-none" />
+      )}
     </div>
   )
 }

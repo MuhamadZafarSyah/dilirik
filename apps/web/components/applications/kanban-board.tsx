@@ -10,7 +10,6 @@ import {
   type ApplicationStatus,
 } from "@dilirik/shared"
 import { Skeleton } from "boneyard-js/react"
-import { FiPlus, FiMoreHorizontal, FiZap } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
@@ -49,14 +48,37 @@ const columnVariants = {
   visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 350, damping: 25 } },
 }
 
+const LOCAL_STORAGE_KEY = "dilirik_kanban_order"
+
+function getSavedOrder(): string[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveOrder(ids: string[]) {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(ids))
+  } catch { }
+}
+
 type DragState = { id: string; from: ApplicationStatus } | null
+type DropTarget = { cardId: string; position: "before" | "after" } | null
 
 export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
   const { lang, t } = useI18n()
   const { toast } = useToast()
   const qc = useQueryClient()
+
   const [dragging, setDragging] = useState<DragState>(null)
   const [overCol, setOverCol] = useState<ApplicationStatus | null>(null)
+  const [dropTarget, setDropTarget] = useState<DropTarget>(null)
+  const [orderIds, setOrderIds] = useState<string[]>(getSavedOrder)
 
   const itemsQuery = useQuery({
     queryKey: ["applications", ""],
@@ -67,17 +89,39 @@ export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
   })
   const rawItems = itemsQuery.data ?? (itemsQuery.isError ? [] : null)
 
-  const items = useMemo(() => {
+  const orderedItems = useMemo(() => {
     if (!rawItems) return null
-    if (!searchQuery) return rawItems
+    const map = new Map(rawItems.map((item) => [item.id, item]))
+    const result: KanbanItem[] = []
+
+    // Preserve custom orderIds sequence
+    for (const id of orderIds) {
+      const item = map.get(id)
+      if (item) {
+        result.push(item)
+        map.delete(id)
+      }
+    }
+
+    // Append any new items not yet in orderIds
+    for (const item of map.values()) {
+      result.push(item)
+    }
+
+    return result
+  }, [rawItems, orderIds])
+
+  const items = useMemo(() => {
+    if (!orderedItems) return null
+    if (!searchQuery) return orderedItems
     const q = searchQuery.toLowerCase()
-    return rawItems.filter((item) => {
+    return orderedItems.filter((item) => {
       const title = (item.jobPosting.parsedJson.jobTitle || "").toLowerCase()
       const company = (item.jobPosting.parsedJson.company || "").toLowerCase()
       const cvTitle = (item.cv.title || "").toLowerCase()
       return title.includes(q) || company.includes(q) || cvTitle.includes(q)
     })
-  }, [rawItems, searchQuery])
+  }, [orderedItems, searchQuery])
 
   const moveMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ApplicationStatus }) => {
@@ -112,19 +156,86 @@ export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
     return map
   }, [items])
 
-  const move = (item: KanbanItem, status: ApplicationStatus | undefined) => {
-    if (!status || item.status === status) return
-    moveMutation.mutate({ id: item.id, status })
+  const applyCardDrop = (
+    sourceId: string,
+    targetStatus: ApplicationStatus,
+    targetCardId?: string,
+    position?: "before" | "after"
+  ) => {
+    if (!orderedItems) return
+    const sourceItem = orderedItems.find((it) => it.id === sourceId)
+    if (!sourceItem) return
+
+    const currentIds = orderedItems.map((it) => it.id)
+    const filteredIds = currentIds.filter((id) => id !== sourceId)
+
+    let newOrderIds: string[] = []
+    if (targetCardId && position) {
+      const targetIndex = filteredIds.indexOf(targetCardId)
+      if (targetIndex !== -1) {
+        const insertIndex = position === "after" ? targetIndex + 1 : targetIndex
+        filteredIds.splice(insertIndex, 0, sourceId)
+        newOrderIds = filteredIds
+      } else {
+        filteredIds.push(sourceId)
+        newOrderIds = filteredIds
+      }
+    } else {
+      const colItemIds = orderedItems
+        .filter((it) => it.status === targetStatus && it.id !== sourceId)
+        .map((it) => it.id)
+
+      if (colItemIds.length > 0) {
+        const lastColItemId = colItemIds[colItemIds.length - 1]
+        const lastIdx = filteredIds.indexOf(lastColItemId!)
+        filteredIds.splice(lastIdx + 1, 0, sourceId)
+        newOrderIds = filteredIds
+      } else {
+        filteredIds.push(sourceId)
+        newOrderIds = filteredIds
+      }
+    }
+
+    setOrderIds(newOrderIds)
+    saveOrder(newOrderIds)
+
+    const statusChanged = sourceItem.status !== targetStatus
+    if (statusChanged) {
+      qc.setQueryData<KanbanItem[]>(["applications", ""], (old) =>
+        old?.map((it) => (it.id === sourceId ? { ...it, status: targetStatus } : it))
+      )
+      moveMutation.mutate({ id: sourceId, status: targetStatus })
+    }
   }
 
-  const handleDrop = (e: React.DragEvent, status: ApplicationStatus) => {
+  const move = (item: KanbanItem, status: ApplicationStatus | undefined) => {
+    if (!status || item.status === status) return
+    applyCardDrop(item.id, status)
+  }
+
+  const handleColumnDrop = (e: React.DragEvent, status: ApplicationStatus) => {
     e.preventDefault()
     const id = e.dataTransfer.getData("text/plain") || dragging?.id
-    const from = dragging?.from
     setOverCol(null)
     setDragging(null)
-    if (!id || from === status) return
-    moveMutation.mutate({ id, status })
+    setDropTarget(null)
+    if (!id) return
+    applyCardDrop(id, status)
+  }
+
+  const handleCardDrop = (
+    e: React.DragEvent,
+    targetItem: KanbanItem,
+    position: "before" | "after"
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const id = e.dataTransfer.getData("text/plain") || dragging?.id
+    setOverCol(null)
+    setDragging(null)
+    setDropTarget(null)
+    if (!id || id === targetItem.id) return
+    applyCardDrop(id, targetItem.status, targetItem.id, position)
   }
 
   return (
@@ -168,7 +279,7 @@ export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
                       if (!e.currentTarget.contains(e.relatedTarget as Node | null))
                         setOverCol((c) => (c === status ? null : c))
                     }}
-                    onDrop={(e) => handleDrop(e, status)}
+                    onDrop={(e) => handleColumnDrop(e, status)}
                     className={cn(
                       "w-[310px] shrink-0 rounded-2xl border-2 bg-panel/80 shadow-paper backdrop-blur-xs flex flex-col h-full overflow-hidden transition-all duration-150",
                       isOver ? "scale-[1.01] border-dashed border-ink bg-yellow/10" : "border-line"
@@ -195,11 +306,26 @@ export function KanbanBoard({ searchQuery }: { searchQuery?: string }) {
                           item={item}
                           rotate={rotations[(i + colIdx) % rotations.length]!}
                           isDragging={dragging?.id === item.id}
+                          dropIndicator={
+                            dropTarget?.cardId === item.id ? dropTarget.position : null
+                          }
                           onDragStart={() => setDragging({ id: item.id, from: status })}
                           onDragEnd={() => {
                             setDragging(null)
                             setOverCol(null)
+                            setDropTarget(null)
                           }}
+                          onDragOverCard={(_e, position) => {
+                            if (dragging && dragging.id !== item.id) {
+                              setDropTarget({ cardId: item.id, position })
+                            }
+                          }}
+                          onDragLeaveCard={() => {
+                            if (dropTarget?.cardId === item.id) {
+                              setDropTarget(null)
+                            }
+                          }}
+                          onDropOnCard={(e, position) => handleCardDrop(e, item, position)}
                           onMovePrev={
                             colIdx > 0 ? () => move(item, APPLICATION_STATUSES[colIdx - 1]) : undefined
                           }
