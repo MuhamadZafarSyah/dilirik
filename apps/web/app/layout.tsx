@@ -40,7 +40,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.variable} ${gochi.variable} ${caveat.variable} bg-paper text-ink font-sans paper-texture min-h-screen antialiased`}
       >
         {children}
-        <Cursor />
       </body>
     </html>
   )

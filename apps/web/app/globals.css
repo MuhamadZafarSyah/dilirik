@@ -3,12 +3,31 @@
 /* Dark mode berbasis class (html.dark) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Hide browser cursor everywhere when custom cursor is enabled */
-html.cursor-none,
-html.cursor-none *,
-html.cursor-none *::before,
-html.cursor-none *::after {
-  cursor: none !important;
+/* Native Custom SVG Cursors — 0ms Latency & 100% Embed/Iframe Compatibility */
+@media (pointer: fine) {
+  :root {
+    --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%232a241d' stroke='%23ffffff' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, auto;
+    --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%23df513b' stroke='%23ffffff' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, pointer;
+    --cursor-grab: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%233f6fb0' stroke='%23ffffff' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, grab;
+  }
+
+  .dark {
+    --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%23f4edd9' stroke='%23181512' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, auto;
+    --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%23e66450' stroke='%23181512' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, pointer;
+    --cursor-grab: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%234479ab' stroke='%23181512' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E") 3 1, grab;
+  }
+
+  html, body {
+    cursor: var(--cursor-default);
+  }
+
+  a, button, input, textarea, select, [role="button"], .cursor-pointer, label[for], summary {
+    cursor: var(--cursor-pointer);
+  }
+
+  .grab, [draggable="true"] {
+    cursor: var(--cursor-grab);
+  }
 }
 
 /* ── Design tokens (Tailwind v4, CSS-first) ───────────── */
