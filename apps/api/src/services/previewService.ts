@@ -11,6 +11,8 @@ import * as cvService from "./cvService"
  *   ASLI yang tersimpan di sebelahnya (key tanpa sufiks `.docx`) — pixel-perfect.
  * - "After": DOCX asli dipatch in-memory dengan engine reviseDocx (hanya isi <w:t>
  *   yang diganti — styling, font, dan tabel tidak disentuh) lalu dikonversi ke PDF.
+ *   Opsi `highlight` menyorot teks pengganti dengan stabilo kuning ala Word —
+ *   HANYA berlaku di preview ini; flow apply/simpan versi TIDAK pernah menyorot.
  *
  * PENTING: fungsi-fungsi ini murni preview — TIDAK menyimpan file/versi apa pun.
  * Sumber kebenaran tetap rawText + flow apply yang sudah ada di routes/analyze.ts.
@@ -56,6 +58,7 @@ export async function getRevisedPdfPreview(
   userId: string,
   cvId: string,
   replacements: DocxReplacement[],
+  options?: { highlight?: boolean },
 ): Promise<{ pdf: Buffer; appliedCount: number; skippedCount: number }> {
   const cv = await cvService.getCv(userId, cvId)
   if (!cv.fileKey?.toLowerCase().endsWith(".docx")) {
@@ -65,7 +68,11 @@ export async function getRevisedPdfPreview(
   const file = await getCvFile(cv.fileKey)
   if (!file) throw new HttpError(404, "NO_FILE", "File tidak ditemukan di storage")
 
-  const revised = await reviseDocx({ buffer: file.buffer, replacements })
+  const revised = await reviseDocx({
+    buffer: file.buffer,
+    replacements,
+    highlight: options?.highlight ?? false,
+  })
   let pdf: Buffer
   try {
     pdf = await convertDocxToPdf(revised.buffer, "cv-revisi.docx")

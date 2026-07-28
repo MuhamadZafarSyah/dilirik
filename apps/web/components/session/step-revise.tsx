@@ -26,6 +26,9 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
   const [applied, setApplied] = useState<Record<number, "ok" | "manual">>({})
   // Kunci preview "Sesudah": indeks saran ter-apply (di-debounce → klik beruntun = 1 konversi)
   const [previewKey, setPreviewKey] = useState("")
+  // Sorot teks yang berubah di preview "Sesudah" (stabilo kuning ala Word) —
+  // hanya memengaruhi preview; file final yang disimpan/di-download tetap bersih.
+  const [highlight, setHighlight] = useState(true)
 
   const cvQuery = useQuery({
     queryKey: ["cv", session.cvId],
@@ -104,7 +107,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
 
   // "Sesudah": DOCX asli dipatch in-memory di server lalu dikonversi — tidak menyimpan apa pun
   const afterPdfQuery = useQuery({
-    queryKey: ["cv-preview-after", session.cvId, previewKey],
+    queryKey: ["cv-preview-after", session.cvId, previewKey, highlight],
     enabled: previewEnabled && isDocxSource && previewKey.length > 0,
     staleTime: Infinity,
     placeholderData: (prev) => prev, // preview lama tetap tampil selagi konversi baru jalan
@@ -115,7 +118,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
       })
       const res = await api.post<Blob>(
         `/api/preview/cv/${session.cvId}/revised`,
-        { replacements },
+        { replacements, highlight },
         { responseType: "blob" },
       )
       return { blob: res.data, skipped: Number(res.headers["x-preview-skipped"] ?? 0) }
@@ -254,15 +257,28 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
         <div className="space-y-3 pt-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="scrawl text-2xl font-bold">Preview Desain Asli 📄</h3>
-            {afterPdfQuery.isFetching && (
-              <span className="label text-muted text-[10px] font-bold uppercase animate-pulse">
-                ⏳ Memperbarui preview…
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {isDocxSource && (
+                <label className="flex cursor-pointer select-none items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={highlight}
+                    onChange={(e) => setHighlight(e.target.checked)}
+                    className="accent-ink h-3.5 w-3.5"
+                  />
+                  <span className="label text-[10px] font-bold uppercase">🖍️ Sorot perubahan</span>
+                </label>
+              )}
+              {afterPdfQuery.isFetching && (
+                <span className="label text-muted text-[10px] font-bold uppercase animate-pulse">
+                  ⏳ Memperbarui preview…
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-muted text-xs">
             {isDocxSource
-              ? "Kiri = file asli kamu. Kanan = file yang SAMA setelah saran diterapkan — hanya teksnya yang diganti, desain/font/tabel tidak disentuh. Catatan: edit manual di textarea tidak ikut ke preview desain (tetap tersimpan di revisi teks)."
+              ? "Kiri = file asli kamu. Kanan = file yang SAMA setelah saran diterapkan — hanya teksnya yang diganti, desain/font/tabel tidak disentuh. Teks yang berubah disorot kuning HANYA di preview — file final yang kamu simpan/download tetap bersih tanpa sorotan. Catatan: edit manual di textarea tidak ikut ke preview desain (tetap tersimpan di revisi teks)."
               : 'Ini file PDF asli kamu (tampilan 100% sama). Preview "Sesudah" pada desain asli hanya tersedia untuk sumber .docx — untuk PDF, hasil akhir dirender ulang pakai template Dilirik.'}
           </p>
           <div className={`grid gap-6 ${isDocxSource ? "lg:grid-cols-2" : ""}`}>
