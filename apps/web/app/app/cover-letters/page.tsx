@@ -9,7 +9,7 @@ import {
   FiPlus,
   FiTrash2,
   FiArrowRight,
-  FiSparkles,
+  FiZap,
   FiClock,
 } from "react-icons/fi"
 import { api, errorMessage, type QuotaInfo } from "@/lib/api"
@@ -119,14 +119,14 @@ export default function CoverLettersPage() {
   useEffect(() => {
     if (cvsQuery.data && cvsQuery.data.length > 0 && !selectedCvId) {
       const match = initialCvId && cvsQuery.data.find((c) => c.id === initialCvId)
-      setSelectedCvId(match ? match.id : cvsQuery.data[0].id)
+      setSelectedCvId(match ? match.id : (cvsQuery.data[0]?.id || ""))
     }
   }, [cvsQuery.data, initialCvId, selectedCvId])
 
   useEffect(() => {
     if (jobsQuery.data && jobsQuery.data.length > 0 && !selectedJobId) {
       const match = initialJobId && jobsQuery.data.find((j) => j.id === initialJobId)
-      setSelectedJobId(match ? match.id : jobsQuery.data[0].id)
+      setSelectedJobId(match ? match.id : (jobsQuery.data[0]?.id || ""))
     }
   }, [jobsQuery.data, initialJobId, selectedJobId])
 
@@ -459,7 +459,7 @@ export default function CoverLettersPage() {
                 variant="yellow"
                 isLoading={generateMutation.isPending}
                 disabled={!selectedCvId || !selectedJobId}
-                icon={<FiSparkles />}
+                icon={<FiZap />}
               >
                 {lang === "id" ? "Generate Surat" : "Generate Cover Letter"}
               </Button>
