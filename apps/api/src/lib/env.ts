@@ -4,6 +4,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // Jumlah hop reverse-proxy terpercaya di depan API (Cloudflare/LB) — dipakai
+  // express `trust proxy` supaya req.ip & cookie `secure` bekerja benar.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
   DATABASE_URL: z.string().min(1),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -34,6 +37,12 @@ const envSchema = z.object({
   MAIL_FROM: z.string().default("Dilirik <no-reply@dilirik.app>"),
   SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
+  // ===== CAPTCHA (pilih salah satu provider; kosong = nonaktif) =====
+  // Cloudflare Turnstile (diprioritaskan bila keduanya di-set)
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+  // Google reCAPTCHA v3
+  RECAPTCHA_SECRET_KEY: z.string().optional(),
+  CAPTCHA_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.5),
 })
 
 /** Validasi env saat boot — fail fast dengan pesan jelas. */

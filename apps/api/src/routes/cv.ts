@@ -13,7 +13,25 @@ import * as previewService from "../services/previewService"
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
+
+import {
+  ALLOWED_CV_MIME_TYPES,
+  assertSafeCvUpload,
+  safeOriginalName,
+} from "../lib/uploadSecurity"
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    // Lapis 1: allowlist MIME type. Lapis 2 (magic bytes) dicek setelah buffer ada.
+    if (!ALLOWED_CV_MIME_TYPES.has(file.mimetype)) {
+      cb(new HttpError(400, "UNSUPPORTED_FILE", "Format file harus PDF atau DOCX"))
+      return
+    }
+    cb(null, true)
+  },
+})
 export const cvRouter = Router()
 cvRouter.use(requireAuth)
 
@@ -37,10 +55,14 @@ cvRouter.post("/", rateLimit("cv-create", 10, 60), async (req, res, next) => {
 cvRouter.post("/upload", rateLimit("cv-upload", 5, 60), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) throw new HttpError(400, "NO_FILE", "File tidak ditemukan di form-data 'file'")
+    // Anti file-spoofing: isi file harus benar-benar PDF/DOCX (magic bytes),
+    // bukan sekadar MIME type yang diklaim client.
+    assertSafeCvUpload(req.file)
+    const originalName = safeOriginalName(req.file.originalname)
     const rawText = await extractText({
       buffer: req.file.buffer,
       mimeType: req.file.mimetype,
-      originalName: req.file.originalname,
+      originalName,
     })
     if (rawText.length > MAX_CV_CHARS) {
       throw new HttpError(400, "TOO_LONG", `Teks CV melebihi ${MAX_CV_CHARS} karakter`)
@@ -49,7 +71,7 @@ cvRouter.post("/upload", rateLimit("cv-upload", 5, 60), upload.single("file"), a
       userId: req.userId!,
       buffer: req.file.buffer,
       contentType: req.file.mimetype,
-      originalName: req.file.originalname,
+      originalName,
     })
 
     // ===== PDF → DOCX (Adobe PDF Services) — pertahankan desain asli =====
@@ -73,6 +95,7 @@ cvRouter.post("/upload", rateLimit("cv-upload", 5, 60), upload.single("file"), a
     }
 
     const title = (req.body.title as string | undefined) || req.file.originalname.replace(/\.[^.]+$/, "")
+    // const title = (req.body.title as string | undefined) || originalName.replace(/\.[^.]+$/, "")
     const cv = await cvService.createCv({ userId: req.userId!, title, rawText, fileKey })
     // designPreserved: frontend bisa menampilkan badge "desain asli dipertahankan"
     res.status(201).json({ cv, designPreserved: Boolean(fileKey?.toLowerCase().endsWith(".docx")) })
@@ -90,7 +113,14 @@ cvRouter.get("/:id/file", async (req, res, next) => {
     if (!file) throw new HttpError(404, "NO_FILE", "File tidak ditemukan di storage")
     const ext = cv.fileKey.toLowerCase().endsWith(".docx") ? "docx" : "pdf"
     const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
-    res.setHeader("Content-Type", file.contentType ?? "application/octet-stream")
+    // Content-Type dari allowlist (bukan metadata storage mentah) — anti MIME sniffing/HTML smuggling.
+    res.setHeader(
+      "Content-Type",
+      ext === "docx"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/pdf",
+    )
+    res.setHeader("X-Content-Type-Options", "nosniff")
     res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.${ext}"`)
     res.send(file.buffer)
   } catch (e) { next(e) }
@@ -105,6 +135,7 @@ cvRouter.get("/:id/file/pdf", rateLimit("cv-file-pdf", 10, 60), async (req, res,
     const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
     const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
     res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("X-Content-Type-Options", "nosniff")
     res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.pdf"`)
     res.send(pdf)
   } catch (e) { next(e) }
