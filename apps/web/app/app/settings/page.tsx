@@ -47,11 +47,11 @@ export default function SettingsPage() {
       .then((r) => {
         setData(r.data)
         setName(r.data.user.name)
-        if (r.data.user.uiLanguage === "id" || r.data.user.uiLanguage === "en") {
-          setLang(r.data.user.uiLanguage)
-        }
+        // if (r.data.user.uiLanguage === "id" || r.data.user.uiLanguage === "en") {
+        //   setLang(r.data.user.uiLanguage)
+        // }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [setLang])
 
   if (!data) {
@@ -135,11 +135,10 @@ export default function SettingsPage() {
                     setLang(l)
                     save({ uiLanguage: l })
                   }}
-                  className={`label rounded-xl px-4 py-2 text-xs font-bold uppercase transition-all select-none ${
-                    active
+                  className={`label rounded-xl px-4 py-2 text-xs font-bold uppercase transition-all select-none ${active
                       ? "bg-ink text-paper shadow-paper -rotate-1"
                       : "bg-paper border-2 border-line text-ink hover:border-ink"
-                  }`}
+                    }`}
                 >
                   {l === "id" ? "🇮🇩 Bahasa Indonesia" : "🇬🇧 English"}
                 </button>
@@ -164,11 +163,10 @@ export default function SettingsPage() {
               return (
                 <span
                   key={provider}
-                  className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase border shadow-xs ${
-                    isConnected
+                  className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase border shadow-xs ${isConnected
                       ? "bg-green/15 border-green/40 text-green"
                       : "bg-line/20 border-line text-muted"
-                  }`}
+                    }`}
                 >
                   {provider === "credential" ? "Email Password" : provider}
                   {isConnected ? <FiCheck className="h-3.5 w-3.5" /> : "—"}
