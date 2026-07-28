@@ -37,7 +37,7 @@ const FORMATS = [
 export default function CoverLetterDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  const toast = useToast()
+  const { toast } = useToast()
   const queryClient = useQueryClient()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
@@ -57,10 +57,10 @@ export default function CoverLetterDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
-      toast.show("Surat lamaran dihapus", "success")
+      toast("Surat lamaran dihapus", "success")
       router.push("/app/cover-letter")
     },
-    onError: (error) => toast.show(errorMessage(error), "error"),
+    onError: (error) => toast(errorMessage(error), "error"),
   })
 
   async function download(format: string) {
@@ -78,7 +78,7 @@ export default function CoverLetterDetailPage() {
       anchor.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      toast.show(errorMessage(error), "error")
+      toast(errorMessage(error), "error")
     } finally {
       setDownloading(null)
     }

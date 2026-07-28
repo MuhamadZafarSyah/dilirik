@@ -37,7 +37,7 @@ function jobLabel(job: JobItem): string {
 
 export default function NewCoverLetterPage() {
   const router = useRouter()
-  const toast = useToast()
+  const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const [cvId, setCvId] = useState("")
@@ -70,11 +70,11 @@ export default function NewCoverLetterPage() {
     onSuccess: (coverLetter) => {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
       queryClient.invalidateQueries({ queryKey: ["cover-letter-quota"] })
-      toast.show("Surat lamaran selesai dibuat", "success")
+      toast("Surat lamaran selesai dibuat", "success")
       router.push(`/app/cover-letter/${coverLetter.id}`)
     },
     onError: (error) => {
-      toast.show(
+      toast(
         isQuotaExceeded(error)
           ? "Kuota cover letter bulan ini sudah habis."
           : errorMessage(error),
