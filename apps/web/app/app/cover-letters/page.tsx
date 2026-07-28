@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import {
-  FiFileText,
   FiPlus,
   FiTrash2,
   FiArrowRight,
@@ -16,8 +15,10 @@ import {
 import { api, errorMessage, type QuotaInfo } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
-import { Card, Polaroid } from "@/components/ui/card"
+import { Polaroid } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ export default function CoverLettersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { lang } = useI18n()
+  const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -63,6 +65,7 @@ export default function CoverLettersPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<"id" | "en">("id")
   const [selectedTemplate, setSelectedTemplate] = useState<CoverLetterTemplate>("professional")
   const [customInstructions, setCustomInstructions] = useState("")
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   const initialCvId = searchParams.get("cvId")
   const initialJobId = searchParams.get("jobId")
@@ -143,7 +146,11 @@ export default function CoverLettersPage() {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
       queryClient.invalidateQueries({ queryKey: ["cover-letter-quota"] })
       setModalOpen(false)
+      toast(lang === "id" ? "Surat lamaran berhasil dibuat!" : "Cover letter generated successfully!", "success")
       router.push(`/app/cover-letters/${newCoverLetter.id}`)
+    },
+    onError: (err) => {
+      toast(errorMessage(err), "error")
     },
   })
 
@@ -154,14 +161,18 @@ export default function CoverLettersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
+      toast(lang === "id" ? "Surat lamaran berhasil dihapus" : "Cover letter deleted successfully", "success")
+      setDeleteTargetId(null)
+    },
+    onError: (err) => {
+      toast(errorMessage(err), "error")
     },
   })
 
-  function handleDelete(id: string, e: React.MouseEvent) {
+  function handleDeleteClick(id: string, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm(lang === "id" ? "Hapus surat lamaran ini?" : "Delete this cover letter?")) return
-    deleteMutation.mutate(id)
+    setDeleteTargetId(id)
   }
 
   const coverLetters = listQuery.data ?? []
@@ -283,7 +294,7 @@ export default function CoverLettersPage() {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={(e) => handleDelete(cl.id, e)}
+                        onClick={(e) => handleDeleteClick(cl.id, e)}
                         disabled={deleteMutation.isPending}
                         className="p-1.5 hover:bg-red/20 text-muted hover:text-red rounded-lg transition-colors"
                         title="Hapus"
@@ -456,6 +467,27 @@ export default function CoverLettersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null)
+        }}
+        title={lang === "id" ? "Hapus Surat Lamaran?" : "Delete Cover Letter?"}
+        description={
+          lang === "id"
+            ? "Surat lamaran ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+            : "This cover letter will be permanently deleted. This action cannot be undone."
+        }
+        confirmLabel={lang === "id" ? "Ya, Hapus" : "Yes, Delete"}
+        cancelLabel={lang === "id" ? "Batal" : "Cancel"}
+        onConfirm={async () => {
+          if (deleteTargetId) {
+            await deleteMutation.mutateAsync(deleteTargetId)
+          }
+        }}
+      />
     </motion.div>
   )
 }

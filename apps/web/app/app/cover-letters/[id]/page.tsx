@@ -19,6 +19,8 @@ import { api, errorMessage } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { Card, Polaroid } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import type { CoverLetterDto } from "@dilirik/shared"
 
 const containerVariants = {
@@ -48,11 +50,13 @@ export default function CoverLetterDetailPage({
   const id = resolvedParams.id
   const router = useRouter()
   const { lang } = useI18n()
+  const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState("")
   const [copied, setCopied] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Query: Cover Letter Detail
   const detailQuery = useQuery({
@@ -76,6 +80,10 @@ export default function CoverLetterDetailPage({
       queryClient.setQueryData(["cover-letter", id], updated)
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
       setEditing(false)
+      toast(lang === "id" ? "Perubahan berhasil disimpan!" : "Changes saved successfully!", "success")
+    },
+    onError: (err) => {
+      toast(errorMessage(err), "error")
     },
   })
 
@@ -86,7 +94,11 @@ export default function CoverLetterDetailPage({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
+      toast(lang === "id" ? "Surat lamaran berhasil dihapus" : "Cover letter deleted successfully", "success")
       router.push("/app/cover-letters")
+    },
+    onError: (err) => {
+      toast(errorMessage(err), "error")
     },
   })
 
@@ -97,20 +109,16 @@ export default function CoverLetterDetailPage({
     try {
       await navigator.clipboard.writeText(coverLetter.text)
       setCopied(true)
+      toast(lang === "id" ? "Teks disalin ke clipboard!" : "Text copied to clipboard!", "success")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      alert("Gagal menyalin teks")
+      toast(lang === "id" ? "Gagal menyalin teks" : "Failed to copy text", "error")
     }
   }
 
   function downloadFile(url: string) {
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
     window.open(`${apiBase}${url}`, "_blank")
-  }
-
-  function handleDelete() {
-    if (!confirm(lang === "id" ? "Hapus surat lamaran ini?" : "Delete this cover letter?")) return
-    deleteMutation.mutate()
   }
 
   if (detailQuery.isLoading) {
@@ -198,8 +206,7 @@ export default function CoverLetterDetailPage({
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDelete}
-            isLoading={deleteMutation.isPending}
+            onClick={() => setConfirmDelete(true)}
             icon={<FiTrash2 className="text-red" />}
             title="Hapus"
           />
@@ -299,6 +306,23 @@ export default function CoverLetterDetailPage({
           </div>
         </Polaroid>
       </motion.div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={lang === "id" ? "Hapus Surat Lamaran?" : "Delete Cover Letter?"}
+        description={
+          lang === "id"
+            ? "Surat lamaran ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+            : "This cover letter will be permanently deleted. This action cannot be undone."
+        }
+        confirmLabel={lang === "id" ? "Ya, Hapus" : "Yes, Delete"}
+        cancelLabel={lang === "id" ? "Batal" : "Cancel"}
+        onConfirm={async () => {
+          await deleteMutation.mutateAsync()
+        }}
+      />
     </motion.div>
   )
 }

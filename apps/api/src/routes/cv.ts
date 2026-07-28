@@ -101,8 +101,8 @@ cvRouter.get("/:id/file", async (req, res, next) => {
 // jadi user bebas memilih format Word atau PDF dengan desain yang sama.
 cvRouter.get("/:id/file/pdf", rateLimit("cv-file-pdf", 10, 60), async (req, res, next) => {
   try {
-    const cv = await cvService.getCv(req.userId!, req.params.id!)
-    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
+    const cv = await cvService.getCv(req.userId!, req.params.id as string)
+    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id as string)
     const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", `attachment; filename="${slug}-v${cv.version}-dilirik.pdf"`)

@@ -57,7 +57,7 @@ interviewRouter.get("/sessions/:id", async (req, res, next) => {
 // Ephemeral token: browser connect langsung ke Gemini Live TANPA GEMINI_API_KEY (T-M5-03)
 interviewRouter.post("/sessions/:id/token", rateLimit("interview-token", 10, 60), async (req, res, next) => {
   try {
-    const session = await interviewService.startInterviewSession(req.userId!, req.params.id!)
+    const session = await interviewService.startInterviewSession(req.userId!, req.params.id as string)
     const { token, expireAt } = await createEphemeralToken()
     res.json({
       token,
@@ -93,7 +93,7 @@ interviewRouter.patch("/sessions/:id", async (req, res, next) => {
 // Feedback pasca-sesi — 1 panggilan LLM non-live, idempoten
 interviewRouter.post("/sessions/:id/feedback", rateLimit("interview-feedback", 4, 60), async (req, res, next) => {
   try {
-    const session = await interviewService.generateFeedback(req.userId!, req.params.id!)
+    const session = await interviewService.generateFeedback(req.userId!, req.params.id as string)
     res.json({ session: toPublic(session) })
   } catch (e) { next(e) }
 })

@@ -20,7 +20,7 @@ previewRouter.get("/status", async (_req, res, next) => {
 // PDF file desain ASLI ("Before") — PDF passthrough, DOCX dikonversi
 previewRouter.get("/cv/:id", rateLimit("preview-original", 30, 60), async (req, res, next) => {
   try {
-    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
+    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id as string)
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Cache-Control", "private, max-age=300")
     res.send(pdf)
@@ -37,7 +37,7 @@ const revisedPreviewSchema = z.object({
 previewRouter.post("/cv/:id/revised", rateLimit("preview-revised", 20, 60), async (req, res, next) => {
   try {
     const { replacements } = revisedPreviewSchema.parse(req.body)
-    const result = await previewService.getRevisedPdfPreview(req.userId!, req.params.id!, replacements)
+    const result = await previewService.getRevisedPdfPreview(req.userId!, req.params.id as string, replacements)
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Access-Control-Expose-Headers", "X-Preview-Applied, X-Preview-Skipped")
     res.setHeader("X-Preview-Applied", String(result.appliedCount))
