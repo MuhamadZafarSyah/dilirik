@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/nav/sidebar"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { ToastProvider } from "@/components/ui/toast"
 import { TopProgressBar } from "@/components/ui/top-progress-bar"
+import Cursor from "@/components/ui/Cursor"
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <main className="mx-auto w-full max-w-shell flex-1 p-4 md:p-8">{children}</main>
           </div>
         </div>
+        <Cursor />
       </ToastProvider>
     </QueryProvider>
   )
