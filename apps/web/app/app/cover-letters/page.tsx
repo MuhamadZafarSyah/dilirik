@@ -26,13 +26,20 @@ import {
   DialogTitle,
 } from "@/components/ui/modal"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   COVER_LETTER_TEMPLATE_LABELS,
   type CoverLetterDto,
   type CoverLetterTemplate,
 } from "@dilirik/shared"
 
-type CvListItem = { id: string; title: string }
-type JobListItem = { id: string; parsedJson: { title?: string; company?: string }; createdAt: string }
+type CvListItem = { id: string; title: string; version: number }
+type JobListItem = { id: string; parsedJson: { jobTitle?: string; company?: string }; createdAt: string }
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -103,8 +110,8 @@ export default function CoverLettersPage() {
     queryKey: ["jobs"],
     enabled: modalOpen || Boolean(initialCvId || initialJobId),
     queryFn: async () => {
-      const res = await api.get<{ jobPostings: JobListItem[] }>("/api/jobs")
-      return res.data.jobPostings
+      const res = await api.get<{ jobs: JobListItem[] }>("/api/jobs")
+      return res.data.jobs
     },
   })
 
@@ -337,8 +344,8 @@ export default function CoverLettersPage() {
             className="space-y-4"
           >
             {/* Select CV */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-muted mb-1.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase text-muted">
                 1. {lang === "id" ? "Pilih CV Pengamar" : "Select Candidate CV"}
               </label>
               {cvs.length === 0 ? (
@@ -349,24 +356,24 @@ export default function CoverLettersPage() {
                   </Link>
                 </div>
               ) : (
-                <select
-                  value={selectedCvId}
-                  onChange={(e) => setSelectedCvId(e.target.value)}
-                  required
-                  className="w-full bg-panel border-2 border-line rounded-xl px-4 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                >
-                  {cvs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedCvId} onValueChange={setSelectedCvId}>
+                  <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
+                    <SelectValue placeholder={lang === "id" ? "— pilih CV —" : "— select CV —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cvs.map((cv) => (
+                      <SelectItem key={cv.id} value={cv.id}>
+                        {cv.title} (v{cv.version})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
             {/* Select Job */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-muted mb-1.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase text-muted">
                 2. {lang === "id" ? "Pilih Lowongan Pekerjaan" : "Select Job Posting"}
               </label>
               {jobs.length === 0 ? (
@@ -377,58 +384,60 @@ export default function CoverLettersPage() {
                   </Link>
                 </div>
               ) : (
-                <select
-                  value={selectedJobId}
-                  onChange={(e) => setSelectedJobId(e.target.value)}
-                  required
-                  className="w-full bg-panel border-2 border-line rounded-xl px-4 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                >
-                  {jobs.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.parsedJson?.title || "Lowongan"} {j.parsedJson?.company ? `(${j.parsedJson.company})` : ""}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                  <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
+                    <SelectValue placeholder={lang === "id" ? "— pilih Lowongan —" : "— select Job —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map((j) => (
+                      <SelectItem key={j.id} value={j.id}>
+                        {j.parsedJson?.jobTitle || "Lowongan"} {j.parsedJson?.company ? `(${j.parsedJson.company})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
             {/* Language & Template */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase text-muted mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase text-muted">
                   3. {lang === "id" ? "Bahasa Surat" : "Language"}
                 </label>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value as "id" | "en")}
-                  className="w-full bg-panel border-2 border-line rounded-xl px-4 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                >
-                  <option value="id">Bahasa Indonesia</option>
-                  <option value="en">English</option>
-                </select>
+                <Select value={selectedLanguage} onValueChange={(val) => setSelectedLanguage(val as "id" | "en")}>
+                  <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
+                    <SelectValue placeholder={lang === "id" ? "— pilih Bahasa —" : "— select Language —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-muted mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase text-muted">
                   4. {lang === "id" ? "Gaya Template" : "Template Style"}
                 </label>
-                <select
-                  value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value as CoverLetterTemplate)}
-                  className="w-full bg-panel border-2 border-line rounded-xl px-4 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-ink"
-                >
-                  {Object.entries(COVER_LETTER_TEMPLATE_LABELS).map(([key, labelObj]) => (
-                    <option key={key} value={key}>
-                      {lang === "id" ? labelObj.id : labelObj.en}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedTemplate} onValueChange={(val) => setSelectedTemplate(val as CoverLetterTemplate)}>
+                  <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
+                    <SelectValue placeholder={lang === "id" ? "— pilih Template —" : "— select Template —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(COVER_LETTER_TEMPLATE_LABELS).map(([key, labelObj]) => (
+                      <SelectItem key={key} value={key}>
+                        {lang === "id" ? labelObj.id : labelObj.en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {/* Custom Instructions */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-muted mb-1.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase text-muted">
                 5. {lang === "id" ? "Instruksi Khusus (Opsional)" : "Custom Instructions (Optional)"}
               </label>
               <textarea
