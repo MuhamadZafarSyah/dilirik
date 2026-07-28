@@ -16,6 +16,7 @@ import { dashboardRouter } from "./routes/dashboard"
 import { settingsRouter } from "./routes/settings"
 import { interviewRouter } from "./routes/interview"
 import { previewRouter } from "./routes/preview"
+import { coverLetterRouter } from "./routes/coverLetters"
 
 export function createApp() {
   const app = express()
@@ -41,6 +42,8 @@ export function createApp() {
   app.use("/api/settings", settingsRouter)
   app.use("/api/interview", interviewRouter)
   app.use("/api/preview", previewRouter)
+  app.use("/api/cover-letters", coverLetterRouter)
+
 
   app.use(errorHandler)
   return app

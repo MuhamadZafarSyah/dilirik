@@ -20,3 +20,10 @@ export {
   interviewFeedbackSchema,
   type InterviewFeedback,
 } from "./analysis/interviewFeedback"
+export {
+  generateCoverLetter,
+  countWords,
+  type GenerateCoverLetterParams,
+} from "./coverLetter/generateCoverLetter.js"
+
+

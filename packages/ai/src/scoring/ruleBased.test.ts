@@ -5,11 +5,14 @@ import { ruleBasedScore } from "./ruleBased"
 const cv = (skills: string[]): CvStructured => ({
   fullName: "Tester",
   headline: null,
+  about: null,
   skills,
   experiences: [],
   achievements: [],
   education: [],
+  sections: [],
 })
+
 
 const job = (must: string[], nice: string[] = []): JobParsed => ({
   jobTitle: "FE Engineer",

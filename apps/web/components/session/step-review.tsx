@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { FiAlertTriangle, FiEdit3 } from "react-icons/fi"
+import { FiAlertTriangle, FiEdit3, FiFileText } from "react-icons/fi"
+
 import { Skeleton } from "boneyard-js/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
@@ -106,10 +107,18 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                     ✏︎ Tetap Edit Teks Manual →
                   </Button>
                 )}
+                {session.cvId && session.jobPostingId && (
+                  <Link href={`/app/cover-letters?cvId=${session.cvId}&jobId=${session.jobPostingId}`}>
+                    <Button variant="yellow" icon={<FiFileText />}>
+                      ✉️ Buat Surat Lamaran →
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="secondary" onClick={() => patch({ step: "JOB", analysisId: null })}>
                   ← Ganti Lowongan
                 </Button>
               </div>
+
             </div>
           </Card>
 
