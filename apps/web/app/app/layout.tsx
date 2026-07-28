@@ -25,7 +25,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <main className="mx-auto w-full max-w-shell flex-1 p-4 md:p-8">{children}</main>
           </div>
         </div>
-        <Cursor />
       </ToastProvider>
     </QueryProvider>
   )

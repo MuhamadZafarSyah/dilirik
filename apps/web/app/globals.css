@@ -26,7 +26,7 @@
         3 1,
       auto;
     --cursor-pointer:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%23df513b' stroke='%23181512' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 28 28'%3E%3Cg transform='translate(4, 4) rotate(-70 8 8)'%3E%3Cpath d='M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z' fill='%23e66450' stroke='%23181512' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")
         3 1,
       pointer;
     --cursor-grab:
