@@ -20,3 +20,18 @@ export {
   interviewFeedbackSchema,
   type InterviewFeedback,
 } from "./analysis/interviewFeedback"
+export {
+  generateCoverLetter,
+  EmptyCoverLetterError,
+  type GenerateCoverLetterArgs,
+} from "./coverLetter/generate"
+export {
+  buildCoverLetterPrompt,
+  buildCoverLetterSystemPrompt,
+  type CoverLetterAnalysisContext,
+} from "./coverLetter/prompt"
+export {
+  filterCoverLetterDraft,
+  postCheckCoverLetterParagraph,
+  renderCoverLetterText,
+} from "./coverLetter/postCheck"

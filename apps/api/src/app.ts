@@ -19,6 +19,7 @@ import { dashboardRouter } from "./routes/dashboard"
 import { settingsRouter } from "./routes/settings"
 import { interviewRouter } from "./routes/interview"
 import { previewRouter } from "./routes/preview"
+import { coverLetterRouter } from "./routes/coverLetter"
 
 export function createApp() {
   const app = express()
@@ -76,6 +77,7 @@ export function createApp() {
   app.use("/api/settings", settingsRouter)
   app.use("/api/interview", interviewRouter)
   app.use("/api/preview", previewRouter)
+  app.use("/api/cover-letter", coverLetterRouter)
 
   // 404 JSON konsisten (tanpa bocor stack/HTML default Express)
   app.use((_req, res) => {

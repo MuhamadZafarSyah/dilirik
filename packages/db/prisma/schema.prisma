@@ -24,6 +24,11 @@ model User {
   interviewQuota          Int?      @default(5)
   interviewUsedThisPeriod Int       @default(0)
   interviewQuotaResetAt   DateTime?
+  // Kuota cover letter: TERPISAH dari kuota analisis supaya biaya tiap modul
+  // bisa diatur sendiri. null = unlimited; default 10/bulan.
+  coverLetterQuota          Int?      @default(10)
+  coverLetterUsedThisPeriod Int       @default(0)
+  coverLetterQuotaResetAt   DateTime?
   uiLanguage             String?   @default("id")
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
@@ -35,6 +40,7 @@ model User {
   applications      Application[]
   analysisSessions  AnalysisSession[]
   interviewSessions InterviewSession[]
+  coverLetters      CoverLetter[]
 
   @@map("user")
 }
@@ -228,4 +234,35 @@ model InterviewSession {
 
   @@index([userId, status])
   @@map("interview_session")
+}
+
+// Cover Letter Generator (AI). Surat lamaran dibangun HANYA dari fakta yang ada
+// di CV — tiap paragraf membawa `evidenceFromCv` dan divalidasi guardrail
+// sebelum disimpan (paragraf yang mengarang dibuang ke `rejectedJson`).
+//
+// Referensi cv/job/analysis memakai id longgar TANPA FK, konsisten dengan
+// AnalysisSession & InterviewSession: surat yang sudah jadi adalah artefak
+// final milik user dan tetap hidup meski CV/lowongan sumbernya dihapus.
+// Tanpa versioning — regenerate = baris baru.
+model CoverLetter {
+  id            String   @id @default(cuid())
+  userId        String
+  cvId          String?
+  jobPostingId  String?
+  analysisId    String? // opsional: surat memakai konteks hasil analisis bila ada
+  title         String
+  language      String   @default("id") // id | en — dipilih user
+  tone          String   @default("PROFESIONAL") // SANTAI | PROFESIONAL | ANTUSIAS | FORMAL
+  length        String   @default("SEDANG") // SINGKAT | SEDANG | PANJANG
+  bodyText      String // hasil render final — SUMBER KEBENARAN untuk copy/TXT/DOCX/PDF
+  draftJson     Json // struktur draft + evidenceFromCv per paragraf (audit kejujuran)
+  rejectedJson  Json // paragraf yang ditolak guardrail + alasannya (transparan ke user)
+  engineVersion String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("cover_letter")
 }
