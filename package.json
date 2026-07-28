@@ -2,12 +2,15 @@
   "name": "dilirik",
   "private": true,
   "packageManager": "pnpm@9.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "clear": "pnpm --filter @dilirik/web exec -- rm -rf .next && rm -rf node_modules/.cache/turbo",
     "typecheck": "turbo run typecheck",
     "e2e": "pnpm --filter @dilirik/web e2e",
     "db:push": "pnpm --filter @dilirik/db db:push",

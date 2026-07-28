@@ -2,8 +2,10 @@ import type { NextFunction, Request, Response } from "express"
 import { fromNodeHeaders } from "better-auth/node"
 import { auth } from "../lib/auth"
 
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
+
     interface Request {
       userId?: string
       userEmail?: string
