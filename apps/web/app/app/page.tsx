@@ -451,8 +451,34 @@ export default function DashboardPage() {
                   )}
                 </div>
               </motion.section>
+
+              {/* ===== Cover Letter Banner ===== */}
+              <motion.section variants={itemVariants}>
+                <Card tape="yellow" pin className="p-6 bg-paper flex flex-col md:flex-row items-center justify-between gap-4 border-2 border-line">
+                  <div className="space-y-1 text-center md:text-left">
+                    <div className="flex items-center gap-2 justify-center md:justify-start">
+                      <span className="text-xl">✉️</span>
+                      <h3 className="hand text-2xl font-bold text-ink">
+                        {lang === "id" ? "Surat Lamaran Pekerjaan AI" : "AI Cover Letters"}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-muted max-w-lg">
+                      {lang === "id"
+                        ? "Buat surat lamaran formal atau modern yang disesuaikan secara otomatis dengan CV & match score lowongan incaranmu."
+                        : "Generate tailored formal or modern cover letters based on your CV match score."}
+                    </p>
+                  </div>
+
+                  <Link href="/app/cover-letters">
+                    <Button variant="yellow" icon={<FiFileText />}>
+                      {lang === "id" ? "Kelola Surat Lamaran →" : "Manage Cover Letters →"}
+                    </Button>
+                  </Link>
+                </Card>
+              </motion.section>
             </>
           )}
+
         </motion.div>
       ) : null}
     </Skeleton>

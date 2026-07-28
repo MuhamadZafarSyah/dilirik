@@ -2,12 +2,15 @@ import type { NextFunction, Request, Response } from "express"
 import { fromNodeHeaders } from "better-auth/node"
 import { auth } from "../lib/auth"
 
-declare module "express-serve-static-core" {
-  interface Request {
-    userId?: string
-    userEmail?: string
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string
+      userEmail?: string
+    }
   }
 }
+
 
 /** Proteksi route privat (PRD §7.1): tanpa session valid → 401. */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {

@@ -5,6 +5,7 @@ import { postCheckSuggestion } from "./postCheck"
 const cv: CvStructured = {
   fullName: "Rara",
   headline: "Fresh graduate Informatika",
+  about: null,
   skills: ["JavaScript", "React"],
   experiences: [
     {
@@ -16,14 +17,17 @@ const cv: CvStructured = {
   ],
   achievements: ["Juara 2 hackathon kampus"],
   education: [{ institution: "Universitas X", degree: "S1 Informatika", period: "2020-2024" }],
+  sections: [],
 }
 
 const suggestion = (facts: string[]): Suggestion => ({
   section: "experience",
   before: "Asisten lab",
   after: "Membimbing 30 mahasiswa dalam praktikum JavaScript dasar",
+  targetRequirement: "",
   basedOnFacts: facts,
 })
+
 
 describe("postCheckSuggestion (guardrail titik-3)", () => {
   it("menerima saran yang merujuk fakta asli CV", () => {

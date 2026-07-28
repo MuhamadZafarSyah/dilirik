@@ -265,7 +265,7 @@ function buildUserPrompt(params: GenerateCoverLetterParams, issues: readonly str
   if (params.analysisGaps?.length) {
     parts.push(
       `## Gap yang sudah terdeteksi\n${params.analysisGaps.map((gap) => `- ${gap}`).join("\n")}\n` +
-        `Jangan tutupi gap ini dengan karangan. Kalau perlu disebut, sebut sekali dengan jujur di paragraf kecocokan.`,
+      `Jangan tutupi gap ini dengan karangan. Kalau perlu disebut, sebut sekali dengan jujur di paragraf kecocokan.`,
     )
   }
   if (params.analysisSuggestions?.length) {
@@ -278,7 +278,7 @@ function buildUserPrompt(params: GenerateCoverLetterParams, issues: readonly str
   if (issues.length > 0) {
     parts.push(
       `## Perbaiki percobaan sebelumnya\nHasil sebelumnya ditolak karena hal berikut. Perbaiki semuanya:\n` +
-        issues.map((issue) => `- ${issue}`).join("\n"),
+      issues.map((issue) => `- ${issue}`).join("\n"),
     )
   }
 

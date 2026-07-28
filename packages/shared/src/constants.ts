@@ -88,3 +88,42 @@ export const INTERVIEW_PERSONA_LABELS: Record<
 
 export const INTERVIEW_STATUSES = ["CREATED", "LIVE", "ENDED", "FEEDBACK_READY"] as const
 export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number]
+
+// ===== Cover Letter Generator (PRD Cover Letter §9.2) =====
+
+/** Kuota gratis pembuatan surat lamaran default per bulan (null = unlimited). */
+export const DEFAULT_COVER_LETTER_QUOTA = 3
+
+export const COVER_LETTER_TEMPLATES = ["professional", "modern", "creative"] as const
+export type CoverLetterTemplate = (typeof COVER_LETTER_TEMPLATES)[number]
+
+export const COVER_LETTER_TEMPLATE_LABELS: Record<
+  CoverLetterTemplate,
+  { id: string; en: string; description: { id: string; en: string } }
+> = {
+  professional: {
+    id: "Profesional",
+    en: "Professional",
+    description: {
+      id: "Format bisnis klasik dengan nada formal, cocok untuk perusahaan korporasi",
+      en: "Classic business layout with formal tone, suitable for corporate roles",
+    },
+  },
+  modern: {
+    id: "Modern",
+    en: "Modern",
+    description: {
+      id: "Tampilan bersih & kontemporer dengan penekanan pada pencapaian utama",
+      en: "Clean contemporary layout with emphasis on key achievements",
+    },
+  },
+  creative: {
+    id: "Kreatif",
+    en: "Creative",
+    description: {
+      id: "Pendekatan bercerita (storytelling) dengan sentuhan estetika Y2K",
+      en: "Storytelling approach with Y2K aesthetic touch",
+    },
+  },
+}
+
