@@ -1,51 +1,36 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect, useMemo, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import {
   FiPlus,
-  FiTrash2,
-  FiArrowRight,
+  FiSearch,
   FiZap,
-  FiClock,
+  FiFilter,
+  FiX,
+  FiFileText,
 } from "react-icons/fi"
 import { api, errorMessage, type QuotaInfo } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
-import { Polaroid } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
+import { CoverLetterCard } from "@/components/cover-letters/cover-letter-card"
+import { GenerateCoverLetterModal } from "@/components/cover-letters/generate-modal"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/modal"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  COVER_LETTER_TEMPLATE_LABELS,
   type CoverLetterDto,
   type CoverLetterTemplate,
 } from "@dilirik/shared"
-
-type CvListItem = { id: string; title: string; version: number }
-type JobListItem = { id: string; parsedJson: { jobTitle?: string; company?: string }; createdAt: string }
+import { cn } from "@/lib/utils"
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
   },
 }
 
@@ -59,23 +44,30 @@ const itemVariants = {
   },
 }
 
-export default function CoverLettersPage() {
-  const router = useRouter()
+function CoverLettersContent() {
   const searchParams = useSearchParams()
   const { lang } = useI18n()
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
+  // Modal & Dialog state
   const [modalOpen, setModalOpen] = useState(false)
-  const [selectedCvId, setSelectedCvId] = useState("")
-  const [selectedJobId, setSelectedJobId] = useState("")
-  const [selectedLanguage, setSelectedLanguage] = useState<"id" | "en">("id")
-  const [selectedTemplate, setSelectedTemplate] = useState<CoverLetterTemplate>("professional")
-  const [customInstructions, setCustomInstructions] = useState("")
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string>("all")
+  const [selectedLangFilter, setSelectedLangFilter] = useState<string>("all")
 
   const initialCvId = searchParams.get("cvId")
   const initialJobId = searchParams.get("jobId")
+
+  // Auto-open modal if query params present (e.g. redirected from CV or Job page)
+  useEffect(() => {
+    if (initialCvId || initialJobId) {
+      setModalOpen(true)
+    }
+  }, [initialCvId, initialJobId])
 
   // Query: Cover Letters List
   const listQuery = useQuery({
@@ -86,78 +78,12 @@ export default function CoverLettersPage() {
     },
   })
 
-  // Query: Quota
+  // Query: Quota Info
   const quotaQuery = useQuery({
     queryKey: ["cover-letter-quota"],
     queryFn: async () => {
       const res = await api.get<QuotaInfo>("/api/cover-letters/quota")
       return res.data
-    },
-  })
-
-  // Query: Candidate CVs (enabled when modal opens or initial query params exist)
-  const cvsQuery = useQuery({
-    queryKey: ["cvs"],
-    enabled: modalOpen || Boolean(initialCvId || initialJobId),
-    queryFn: async () => {
-      const res = await api.get<{ cvs: CvListItem[] }>("/api/cv")
-      return res.data.cvs
-    },
-  })
-
-  // Query: Job Postings (enabled when modal opens or initial query params exist)
-  const jobsQuery = useQuery({
-    queryKey: ["jobs"],
-    enabled: modalOpen || Boolean(initialCvId || initialJobId),
-    queryFn: async () => {
-      const res = await api.get<{ jobs: JobListItem[] }>("/api/jobs")
-      return res.data.jobs
-    },
-  })
-
-  // Auto-open modal if query params present
-  useEffect(() => {
-    if (initialCvId || initialJobId) {
-      setModalOpen(true)
-    }
-  }, [initialCvId, initialJobId])
-
-  // Sync selected CV and Job when options load
-  useEffect(() => {
-    if (cvsQuery.data && cvsQuery.data.length > 0 && !selectedCvId) {
-      const match = initialCvId && cvsQuery.data.find((c) => c.id === initialCvId)
-      setSelectedCvId(match ? match.id : (cvsQuery.data[0]?.id || ""))
-    }
-  }, [cvsQuery.data, initialCvId, selectedCvId])
-
-  useEffect(() => {
-    if (jobsQuery.data && jobsQuery.data.length > 0 && !selectedJobId) {
-      const match = initialJobId && jobsQuery.data.find((j) => j.id === initialJobId)
-      setSelectedJobId(match ? match.id : (jobsQuery.data[0]?.id || ""))
-    }
-  }, [jobsQuery.data, initialJobId, selectedJobId])
-
-  // Mutation: Generate Cover Letter
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<{ coverLetter: CoverLetterDto }>("/api/cover-letters/generate", {
-        cvId: selectedCvId,
-        jobPostingId: selectedJobId,
-        language: selectedLanguage,
-        template: selectedTemplate,
-        customInstructions: customInstructions.trim() || undefined,
-      })
-      return res.data.coverLetter
-    },
-    onSuccess: (newCoverLetter) => {
-      queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
-      queryClient.invalidateQueries({ queryKey: ["cover-letter-quota"] })
-      setModalOpen(false)
-      toast(lang === "id" ? "Surat lamaran berhasil dibuat!" : "Cover letter generated successfully!", "success")
-      router.push(`/app/cover-letters/${newCoverLetter.id}`)
-    },
-    onError: (err) => {
-      toast(errorMessage(err), "error")
     },
   })
 
@@ -168,7 +94,10 @@ export default function CoverLettersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
-      toast(lang === "id" ? "Surat lamaran berhasil dihapus" : "Cover letter deleted successfully", "success")
+      toast(
+        lang === "id" ? "Surat lamaran berhasil dihapus" : "Cover letter deleted successfully",
+        "success"
+      )
       setDeleteTargetId(null)
     },
     onError: (err) => {
@@ -176,16 +105,45 @@ export default function CoverLettersPage() {
     },
   })
 
+  const rawCoverLetters = listQuery.data ?? []
+  const quota = quotaQuery.data
+
+  // Filtered Cover Letters
+  const filteredCoverLetters = useMemo(() => {
+    return rawCoverLetters.filter((cl) => {
+      // Template filter
+      if (selectedTemplateFilter !== "all" && cl.template !== selectedTemplateFilter) {
+        return false
+      }
+      // Language filter
+      if (selectedLangFilter !== "all" && cl.language !== selectedLangFilter) {
+        return false
+      }
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim()
+        const title = (cl.jobPosting?.title || "").toLowerCase()
+        const company = (cl.jobPosting?.company || "").toLowerCase()
+        const text = cl.text.toLowerCase()
+        return title.includes(q) || company.includes(q) || text.includes(q)
+      }
+      return true
+    })
+  }, [rawCoverLetters, selectedTemplateFilter, selectedLangFilter, searchQuery])
+
+  const isFilterActive = searchQuery.trim() !== "" || selectedTemplateFilter !== "all" || selectedLangFilter !== "all"
+
   function handleDeleteClick(id: string, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     setDeleteTargetId(id)
   }
 
-  const coverLetters = listQuery.data ?? []
-  const quota = quotaQuery.data
-  const cvs = cvsQuery.data ?? []
-  const jobs = jobsQuery.data ?? []
+  function resetFilters() {
+    setSearchQuery("")
+    setSelectedTemplateFilter("all")
+    setSelectedLangFilter("all")
+  }
 
   return (
     <motion.div
@@ -194,8 +152,8 @@ export default function CoverLettersPage() {
       animate="visible"
       className="max-w-6xl mx-auto space-y-8 p-4 md:p-6"
     >
-      {/* Header */}
-      <motion.div
+      {/* Header Section */}
+      <motion.header
         variants={itemVariants}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-line pb-6"
       >
@@ -204,9 +162,6 @@ export default function CoverLettersPage() {
             <h1 className="hand text-4xl font-bold text-ink">
               {lang === "id" ? "Surat Lamaran" : "Cover Letters"}
             </h1>
-            <span className="bg-yellow text-ink border-2 border-line px-3 py-0.5 rounded-full text-xs font-bold shadow-xs">
-              AI Powered ✦
-            </span>
           </div>
           <p className="text-muted text-sm mt-1">
             {lang === "id"
@@ -215,12 +170,16 @@ export default function CoverLettersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Quota Badge & Create CTA */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           {quota && (
-            <div className="bg-paper border-2 border-line rounded-xl px-3.5 py-1.5 shadow-xs text-xs font-bold text-ink">
-              {quota.quota === null
-                ? "Unlimited ✦"
-                : `${quota.used}/${quota.quota} ${lang === "id" ? "gratis bulan ini" : "free this month"}`}
+            <div className="bg-paper border-2 border-line rounded-2xl px-4 py-2 shadow-paper text-xs font-bold text-ink flex items-center gap-2">
+              <FiZap className="h-4 w-4 text-yellow" />
+              <span>
+                {quota.quota === null
+                  ? "Unlimited ✦"
+                  : `${quota.used}/${quota.quota} ${lang === "id" ? "gratis bulan ini" : "free this month"}`}
+              </span>
             </div>
           )}
 
@@ -233,21 +192,95 @@ export default function CoverLettersPage() {
             {lang === "id" ? "Buat Surat Lamaran" : "Create Cover Letter"}
           </Button>
         </div>
-      </motion.div>
+      </motion.header>
 
-      {/* Main Content Showcase */}
+      {/* Filter & Search Bar */}
+      {rawCoverLetters.length > 0 && (
+        <motion.div
+          variants={itemVariants}
+          className="bg-panel border-2 border-line rounded-2xl p-4 shadow-paper space-y-3"
+        >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[220px]">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  lang === "id"
+                    ? "Cari posisi, perusahaan, atau isi surat..."
+                    : "Search job title, company, or text..."
+                }
+                className="w-full bg-paper border-2 border-line rounded-xl pl-10 pr-8 py-2 text-xs font-mono text-ink placeholder:text-muted/60 focus:outline-none focus:border-ink shadow-inner"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-line/40 text-muted hover:text-ink transition-colors"
+                >
+                  <FiX className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Template Filters */}
+            <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-[11px] font-bold uppercase text-muted mr-1 flex items-center gap-1">
+                <FiFilter className="h-3 w-3" />
+                {lang === "id" ? "Gaya:" : "Style:"}
+              </span>
+              {(
+                [
+                  ["all", lang === "id" ? "Semua" : "All"],
+                  ["professional", lang === "id" ? "Profesional" : "Professional"],
+                  ["modern", lang === "id" ? "Modern" : "Modern"],
+                  ["creative", lang === "id" ? "Kreatif" : "Creative"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedTemplateFilter(key)}
+                  className={cn(
+                    "label text-xs font-bold uppercase px-3 py-1 rounded-lg border transition-all cursor-pointer select-none",
+                    selectedTemplateFilter === key
+                      ? "bg-ink text-paper border-ink shadow-xs"
+                      : "bg-paper text-muted border-line hover:border-ink/60 hover:text-ink"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+
+              {isFilterActive && (
+                <button
+                  onClick={resetFilters}
+                  className="text-xs font-bold text-red hover:underline ml-2 flex items-center gap-1 cursor-pointer"
+                >
+                  <FiX className="h-3.5 w-3.5" />
+                  {lang === "id" ? "Reset" : "Reset"}
+                </button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Main Cover Letters Showcase Grid */}
       {listQuery.isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-56 bg-panel/60 border-2 border-line rounded-2xl p-5 shadow-paper" />
+            <div key={i} className="h-60 bg-panel/60 border-2 border-line rounded-2xl p-5 shadow-paper" />
           ))}
         </div>
-      ) : coverLetters.length === 0 ? (
+      ) : rawCoverLetters.length === 0 ? (
         <motion.div variants={itemVariants}>
           <EmptyState
             title={lang === "id" ? "Belum ada surat lamaran" : "No cover letters yet"}
             ctaLabel={lang === "id" ? "✍️ Buat Surat Lamaran Pertama" : "✍️ Create First Cover Letter"}
             ctaHref="#"
+            onCtaClick={() => setModalOpen(true)}
             note={
               lang === "id"
                 ? "Surat lamaran personal yang dibuat AI dapat meningkatkan peluang panggilan interview."
@@ -255,231 +288,46 @@ export default function CoverLettersPage() {
             }
           />
         </motion.div>
+      ) : filteredCoverLetters.length === 0 ? (
+        <motion.div variants={itemVariants} className="text-center py-12 space-y-3">
+          <div className="inline-block bg-panel border-2 border-line p-4 rounded-full shadow-paper text-2xl">
+            🔍
+          </div>
+          <h3 className="hand text-2xl font-bold text-ink">
+            {lang === "id" ? "Tidak ada hasil pencarian" : "No matching cover letters"}
+          </h3>
+          <p className="text-xs text-muted">
+            {lang === "id"
+              ? "Coba ubah kata kunci pencarian atau reset filter di atas."
+              : "Try adjusting your search terms or reset the filters above."}
+          </p>
+          <Button variant="secondary" size="sm" onClick={resetFilters}>
+            {lang === "id" ? "Reset Filter" : "Reset Filters"}
+          </Button>
+        </motion.div>
       ) : (
         <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {coverLetters.map((cl, idx) => {
-            const jobTitle = cl.jobPosting?.title || "Posisi Pekerjaan"
-            const company = cl.jobPosting?.company || "Perusahaan"
-
-            return (
-              <Link key={cl.id} href={`/app/cover-letters/${cl.id}`} className="block group">
-                <Polaroid
-                  rotate={(idx % 3 === 0 ? -1 : idx % 2 === 0 ? 1 : 0) * 0.8}
-                  tape={idx % 3 === 0 ? "yellow" : idx % 3 === 1 ? "blue" : "red"}
-                  className="h-full flex flex-col justify-between p-5 space-y-4 group-hover:border-ink transition-colors"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="uppercase text-[10px] font-bold bg-panel border border-line px-2 py-0.5 rounded-md text-ink">
-                        {cl.template ?? "professional"} • {cl.language.toUpperCase()}
-                      </span>
-
-                      {cl.relevanceScore !== null && (
-                        <span className="text-xs font-bold text-green-700 bg-green-100 border border-green-300 px-2 py-0.5 rounded-md">
-                          {cl.relevanceScore}% Match
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <h3 className="font-bold text-ink text-lg line-clamp-1 group-hover:text-yellow-600 transition-colors">
-                        {jobTitle}
-                      </h3>
-                      <p className="text-xs font-bold text-muted line-clamp-1">{company}</p>
-                    </div>
-
-                    <div className="bg-panel/70 border border-line p-3 rounded-xl text-xs text-ink/80 italic line-clamp-3 font-mono">
-                      "{cl.text.slice(0, 140)}…"
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-line/60 flex items-center justify-between text-xs text-muted font-bold">
-                    <span className="flex items-center gap-1">
-                      <FiClock className="h-3.5 w-3.5" />
-                      {new Date(cl.createdAt).toLocaleDateString(lang === "id" ? "id-ID" : "en-US")}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => handleDeleteClick(cl.id, e)}
-                        disabled={deleteMutation.isPending}
-                        className="p-1.5 hover:bg-red/20 text-muted hover:text-red rounded-lg transition-colors"
-                        title="Hapus"
-                      >
-                        <FiTrash2 className="h-4 w-4" />
-                      </button>
-                      <FiArrowRight className="h-4 w-4 text-ink group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                </Polaroid>
-              </Link>
-            )
-          })}
+          {filteredCoverLetters.map((cl, idx) => (
+            <CoverLetterCard
+              key={cl.id}
+              coverLetter={cl}
+              index={idx}
+              lang={lang}
+              onDeleteClick={handleDeleteClick}
+              isDeleting={deleteMutation.isPending && deleteTargetId === cl.id}
+            />
+          ))}
         </motion.div>
       )}
 
-      {/* Generator Radix Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-6 gap-0">
-          <DialogHeader className="pb-4 border-b-2 border-line shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <span>✍️</span>
-              <span>{lang === "id" ? "Buat Surat Lamaran AI" : "Create AI Cover Letter"}</span>
-            </DialogTitle>
-          </DialogHeader>
-
-          {generateMutation.isError && (
-            <div className="mt-4 bg-red-100 border-2 border-red-300 text-red-800 p-3.5 rounded-xl text-sm font-bold shrink-0">
-              {errorMessage(generateMutation.error)}
-            </div>
-          )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (selectedCvId && selectedJobId) {
-                generateMutation.mutate()
-              }
-            }}
-            className="flex flex-col flex-1 min-h-0"
-          >
-            {/* Scrollable Form Body */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1 max-h-[55vh]">
-              {/* Select CV */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase text-muted">
-                  1. {lang === "id" ? "Pilih CV Pengamar" : "Select Candidate CV"}
-                </label>
-                {cvs.length === 0 ? (
-                  <div className="text-xs text-red font-bold">
-                    {lang === "id" ? "Belum ada CV terdaftar." : "No CVs available."}{" "}
-                    <Link href="/app/cv" className="underline">
-                      Tambah CV
-                    </Link>
-                  </div>
-                ) : (
-                  <Select value={selectedCvId} onValueChange={setSelectedCvId}>
-                    <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
-                      <SelectValue placeholder={lang === "id" ? "— pilih CV —" : "— select CV —"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cvs.map((cv) => (
-                        <SelectItem key={cv.id} value={cv.id}>
-                          {cv.title} (v{cv.version})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Select Job */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase text-muted">
-                  2. {lang === "id" ? "Pilih Lowongan Pekerjaan" : "Select Job Posting"}
-                </label>
-                {jobs.length === 0 ? (
-                  <div className="text-xs text-red font-bold">
-                    {lang === "id" ? "Belum ada lowongan terdaftar." : "No job postings available."}{" "}
-                    <Link href="/app/jobs" className="underline">
-                      Tambah Lowongan
-                    </Link>
-                  </div>
-                ) : (
-                  <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                    <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
-                      <SelectValue placeholder={lang === "id" ? "— pilih Lowongan —" : "— select Job —"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jobs.map((j) => (
-                        <SelectItem key={j.id} value={j.id}>
-                          {j.parsedJson?.jobTitle || "Lowongan"} {j.parsedJson?.company ? `(${j.parsedJson.company})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Language & Template */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase text-muted">
-                    3. {lang === "id" ? "Bahasa Surat" : "Language"}
-                  </label>
-                  <Select value={selectedLanguage} onValueChange={(val) => setSelectedLanguage(val as "id" | "en")}>
-                    <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
-                      <SelectValue placeholder={lang === "id" ? "— pilih Bahasa —" : "— select Language —"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase text-muted">
-                    4. {lang === "id" ? "Gaya Template" : "Template Style"}
-                  </label>
-                  <Select value={selectedTemplate} onValueChange={(val) => setSelectedTemplate(val as CoverLetterTemplate)}>
-                    <SelectTrigger className="w-full bg-paper border-2 border-line text-sm font-semibold rounded-xl focus:border-ink">
-                      <SelectValue placeholder={lang === "id" ? "— pilih Template —" : "— select Template —"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(COVER_LETTER_TEMPLATE_LABELS).map(([key, labelObj]) => (
-                        <SelectItem key={key} value={key}>
-                          {lang === "id" ? labelObj.id : labelObj.en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Custom Instructions */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase text-muted">
-                  5. {lang === "id" ? "Instruksi Khusus (Opsional)" : "Custom Instructions (Optional)"}
-                </label>
-                <textarea
-                  value={customInstructions}
-                  onChange={(e) => setCustomInstructions(e.target.value)}
-                  placeholder={
-                    lang === "id"
-                      ? "Tekankan pengalaman memimpin tim, sebutkan ketertarikan pada budaya startup..."
-                      : "Emphasize team leadership experience, mention passion for AI..."
-                  }
-                  rows={3}
-                  className="w-full bg-panel border-2 border-line rounded-xl px-4 py-2.5 text-sm text-ink focus:outline-none focus:border-ink"
-                />
-              </div>
-            </div>
-
-            {/* Sticky Footer Buttons */}
-            <div className="pt-4 border-t-2 border-line flex items-center justify-end gap-3 shrink-0">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setModalOpen(false)}
-                disabled={generateMutation.isPending}
-              >
-                {lang === "id" ? "Batal" : "Cancel"}
-              </Button>
-
-              <Button
-                type="submit"
-                variant="yellow"
-                isLoading={generateMutation.isPending}
-                disabled={!selectedCvId || !selectedJobId}
-                icon={<FiZap />}
-              >
-                {lang === "id" ? "Generate Surat" : "Generate Cover Letter"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Generator Modal Component */}
+      <GenerateCoverLetterModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        initialCvId={initialCvId}
+        initialJobId={initialJobId}
+        lang={lang}
+      />
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
@@ -502,5 +350,13 @@ export default function CoverLettersPage() {
         }}
       />
     </motion.div>
+  )
+}
+
+export default function CoverLettersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center font-hand text-2xl">Memuat…</div>}>
+      <CoverLettersContent />
+    </Suspense>
   )
 }
