@@ -1,9 +1,9 @@
-import { betterAuth } from "better-auth"
-import { prismaAdapter } from "better-auth/adapters/prisma"
-import { prisma } from "@dilirik/db"
-import { DEFAULT_ANALYSIS_QUOTA } from "@dilirik/shared"
-import { env } from "./env"
-import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer"
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { prisma } from "@dilirik/db";
+import { DEFAULT_ANALYSIS_QUOTA } from "@dilirik/shared";
+import { env } from "./env";
+import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
 
 /**
  * Better Auth (PRD §7.1): email/password + OAuth Google & GitHub.
@@ -19,13 +19,15 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendResetPasswordEmail(user.email, url)
+      await sendResetPasswordEmail(user.email, url);
     },
   },
   emailVerification: {
     sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail(user.email, url)
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, token }) => {
+      const verifyUrl = `${env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
+      await sendVerificationEmail(user.email, verifyUrl);
     },
   },
   socialProviders: {
@@ -41,11 +43,15 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       plan: { type: "string", defaultValue: "free" },
-      analysisQuota: { type: "number", defaultValue: DEFAULT_ANALYSIS_QUOTA, required: false },
+      analysisQuota: {
+        type: "number",
+        defaultValue: DEFAULT_ANALYSIS_QUOTA,
+        required: false,
+      },
       analysisUsedThisPeriod: { type: "number", defaultValue: 0 },
       uiLanguage: { type: "string", defaultValue: "id", required: false },
     },
   },
-})
+});
 
-export type Session = typeof auth.$Infer.Session
+export type Session = typeof auth.$Infer.Session;

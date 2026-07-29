@@ -1,7 +1,9 @@
-import { z } from "zod"
+import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
   PORT: z.coerce.number().default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   // Jumlah hop reverse-proxy terpercaya di depan API (Cloudflare/LB) — dipakai
@@ -34,7 +36,7 @@ const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().default("dilirik-uploads"),
   RESEND_API_KEY: z.string().optional(),
-  MAIL_FROM: z.string().default("Dilirik <no-reply@dilirik.app>"),
+  MAIL_FROM: z.string().default("Dilirik <no-reply@dilirik.tech>"),
   SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
   // ===== CAPTCHA (pilih salah satu provider; kosong = nonaktif) =====
@@ -43,7 +45,7 @@ const envSchema = z.object({
   // Google reCAPTCHA v3
   RECAPTCHA_SECRET_KEY: z.string().optional(),
   CAPTCHA_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.5),
-})
+});
 
 /** Validasi env saat boot — fail fast dengan pesan jelas. */
-export const env = envSchema.parse(process.env)
+export const env = envSchema.parse(process.env);
