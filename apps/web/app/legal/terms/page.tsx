@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FiArrowLeft, FiShield } from "react-icons/fi";
+import { FiArrowLeft, FiFileText } from "react-icons/fi";
 import { Card } from "@/components/ui/card";
 
-const title = "Kebijakan Privasi";
+const title = "Ketentuan Layanan";
 const description =
-  "Data apa yang Dilirik simpan, untuk apa dipakai, bagaimana CV diproses model AI, retensi, dan keamanannya.";
+  "Syarat dan ketentuan penggunaan layanan Dilirik, batasan kuota, kewajiban pengguna, dan disclaimer hasil analisis AI.";
 
 export const metadata: Metadata = {
   title,
   description,
-  alternates: { canonical: "/legal/privacy" },
+  alternates: { canonical: "/legal/terms" },
   openGraph: {
     title,
     description,
-    url: "/legal/privacy",
+    url: "/legal/terms",
   },
 };
 
-export default function PrivacyPage() {
+export default function TermsPage() {
   return (
     <main className="min-h-screen py-12 px-4 sm:px-6">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -35,22 +35,22 @@ export default function PrivacyPage() {
 
         {/* Header Block */}
         <div className="space-y-2">
-          <span className="label bg-green/20 border border-green/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xs">
-            <FiShield className="text-green h-3.5 w-3.5" /> Kebijakan Privasi
+          <span className="label bg-blue/20 border border-blue/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xs">
+            <FiFileText className="text-blue h-3.5 w-3.5" /> Ketentuan Layanan
           </span>
           <h1 className="hand text-4xl sm:text-5xl font-extrabold text-ink tracking-tight">
-            Kebijakan Privasi
+            Ketentuan Layanan
           </h1>
           <p className="scrawl text-muted text-lg sm:text-xl">
-            Terakhir diperbarui: 29 Juli 2026 · Waktu baca: 2 menit
+            Terakhir diperbarui: 29 Juli 2026 · Waktu baca: 3 menit
           </p>
         </div>
 
         {/* Content Card */}
         <Card
-          tape="yellow"
+          tape="blue"
           pin
-          rotate={0.5}
+          rotate={-0.5}
           className="w-full p-8 sm:p-12 space-y-8"
         >
           <div className="space-y-8 text-ink">
@@ -61,37 +61,16 @@ export default function PrivacyPage() {
                   01
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Data yang Kami Simpan
+                  Penerimaan Layanan
                 </h2>
               </div>
-              <div className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80 space-y-2">
-                <p>
-                  Kami hanya menyimpan data yang benar-benar dibutuhkan untuk
-                  menjalankan fitur utama Dilirik:
-                </p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>
-                    <strong>Informasi Akun:</strong> Nama dan email yang Anda
-                    daftarkan.
-                  </li>
-                  <li>
-                    <strong>Dokumen CV:</strong> File asli (PDF) beserta
-                    ekstraksi teks dari CV yang Anda tambahkan.
-                  </li>
-                  <li>
-                    <strong>Informasi Pekerjaan:</strong> Lowongan kerja yang
-                    Anda salin/tempel untuk dianalisis.
-                  </li>
-                  <li>
-                    <strong>Hasil Analisis:</strong> Riwayat skor kecocokan,
-                    analisis gap, dan tips optimasi CV Anda.
-                  </li>
-                  <li>
-                    <strong>Tracker Lamaran:</strong> Status pelamaran kerja
-                    yang Anda kelola di dashboard.
-                  </li>
-                </ul>
-              </div>
+              <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
+                Dengan mendaftar, mengakses, atau menggunakan layanan{" "}
+                <strong>Dilirik</strong>, Anda menyatakan bahwa Anda telah
+                membaca, memahami, dan menyetujui seluruh ketentuan layanan ini.
+                Jika Anda tidak menyetujui ketentuan ini, Anda tidak
+                diperkenankan menggunakan layanan kami.
+              </p>
             </section>
 
             {/* Divider */}
@@ -104,18 +83,15 @@ export default function PrivacyPage() {
                   02
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Tujuan Penggunaan Data
+                  Akun dan Keamanan
                 </h2>
               </div>
               <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
-                Data Anda digunakan semata-mata untuk menjalankan dan
-                meningkatkan layanan Dilirik — seperti mengukur tingkat
-                kecocokan CV dengan deskripsi lowongan kerja, menyimpan riwayat
-                versi CV, dan melacak riwayat lamaran Anda.{" "}
-                <strong>
-                  Kami tidak akan pernah menjual atau membagikan data pribadi
-                  Anda kepada pihak ketiga untuk kepentingan iklan.
-                </strong>
+                Anda bertanggung jawab penuh atas kerahasiaan password dan akun
+                Anda, serta semua aktivitas yang terjadi di bawah akun Anda.
+                Satu akun hanya boleh digunakan secara personal oleh pemilik
+                akun yang bersangkutan. Pendaftaran akun secara otomatis oleh
+                bot atau script sangat dilarang.
               </p>
             </section>
 
@@ -129,15 +105,16 @@ export default function PrivacyPage() {
                   03
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Pemrosesan oleh Kecerdasan Buatan (AI)
+                  Penggunaan yang Sah
                 </h2>
               </div>
               <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
-                Untuk menganalisis kecocokan CV, teks CV dan lowongan Anda akan
-                dikirim ke penyedia model AI pihak ketiga melalui API
-                terenkripsi. Kami memiliki perjanjian ketat dan kebijakan
-                privasi yang memastikan bahwa data Anda{" "}
-                <strong>tidak digunakan untuk melatih model AI mereka</strong>.
+                Anda setuju untuk menggunakan Dilirik hanya untuk keperluan yang
+                sah dan tidak melanggar hukum. Anda dilarang keras mencoba
+                melakukan rekayasa balik (reverse engineering), scraping
+                otomatis data massal, memotong (bypass) batasan kuota analisis,
+                atau melakukan tindakan yang dapat mengganggu stabilitas
+                infrastruktur kami.
               </p>
             </section>
 
@@ -151,18 +128,15 @@ export default function PrivacyPage() {
                   04
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Retensi dan Penghapusan Data
+                  Batasan Kuota dan Layanan
                 </h2>
               </div>
               <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
-                Dokumen CV dan versi-versinya akan kami simpan di sistem agar
-                Anda dapat membandingkan perkembangannya kapan saja. Anda
-                memegang kendali penuh atas data Anda.{" "}
-                <strong>
-                  Jika Anda memutuskan untuk menghapus akun, seluruh data
-                  pribadi, CV, dan riwayat analisis Anda akan segera dihapus
-                  secara permanen dari server kami.
-                </strong>
+                Akun dengan paket gratis (Free) akan diberikan kuota analisis CV
+                sebanyak 10 kali per periode. Dilirik berhak untuk menyesuaikan
+                kuota ini, mengubah batasan layanan, atau menangguhkan akses
+                akun yang terdeteksi melakukan penyalahgunaan atau kecurangan
+                kuota.
               </p>
             </section>
 
@@ -176,15 +150,15 @@ export default function PrivacyPage() {
                   05
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Keamanan Data Anda
+                  Hak Milik Intelektual
                 </h2>
               </div>
               <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
-                Kami mengimplementasikan standar keamanan industri untuk
-                melindungi data Anda, termasuk enkripsi koneksi menggunakan TLS,
-                hashing password dengan algoritma yang aman, serta pembatasan
-                akses data yang ketat (ownership check) untuk mencegah kebocoran
-                data antar-pengguna.
+                Seluruh dokumen CV dan detail deskripsi pekerjaan yang Anda
+                unggah ke Dilirik tetap merupakan hak milik intelektual Anda
+                sepenuhnya. Dilirik hanya memiliki hak terbatas untuk memproses
+                data tersebut guna kepentingan menyajikan analisis kecocokan dan
+                laporan kepada Anda.
               </p>
             </section>
 
@@ -198,13 +172,36 @@ export default function PrivacyPage() {
                   06
                 </span>
                 <h2 className="hand text-2xl font-bold text-ink">
-                  Kontak Layanan
+                  Disclaimer Hasil AI
                 </h2>
               </div>
               <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
-                Apabila Anda memiliki pertanyaan, keluhan, atau permintaan
-                terkait pengelolaan data pribadi Anda pada layanan Dilirik,
-                silakan hubungi kami melalui surel di:{" "}
+                Layanan analisis kecocokan CV pada Dilirik didukung oleh
+                kecerdasan buatan (AI). Hasil analisis, skor kecocokan, saran
+                optimasi, dan rekomendasi yang diberikan bersifat membantu
+                referensi Anda dan disediakan "sebagaimana adanya". Dilirik
+                tidak menjamin akurasi mutlak dari hasil pemrosesan AI, dan
+                tidak menjamin kelulusan atau panggilan wawancara kerja Anda di
+                perusahaan mana pun.
+              </p>
+            </section>
+
+            {/* Divider */}
+            <div className="border-t border-line/60 my-6" />
+
+            {/* Section 7 */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <span className="hand text-2xl font-bold text-yellow bg-yellow/20 px-2 py-0.5 rounded-md">
+                  07
+                </span>
+                <h2 className="hand text-2xl font-bold text-ink">
+                  Kontak Kami
+                </h2>
+              </div>
+              <p className="text-sm sm:text-base leading-relaxed pl-10 text-ink/80">
+                Jika Anda memiliki pertanyaan mengenai Ketentuan Layanan ini,
+                silakan hubungi tim dukungan kami melalui surel di:{" "}
                 <a
                   href="mailto:support@dilirik.tech"
                   className="text-blue font-bold hover:underline"
