@@ -1,10 +1,17 @@
 import Link from "next/link"
 
 /** Empty state scrapbook — selalu mengarahkan aksi berikutnya (Prinsip UX #1). */
-export function EmptyState({ title, ctaLabel, ctaHref, note }: {
+export function EmptyState({
+  title,
+  ctaLabel,
+  ctaHref = "#",
+  onCtaClick,
+  note,
+}: {
   title: string
   ctaLabel: string
-  ctaHref: string
+  ctaHref?: string
+  onCtaClick?: () => void
   note?: string
 }) {
   return (
@@ -12,12 +19,21 @@ export function EmptyState({ title, ctaLabel, ctaHref, note }: {
       <span className="tape" aria-hidden />
       <p className="hand text-2xl">{title}</p>
       {note ? <p className="text-muted mt-2 text-sm">{note}</p> : null}
-      <Link
-        href={ctaHref}
-        className="label bg-ink text-paper mt-6 inline-block rounded-md px-5 py-2.5 text-sm font-bold transition-transform hover:rotate-[-2deg]"
-      >
-        {ctaLabel} →
-      </Link>
+      {onCtaClick ? (
+        <button
+          onClick={onCtaClick}
+          className="label bg-ink text-paper mt-6 inline-block rounded-md px-5 py-2.5 text-sm font-bold transition-transform hover:rotate-[-2deg] cursor-pointer"
+        >
+          {ctaLabel} →
+        </button>
+      ) : (
+        <Link
+          href={ctaHref}
+          className="label bg-ink text-paper mt-6 inline-block rounded-md px-5 py-2.5 text-sm font-bold transition-transform hover:rotate-[-2deg]"
+        >
+          {ctaLabel} →
+        </Link>
+      )}
     </div>
   )
 }
