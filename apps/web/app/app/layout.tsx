@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import type { ReactNode } from "react"
 import { Suspense } from "react"
 import { QuotaPill } from "@/components/nav/quota-pill"
@@ -5,7 +6,11 @@ import { Sidebar } from "@/components/nav/sidebar"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { ToastProvider } from "@/components/ui/toast"
 import { TopProgressBar } from "@/components/ui/top-progress-bar"
-import Cursor from "@/components/ui/Cursor"
+
+/** Seluruh area aplikasi bersifat privat — jangan pernah diindeks. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (

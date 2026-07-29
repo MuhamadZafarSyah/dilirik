@@ -1,0 +1,24 @@
+{
+	"name": "Dilirik",
+	"short_name": "Dilirik",
+	"description": "Cocokkan CV dengan lowongan kerja: skor kecocokan, analisis gap, dan saran perbaikan yang jujur.",
+	"lang": "id-ID",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#f2e8d5",
+	"theme_color": "#f2e8d5",
+	"icons": [
+		{
+			"src": "/icon.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/apple-icon.png",
+			"sizes": "180x180",
+			"type": "image/png"
+		}
+	]
+}
