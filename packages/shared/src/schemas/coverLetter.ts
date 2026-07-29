@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { COVER_LETTER_TEMPLATES } from "../constants.js"
+import { COVER_LETTER_TEMPLATES } from "../constants"
 
 export const generateCoverLetterSchema = z.object({
   cvId: z.string().min(1, "cvId wajib diisi"),
