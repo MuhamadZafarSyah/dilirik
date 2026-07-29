@@ -343,7 +343,7 @@ export default function LandingPage() {
         </div>
 
         {/* Interactive App Window Frame */}
-        <Card tape="red" pin className="max-w-4xl mx-auto p-0 overflow-hidden border-2 border-line shadow-lift">
+        <Card tape="red" pin className="max-w-4xl mx-auto p-0  border-2 border-line shadow-lift">
           {/* Simulated App Title Bar */}
           <div className="bg-panel border-b-2 border-line p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
