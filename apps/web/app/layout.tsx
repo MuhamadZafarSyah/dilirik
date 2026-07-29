@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Caveat, Gochi_Hand, Inter } from "next/font/google"
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider"
 import { JsonLd } from "@/components/seo/json-ld"
 import { organizationJsonLd, webSiteJsonLd } from "@/lib/seo/jsonld"
 import {
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         {children}
         <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
+        <AnalyticsProvider />
       </body>
     </html>
   )

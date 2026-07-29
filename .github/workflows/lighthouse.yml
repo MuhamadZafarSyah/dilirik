@@ -1,0 +1,43 @@
+name: Lighthouse
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/lighthouse.yml"
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Diukur pada build production lokal, mengikuti pola job e2e yang sudah ada.
+      # Analytics sengaja TIDAK di-set: Lighthouse mengukur kode kita, bukan
+      # latensi server Google.
+      - name: Build & start web
+        run: |
+          pnpm --filter @dilirik/web build
+          pnpm --filter @dilirik/web start &
+          npx wait-on http://localhost:3000
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./apps/web/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
