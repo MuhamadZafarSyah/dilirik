@@ -1,3 +1,4 @@
+import type { FaqItem } from "@/lib/landing/faqs"
 import {
 	absoluteUrl,
 	defaultDescription,
@@ -80,5 +81,26 @@ export function softwareApplicationJsonLd(): JsonLdObject {
 			url: absoluteUrl("/pricing"),
 			availability: "https://schema.org/InStock",
 		},
+	})
+}
+
+/**
+ * `FAQPage` untuk landing. Pertanyaan dan jawabannya diambil dari sumber yang
+ * sama dengan akordeon di halaman, karena Google mensyaratkan structured data
+ * terlihat juga oleh pengguna.
+ */
+export function faqPageJsonLd(items: readonly FaqItem[]): JsonLdObject {
+	return compact({
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		inLanguage: defaultLanguage,
+		mainEntity: items.map((item) => ({
+			"@type": "Question",
+			name: item.question,
+			acceptedAnswer: {
+				"@type": "Answer",
+				text: item.answer,
+			},
+		})),
 	})
 }
