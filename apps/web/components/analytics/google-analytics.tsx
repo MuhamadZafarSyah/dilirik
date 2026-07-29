@@ -1,6 +1,8 @@
 import Script from "next/script"
 import { gaMeasurementId } from "@/lib/analytics/config"
 
+const GTAG_SCRIPT_BASE_URL = "https://www.googletagmanager.com/gtag/js"
+
 /**
  * Consent Mode v2 — default TOLAK semuanya.
  * `wait_for_update: 500` memberi jeda agar keputusan tersimpan dari kunjungan
@@ -29,9 +31,11 @@ const consentDefaultSnippet = [
 export function GoogleAnalytics() {
   if (!gaMeasurementId) return null
 
+  const scriptSrc = GTAG_SCRIPT_BASE_URL + "?id=" + encodeURIComponent(gaMeasurementId)
+
   const configSnippet = [
     "gtag('js', new Date());",
-    `gtag('config', '${gaMeasurementId}', { send_page_view: true });`,
+    "gtag('config', '" + gaMeasurementId + "', { send_page_view: true });",
   ].join("\n")
 
   return (
@@ -44,10 +48,7 @@ export function GoogleAnalytics() {
         persis sesuai urutan dokumen.
       */}
       <script dangerouslySetInnerHTML={{ __html: consentDefaultSnippet }} />
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
-        strategy="afterInteractive"
-      />
+      <Script src={scriptSrc} strategy="afterInteractive" />
       <Script
         id="ga-config"
         strategy="afterInteractive"
