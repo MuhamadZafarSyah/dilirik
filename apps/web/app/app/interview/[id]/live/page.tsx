@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { FiMic, FiMicOff, FiPhoneOff, FiVolume2, FiMessageSquare } from "react-icons/fi"
 import { api } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -13,7 +14,7 @@ import { useInterviewSession, type TranscriptEntry } from "@/hooks/use-interview
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-type SessionDetail = { id: string; title: string; status: string; maxDurationSec: number }
+type SessionDetail = { id: string; title: string; status: string; maxDurationSec: number; persona?: string }
 
 function formatClock(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -153,6 +154,7 @@ export default function InterviewLivePage({ params }: { params: Promise<{ id: st
   const { lang } = useI18n()
   const [confirmEnd, setConfirmEnd] = useState(false)
   const transcriptEndRef = useRef<HTMLDivElement | null>(null)
+  const sessionEndTrackedRef = useRef(false)
 
   const detailQuery = useQuery({
     queryKey: ["interview", id],
@@ -168,6 +170,17 @@ export default function InterviewLivePage({ params }: { params: Promise<{ id: st
       router.replace(`/app/interview/${id}`)
     }
   }, [id, router, session])
+
+  // Track interview session end once when the live phase transitions to "ended".
+  useEffect(() => {
+    if (live.phase === "ended" && !sessionEndTrackedRef.current) {
+      sessionEndTrackedRef.current = true
+      track("interview_session_ended", {
+        persona: session?.persona ?? "NETRAL",
+        duration_sec: live.elapsedSec,
+      })
+    }
+  }, [live.phase, live.elapsedSec, session])
 
   // Auto-scroll transkrip ke paling bawah
   useEffect(() => {

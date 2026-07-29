@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { FiAlertTriangle, FiEdit3 } from "react-icons/fi"
 import { Skeleton } from "boneyard-js/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage, isQuotaExceeded } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
 import { ScoreGauge } from "@/components/ui/gauge"
@@ -15,6 +17,7 @@ import { FIXABILITY_LABELS, type AnalysisDetail, type Patch, type SessionDetail 
 export function StepReview({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const { t } = useI18n()
   const queryClient = useQueryClient()
+  const quotaTrackedRef = useRef(false)
 
   /**
    * Satu query "get-or-create":
@@ -42,11 +45,20 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
       // Kuota terpakai satu — refresh pill kuota di header.
       queryClient.invalidateQueries({ queryKey: ["quota"] })
       await patch({ analysisId: r.data.analysis.id })
+      track("analysis_completed", { match_score: r.data.analysis.matchScore, cached: false })
       return r.data.analysis
     },
   })
 
   const analysis = analysisQuery.data ?? null
+
+  // Track quota_exceeded once when the API returns a quota error (external system state).
+  useEffect(() => {
+    if (analysisQuery.isError && isQuotaExceeded(analysisQuery.error) && !quotaTrackedRef.current) {
+      quotaTrackedRef.current = true
+      track("quota_exceeded", { module: "analysis" })
+    }
+  }, [analysisQuery.isError, analysisQuery.error])
 
   if (analysisQuery.isError && isQuotaExceeded(analysisQuery.error)) {
     return (

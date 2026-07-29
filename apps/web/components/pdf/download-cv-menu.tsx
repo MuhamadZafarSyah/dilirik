@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { FiDownload, FiFileText, FiMaximize2 } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { DownloadCvButton } from "./download-cv-button"
@@ -48,6 +49,7 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
     mutationFn: async () => {
       const res = await api.get<Blob>(`/api/cv/${cv.id}/file/pdf`, { responseType: "blob" })
       saveBlob(res.data, `${slugOf(cv.title)}-v${cv.version}-dilirik.pdf`)
+      track("export_downloaded", { format: "pdf", module: "cv" })
     },
     onError: (err) => toast(errorMessage(err), "error"),
   })
@@ -67,6 +69,7 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
     mutationFn: async () => {
       const res = await api.get<Blob>(`/api/cv/${cv.id}/file`, { responseType: "blob" })
       saveBlob(res.data, `${slugOf(cv.title)}-v${cv.version}-dilirik.docx`)
+      track("export_downloaded", { format: "docx", module: "cv" })
     },
     onError: (err) => toast(errorMessage(err), "error"),
   })
