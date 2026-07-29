@@ -27,9 +27,11 @@ function normalizeSiteUrl(raw: string | undefined): string {
 	const candidate = raw?.trim()
 	if (!candidate) return FALLBACK_SITE_URL
 
+	const withScheme = candidate.includes("://") ? candidate : "https://" + candidate
+
 	let url: URL
 	try {
-		url = new URL(candidate.includes("://") ? candidate : `https://${candidate}`)
+		url = new URL(withScheme)
 	} catch {
 		return FALLBACK_SITE_URL
 	}
