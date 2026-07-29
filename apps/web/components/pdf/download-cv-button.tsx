@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 
 type Props = {
@@ -36,6 +37,7 @@ export function DownloadCvButton({ rawText, title, version, language }: Props) {
       a.download = `${slug}-v${version}-dilirik.pdf`
       a.click()
       URL.revokeObjectURL(url)
+      track("export_downloaded", { format: "pdf", module: "cv" })
     } finally {
       setBusy(false)
     }

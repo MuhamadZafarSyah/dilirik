@@ -3,8 +3,9 @@
 import { useEffect } from "react"
 import posthog from "posthog-js"
 import { useConsent } from "@/hooks/use-consent"
-import { posthogHost, posthogKey } from "@/lib/analytics/config"
+import { posthogKey } from "@/lib/analytics/config"
 import { registerAnalyticsCapture } from "@/lib/analytics/track"
+import { useSession } from "@/lib/auth-client"
 
 /**
  * Penjaga init agar `posthog.init` tidak pernah dipanggil dua kali (Strict Mode
@@ -14,24 +15,32 @@ let initialized = false
 
 /**
  * Menginisialisasi PostHog HANYA setelah consent diberikan.
- *
- * Catatan: `posthog-js` sudah lama terdaftar sebagai dependency di repo ini tapi
- * belum pernah dipakai. Di sinilah paket itu akhirnya berfungsi.
  */
 export function PostHogProvider() {
   const { consent } = useConsent()
+  const { data: session } = useSession()
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== "production" && !posthogKey) {
+      console.error(
+        "NEXT_PUBLIC_POSTHOG_KEY variable required by PostHog is missing or un-configured, " +
+        "this causes events to be silently missed. This error stops appearing once " +
+        "NEXT_PUBLIC_POSTHOG_KEY is configured"
+      )
+    }
     if (!posthogKey || consent !== "granted") return
 
     if (!initialized) {
       posthog.init(posthogKey, {
-        api_host: posthogHost,
-        // Hanya buat profil orang untuk pengguna yang teridentifikasi — kunjungan
-        // anonim tetap terhitung tanpa menciptakan profil sampah.
+        // Route through Next.js reverse proxy to avoid ad blockers
+        api_host: "/ingest",
+        ui_host: "https://us.posthog.com",
+        defaults: "2026-01-30",
+        // Hanya buat profil orang untuk pengguna yang teridentifikasi
         person_profiles: "identified_only",
         capture_pageview: true,
         capture_pageleave: true,
+        capture_exceptions: true,
       })
       initialized = true
     }
@@ -42,6 +51,16 @@ export function PostHogProvider() {
 
     return () => registerAnalyticsCapture(null)
   }, [consent])
+
+  // Identify authenticated user whenever session or consent changes
+  useEffect(() => {
+    if (consent !== "granted" || !initialized) return
+    if (session?.user?.id) {
+      posthog.identify(session.user.id, {
+        name: session.user.name,
+      })
+    }
+  }, [consent, session])
 
   return null
 }

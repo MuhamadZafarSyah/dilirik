@@ -6,6 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { FiUploadCloud, FiFileText, FiArrowLeft, FiCheck } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -32,6 +33,8 @@ export default function NewCvPage() {
       form.append("file", file)
       if (title) form.append("title", title)
       const { data } = await api.post<{ cv: { id: string } }>("/api/cv/upload", form)
+      const ext = file.name.toLowerCase().endsWith(".docx") ? "docx" : "pdf"
+      track("cv_uploaded", { source: "upload", file_type: ext })
       router.push(`/app/cv/${data.cv.id}`)
     } catch (err) {
       setError(errorMessage(err))
@@ -52,6 +55,7 @@ export default function NewCvPage() {
         title: title || "CV Master Baru",
         rawText,
       })
+      track("cv_uploaded", { source: "paste", file_type: "text" })
       router.push(`/app/cv/${data.cv.id}`)
     } catch (err) {
       setError(errorMessage(err))

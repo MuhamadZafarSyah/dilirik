@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 import { getCaptchaToken } from "@/lib/captcha";
+import { track } from "@/lib/analytics/track";
 import { Button } from "@/components/ui/button";
 import { Card, Sticky } from "@/components/ui/card";
 
@@ -64,6 +65,7 @@ export default function RegisterPage() {
       setError(err.message ?? "Gagal mendaftar, silakan coba lagi.");
       return;
     }
+    track("sign_up", { method: "email" });
     setDone(true);
   }
 
