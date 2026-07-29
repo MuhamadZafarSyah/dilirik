@@ -13,14 +13,15 @@ export type StaticRoute = {
 /**
  * Rute statis yang boleh diindeks.
  *
- * Catatan: `/legal/terms` BELUM ada di aplikasi (hanya `/legal/privacy`).
- * Jangan didaftarkan di sini sebelum halamannya benar-benar dibuat — URL 404 di
- * sitemap menurunkan kepercayaan crawler terhadap seluruh sitemap.
+ * Aturannya: sebuah rute baru masuk daftar ini HANYA setelah halamannya benar
+ * benar ada. URL 404 di dalam sitemap menurunkan kepercayaan crawler terhadap
+ * seluruh sitemap, bukan hanya terhadap satu URL itu.
  */
 export const staticRoutes: readonly StaticRoute[] = [
 	{ path: "/", priority: 1, changeFrequency: "weekly" },
 	{ path: "/pricing", priority: 0.8, changeFrequency: "monthly" },
 	{ path: "/legal/privacy", priority: 0.3, changeFrequency: "yearly" },
+	{ path: "/legal/terms", priority: 0.3, changeFrequency: "yearly" },
 ]
 
 /**
