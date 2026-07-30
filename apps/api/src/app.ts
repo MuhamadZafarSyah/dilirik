@@ -56,6 +56,7 @@ export function createApp(): express.Express {
     res.json({ status: "ok", service: "dilirik-api" });
   });
 
+  // Check endpoint
   app.get("/", (_req, res) => {
     res.json({ status: "ok", service: "dilirik-api" });
   });
