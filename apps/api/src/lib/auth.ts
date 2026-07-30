@@ -6,6 +6,17 @@ import { env } from "./env";
 import { getAllowedOrigins } from "./origins";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
 
+function getCookieDomain(): string | undefined {
+  if (env.NODE_ENV !== "production") return undefined;
+  try {
+    const hostname = new URL(env.NEXT_PUBLIC_APP_URL).hostname.replace(/^www\./i, "");
+    if (hostname === "localhost" || hostname === "127.0.0.1") return undefined;
+    return hostname.startsWith(".") ? hostname : `.${hostname}`;
+  } catch {
+    return ".dilirik.tech";
+  }
+}
+
 /**
  * Better Auth (PRD §7.1): email/password + OAuth Google & GitHub.
  * Field kuota (analysisQuota dsb) ada di skema Prisma dgn default —
@@ -16,6 +27,12 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: getAllowedOrigins(),
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: getCookieDomain(),
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
