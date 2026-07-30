@@ -6,6 +6,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
+import { getAllowedOrigins } from "./lib/origins";
 import { errorHandler } from "./middleware/errorHandler";
 import { rateLimit } from "./middleware/rateLimit";
 import { authHardening } from "./middleware/authHardening";
@@ -49,7 +50,7 @@ export function createApp(): express.Express {
     }),
   );
 
-  app.use(cors({ origin: env.CORS_ORIGIN.split(","), credentials: true }));
+  app.use(cors({ origin: getAllowedOrigins(), credentials: true }));
   app.use(pinoHttp({ logger }));
 
   app.get("/health", (_req, res) => {

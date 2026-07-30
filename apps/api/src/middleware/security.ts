@@ -1,13 +1,8 @@
 import type { NextFunction, Request, Response } from "express"
-import { env } from "../lib/env"
 import { logger } from "../lib/logger"
+import { getAllowedOrigins } from "../lib/origins"
 
-const allowedOrigins = new Set(
-  [env.CORS_ORIGIN.split(","), env.NEXT_PUBLIC_APP_URL]
-    .flat()
-    .map((o) => o.trim())
-    .filter(Boolean),
-)
+const allowedOrigins = new Set(getAllowedOrigins())
 
 /**
  * IP asli client. Di belakang Cloudflare, header `CF-Connecting-IP` adalah

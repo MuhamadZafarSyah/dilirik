@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@dilirik/db";
 import { DEFAULT_ANALYSIS_QUOTA } from "@dilirik/shared";
 import { env } from "./env";
+import { getAllowedOrigins } from "./origins";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
 
 /**
@@ -14,7 +15,7 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.CORS_ORIGIN, env.NEXT_PUBLIC_APP_URL],
+  trustedOrigins: getAllowedOrigins(),
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
