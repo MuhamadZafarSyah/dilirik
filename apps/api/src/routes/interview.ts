@@ -7,7 +7,7 @@ import { createEphemeralToken } from "../lib/gemini"
 import { checkInterviewEntitlement } from "../services/interviewQuota"
 import * as interviewService from "../services/interviewService"
 
-export const interviewRouter = Router()
+export const interviewRouter: Router = Router()
 interviewRouter.use(requireAuth)
 
 /** systemPrompt hanya dikirim lewat endpoint token — respons lain di-strip. */
@@ -57,7 +57,8 @@ interviewRouter.get("/sessions/:id", async (req, res, next) => {
 // Ephemeral token: browser connect langsung ke Gemini Live TANPA GEMINI_API_KEY (T-M5-03)
 interviewRouter.post("/sessions/:id/token", rateLimit("interview-token", 10, 60), async (req, res, next) => {
   try {
-    const session = await interviewService.startInterviewSession(req.userId!, req.params.id!)
+    const id = req.params.id as string
+    const session = await interviewService.startInterviewSession(req.userId!, id)
     const { token, expireAt } = await createEphemeralToken()
     res.json({
       token,
@@ -84,8 +85,9 @@ const endSchema = z.object({
 // Akhiri sesi + simpan transkrip (idempoten — transkrip tersimpan tepat sekali)
 interviewRouter.patch("/sessions/:id", async (req, res, next) => {
   try {
+    const id = req.params.id as string
     const input = endSchema.parse(req.body)
-    const session = await interviewService.endInterviewSession(req.userId!, req.params.id!, input)
+    const session = await interviewService.endInterviewSession(req.userId!, id, input)
     res.json({ session: toPublic(session) })
   } catch (e) { next(e) }
 })
@@ -93,7 +95,8 @@ interviewRouter.patch("/sessions/:id", async (req, res, next) => {
 // Feedback pasca-sesi — 1 panggilan LLM non-live, idempoten
 interviewRouter.post("/sessions/:id/feedback", rateLimit("interview-feedback", 4, 60), async (req, res, next) => {
   try {
-    const session = await interviewService.generateFeedback(req.userId!, req.params.id!)
+    const id = req.params.id as string
+    const session = await interviewService.generateFeedback(req.userId!, id)
     res.json({ session: toPublic(session) })
   } catch (e) { next(e) }
 })

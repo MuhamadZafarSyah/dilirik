@@ -5,7 +5,7 @@ import { rateLimit } from "../middleware/rateLimit"
 import { gotenbergEnabled, warmUpGotenberg } from "../lib/gotenberg"
 import * as previewService from "../services/previewService"
 
-export const previewRouter = Router()
+export const previewRouter: Router = Router()
 previewRouter.use(requireAuth)
 
 // Status fitur preview desain. Sekaligus warm-up Gotenberg (fire-and-forget)
@@ -20,7 +20,8 @@ previewRouter.get("/status", async (_req, res, next) => {
 // PDF file desain ASLI ("Before") — PDF passthrough, DOCX dikonversi
 previewRouter.get("/cv/:id", rateLimit("preview-original", 30, 60), async (req, res, next) => {
   try {
-    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
+    const id = req.params.id as string
+    const pdf = await previewService.getOriginalPdfPreview(req.userId!, id)
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Cache-Control", "private, max-age=300")
     res.send(pdf)
@@ -39,8 +40,9 @@ const revisedPreviewSchema = z.object({
 })
 previewRouter.post("/cv/:id/revised", rateLimit("preview-revised", 20, 60), async (req, res, next) => {
   try {
+    const id = req.params.id as string
     const { replacements, highlight } = revisedPreviewSchema.parse(req.body)
-    const result = await previewService.getRevisedPdfPreview(req.userId!, req.params.id!, replacements, { highlight })
+    const result = await previewService.getRevisedPdfPreview(req.userId!, id, replacements, { highlight })
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Access-Control-Expose-Headers", "X-Preview-Applied, X-Preview-Skipped")
     res.setHeader("X-Preview-Applied", String(result.appliedCount))

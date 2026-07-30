@@ -12,7 +12,7 @@ import { checkEntitlement } from "../services/quota"
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
-export const analyzeRouter = Router()
+export const analyzeRouter: Router = Router()
 analyzeRouter.use(requireAuth)
 
 // Sisa kuota (Flow E: selalu terlihat di dashboard & header)

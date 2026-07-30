@@ -14,7 +14,7 @@ import {
   exportCoverLetterPdfService,
 } from "../services/coverLetterService.js"
 
-export const coverLetterRouter = Router()
+export const coverLetterRouter: Router = Router()
 coverLetterRouter.use(requireAuth)
 
 // Check cover letter quota

@@ -21,7 +21,7 @@ import { interviewRouter } from "./routes/interview";
 import { previewRouter } from "./routes/preview";
 import { coverLetterRouter } from "./routes/coverLetters";
 
-export function createApp() {
+export function createApp(): express.Express {
   const app = express();
 
   // Di belakang Cloudflare/reverse-proxy: percayai N hop supaya req.ip = IP asli

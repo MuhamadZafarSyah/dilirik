@@ -4,7 +4,7 @@ import { requireAuth } from "../middleware/requireAuth"
 import { rateLimit } from "../middleware/rateLimit"
 import * as jobService from "../services/jobService"
 
-export const jobsRouter = Router()
+export const jobsRouter: Router = Router()
 jobsRouter.use(requireAuth)
 
 jobsRouter.get("/", async (req, res, next) => {

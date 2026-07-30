@@ -4,7 +4,7 @@ import { z } from "zod"
 import { requireAuth } from "../middleware/requireAuth"
 import { checkEntitlement } from "../services/quota"
 
-export const settingsRouter = Router()
+export const settingsRouter: Router = Router()
 settingsRouter.use(requireAuth)
 
 // Profil + akun terhubung + kuota (PRD /app/settings)

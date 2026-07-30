@@ -32,7 +32,7 @@ const upload = multer({
     cb(null, true)
   },
 })
-export const cvRouter = Router()
+export const cvRouter: Router = Router()
 cvRouter.use(requireAuth)
 
 // List semua CV (dengan versi)
@@ -131,8 +131,9 @@ cvRouter.get("/:id/file", async (req, res, next) => {
 // jadi user bebas memilih format Word atau PDF dengan desain yang sama.
 cvRouter.get("/:id/file/pdf", rateLimit("cv-file-pdf", 10, 60), async (req, res, next) => {
   try {
-    const cv = await cvService.getCv(req.userId!, req.params.id!)
-    const pdf = await previewService.getOriginalPdfPreview(req.userId!, req.params.id!)
+    const id = req.params.id as string
+    const cv = await cvService.getCv(req.userId!, id)
+    const pdf = await previewService.getOriginalPdfPreview(req.userId!, id)
     const slug = cv.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "cv"
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("X-Content-Type-Options", "nosniff")

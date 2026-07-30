@@ -14,3 +14,5 @@ prisma/*.db
 .agents/
 .claude/
 apps/web/skills-lock.json
+posthog-setup-report.md
+*/tsconfig.tsbuildinfo

@@ -7,7 +7,7 @@ import * as sessionService from "../services/sessionService"
  * Sesi analisis 1-alur (wizard) — progres tersimpan otomatis sebagai draft
  * yang bisa dilanjutkan (Flow B versi sesi-utuh).
  */
-export const sessionsRouter = Router()
+export const sessionsRouter: Router = Router()
 sessionsRouter.use(requireAuth)
 
 sessionsRouter.get("/", async (req, res, next) => {

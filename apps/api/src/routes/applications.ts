@@ -8,7 +8,7 @@ import {
 import { requireAuth } from "../middleware/requireAuth"
 import * as applicationService from "../services/applicationService"
 
-export const applicationsRouter = Router()
+export const applicationsRouter: Router = Router()
 applicationsRouter.use(requireAuth)
 
 applicationsRouter.get("/", async (req, res, next) => {

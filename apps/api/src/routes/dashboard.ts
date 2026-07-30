@@ -2,7 +2,7 @@ import { Router } from "express"
 import { requireAuth } from "../middleware/requireAuth"
 import { getDashboard } from "../services/dashboardService"
 
-export const dashboardRouter = Router()
+export const dashboardRouter: Router = Router()
 dashboardRouter.use(requireAuth)
 
 dashboardRouter.get("/", async (req, res, next) => {
