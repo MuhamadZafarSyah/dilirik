@@ -21,6 +21,8 @@ export type AnalyticsEventMap = {
 	}
 	/** Sesi mock interview berakhir. */
 	interview_session_ended: { persona: string; duration_sec: number }
+	/** Lamaran hasil alur analisis disimpan ke tracker. */
+	application_saved: { source: "analysis_session" }
 	/** Unduhan berkas hasil. */
 	export_downloaded: {
 		format: "txt" | "docx" | "pdf"

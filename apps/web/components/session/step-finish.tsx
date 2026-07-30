@@ -6,6 +6,7 @@ import { FiCheckCircle, FiLayers, FiMic, FiFileText } from "react-icons/fi"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, errorMessage } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CopyButton } from "@/components/ui/copy-button"
@@ -39,6 +40,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
       return data.application.id
     },
     onSuccess: async (applicationId) => {
+      track("application_saved", { source: "analysis_session" })
       queryClient.invalidateQueries({ queryKey: ["applications"] })
       await patch({ applicationId, status: "COMPLETED" })
     },

@@ -3,7 +3,11 @@
 import { useEffect } from "react"
 import posthog from "posthog-js"
 import { useConsent } from "@/hooks/use-consent"
-import { posthogKey } from "@/lib/analytics/config"
+import {
+  posthogHost,
+  posthogKey,
+  posthogTracingHeaders,
+} from "@/lib/analytics/config"
 import { registerAnalyticsCapture } from "@/lib/analytics/track"
 import { useSession } from "@/lib/auth-client"
 
@@ -34,13 +38,16 @@ export function PostHogProvider() {
       posthog.init(posthogKey, {
         // Route through Next.js reverse proxy to avoid ad blockers
         api_host: "/ingest",
-        ui_host: "https://us.posthog.com",
+        ui_host: posthogHost,
         defaults: "2026-01-30",
         // Hanya buat profil orang untuk pengguna yang teridentifikasi
         person_profiles: "identified_only",
         capture_pageview: true,
         capture_pageleave: true,
         capture_exceptions: true,
+        ...(posthogTracingHeaders
+          ? { tracing_headers: [posthogTracingHeaders] }
+          : {}),
       })
       initialized = true
     }
@@ -52,15 +59,15 @@ export function PostHogProvider() {
     return () => registerAnalyticsCapture(null)
   }, [consent])
 
-  // Identify authenticated user whenever session or consent changes
+  // Session identity is persisted by posthog-js after this call.
   useEffect(() => {
-    if (consent !== "granted" || !initialized) return
-    if (session?.user?.id) {
-      posthog.identify(session.user.id, {
-        name: session.user.name,
-      })
-    }
-  }, [consent, session])
+    if (consent !== "granted" || !initialized || !session?.user?.id) return
+
+    posthog.identify(session.user.id, {
+      email: session.user.email,
+      name: session.user.name,
+    })
+  }, [consent, session?.user?.id, session?.user?.email, session?.user?.name])
 
   return null
 }

@@ -20,6 +20,7 @@ import {
   FiX,
 } from "react-icons/fi"
 import { signOut } from "@/lib/auth-client"
+import { posthogKey } from "@/lib/analytics/config"
 import { useI18n } from "@/lib/i18n"
 import { QuotaPill } from "@/components/nav/quota-pill"
 import { cn } from "@/lib/utils"
@@ -49,6 +50,13 @@ export function Sidebar() {
     const next = !collapsed
     setCollapsed(next)
     localStorage.setItem("dilirik-sidebar-collapsed", String(next))
+  }
+
+  const handleSignOut = async () => {
+    const posthog = posthogKey ? (await import("posthog-js")).default : null
+    posthog?.reset()
+    await signOut()
+    router.push("/")
   }
 
   const items = [
@@ -183,8 +191,7 @@ export function Sidebar() {
                 <button
                   onClick={async () => {
                     setMobileOpen(false)
-                    await signOut()
-                    router.push("/")
+                    await handleSignOut()
                   }}
                   className="label text-muted hover:text-red hover:bg-red/10 flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors"
                 >
@@ -319,10 +326,7 @@ export function Sidebar() {
           </div>
 
           <button
-            onClick={async () => {
-              await signOut()
-              router.push("/")
-            }}
+            onClick={handleSignOut}
             className={cn(
               "label text-muted hover:text-red hover:bg-red/10 flex items-center gap-2.5 rounded-xl text-sm font-bold transition-colors",
               collapsed ? "justify-center p-2.5 w-full" : "px-3.5 py-2"

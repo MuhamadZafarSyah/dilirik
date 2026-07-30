@@ -19,8 +19,22 @@ export const gaMeasurementId = readEnv(process.env.NEXT_PUBLIC_GA_ID)
 
 export const posthogKey = readEnv(process.env.NEXT_PUBLIC_POSTHOG_KEY)
 
-export const posthogHost =
-	readEnv(process.env.NEXT_PUBLIC_POSTHOG_HOST) ?? "https://app.posthog.com"
+export const posthogHost = readEnv(process.env.NEXT_PUBLIC_POSTHOG_HOST)
+
+function getHostname(url: string | undefined): string | undefined {
+	if (!url) return undefined
+
+	try {
+		return new URL(url).hostname
+	} catch {
+		return undefined
+	}
+}
+
+/** API host that receives browser identity and session tracing headers. */
+export const posthogTracingHeaders = getHostname(
+	readEnv(process.env.NEXT_PUBLIC_API_URL),
+)
 
 export const isGoogleAnalyticsEnabled = Boolean(gaMeasurementId)
 

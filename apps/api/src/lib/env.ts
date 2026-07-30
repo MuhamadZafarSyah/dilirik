@@ -38,6 +38,8 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().default("Dilirik <no-reply@dilirik.tech>"),
   SENTRY_DSN: z.string().optional(),
+  POSTHOG_PROJECT_TOKEN: z.string().optional(),
+  POSTHOG_HOST: z.string().url().optional(),
   NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
   // ===== CAPTCHA (pilih salah satu provider; kosong = nonaktif) =====
   // Cloudflare Turnstile (diprioritaskan bila keduanya di-set)

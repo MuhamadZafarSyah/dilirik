@@ -1,6 +1,17 @@
 import type { NextFunction, Request, Response } from "express"
 import { ZodError } from "zod"
+import { PostHog } from "posthog-node"
 import { logger } from "../lib/logger"
+
+const posthogKey = process.env.POSTHOG_PROJECT_TOKEN
+const posthog = posthogKey
+  ? new PostHog(posthogKey, {
+      ...(process.env.POSTHOG_HOST ? { host: process.env.POSTHOG_HOST } : {}),
+      flushAt: 1,
+      flushInterval: 0,
+      enableExceptionAutocapture: true,
+    })
+  : null
 
 export class HttpError extends Error {
   constructor(
@@ -19,7 +30,15 @@ export const quotaExceeded = () =>
   new HttpError(429, "QUOTA_EXCEEDED", "Kuota analisis bulan ini habis")
 
 /** Error handler terpusat — bentuk respons konsisten { error, message }. */
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export async function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  if (posthog) {
+    posthog.captureException(err, undefined, {
+      endpoint: req.path,
+      method: req.method,
+      status_code: err instanceof HttpError ? err.status : 500,
+    })
+    await posthog.flush()
+  }
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.code, message: err.message })
     return

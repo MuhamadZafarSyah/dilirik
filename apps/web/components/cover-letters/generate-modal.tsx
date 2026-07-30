@@ -11,6 +11,7 @@ import {
   type CoverLetterTemplate,
 } from "@dilirik/shared"
 import { api, errorMessage } from "@/lib/api"
+import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import {
@@ -127,6 +128,11 @@ export function GenerateCoverLetterModal({
       return res.data.coverLetter
     },
     onSuccess: (newCoverLetter) => {
+      track("cover_letter_generated", {
+        language: selectedLanguage,
+        tone: selectedTemplate,
+        length: customInstructions.trim() ? "customized" : "standard",
+      })
       queryClient.invalidateQueries({ queryKey: ["cover-letters"] })
       queryClient.invalidateQueries({ queryKey: ["cover-letter-quota"] })
       onOpenChange(false)
