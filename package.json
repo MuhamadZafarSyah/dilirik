@@ -2,7 +2,9 @@
   "name": "dilirik",
   "private": true,
   "packageManager": "pnpm@9.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -18,5 +20,8 @@
   "devDependencies": {
     "prettier": "^3.3.3",
     "turbo": "^2.3.3"
+  },
+  "dependencies": {
+    "next": "^15.1.3"
   }
 }
