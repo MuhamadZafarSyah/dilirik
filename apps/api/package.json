@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=../../.env src/server.ts",
-    "build": "pnpm --filter=@dilirik/db build && tsup api/index.ts --format cjs --out-dir dist --clean --no-splitting",
-    "start": "node dist/index.js",
+    "build": "pnpm --filter=@dilirik/db build && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src"
