@@ -42,7 +42,7 @@ const createSchema = z.object({
 interviewRouter.post("/sessions", rateLimit("interview-create", 5, 60), async (req, res, next) => {
   try {
     const input = createSchema.parse(req.body)
-    const session = await interviewService.createInterviewSession({ userId: req.userId!, ...input })
+    const session = await interviewService.createInterviewSession({ userId: req.userId!, ...input } as any)
     res.status(201).json({ session: toPublic(session) })
   } catch (e) { next(e) }
 })
@@ -87,7 +87,7 @@ interviewRouter.patch("/sessions/:id", async (req, res, next) => {
   try {
     const id = req.params.id as string
     const input = endSchema.parse(req.body)
-    const session = await interviewService.endInterviewSession(req.userId!, id, input)
+    const session = await interviewService.endInterviewSession(req.userId!, id, input as any)
     res.json({ session: toPublic(session) })
   } catch (e) { next(e) }
 })

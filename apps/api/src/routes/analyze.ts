@@ -27,7 +27,7 @@ analyzeRouter.get("/quota", async (req, res, next) => {
 analyzeRouter.post("/", rateLimit("analyze", 6, 60), async (req, res, next) => {
   try {
     const input = runAnalysisSchema.parse(req.body)
-    const { analysis, cached } = await analysisService.runAnalysis({ userId: req.userId!, ...input })
+    const { analysis, cached } = await analysisService.runAnalysis({ userId: req.userId!, ...input } as any)
     res.status(201).json({ analysis, cached })
   } catch (e) { next(e) }
 })

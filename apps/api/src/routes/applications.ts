@@ -25,7 +25,7 @@ applicationsRouter.get("/", async (req, res, next) => {
 applicationsRouter.post("/", async (req, res, next) => {
   try {
     const input = createApplicationSchema.parse(req.body)
-    const application = await applicationService.createApplication({ userId: req.userId!, ...input })
+    const application = await applicationService.createApplication({ userId: req.userId!, ...input } as any)
     res.status(201).json({ application })
   } catch (e) { next(e) }
 })

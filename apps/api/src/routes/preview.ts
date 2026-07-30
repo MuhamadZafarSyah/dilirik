@@ -42,7 +42,7 @@ previewRouter.post("/cv/:id/revised", rateLimit("preview-revised", 20, 60), asyn
   try {
     const id = req.params.id as string
     const { replacements, highlight } = revisedPreviewSchema.parse(req.body)
-    const result = await previewService.getRevisedPdfPreview(req.userId!, id, replacements, { highlight })
+    const result = await previewService.getRevisedPdfPreview(req.userId!, id, replacements as any, { highlight })
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Access-Control-Expose-Headers", "X-Preview-Applied, X-Preview-Skipped")
     res.setHeader("X-Preview-Applied", String(result.appliedCount))

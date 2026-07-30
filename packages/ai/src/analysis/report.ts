@@ -107,12 +107,12 @@ export async function generateAnalysisReport(args: {
   for (const suggestion of result.suggestions) {
     const honesty = postCheckSuggestion(suggestion, cv)
     if (!honesty.ok) {
-      rejected.push({ suggestion, reason: honesty.reason })
+      rejected.push({ suggestion, reason: (honesty as any).reason })
       continue
     }
     const usefulness = postCheckUsefulness(suggestion, job)
     if (!usefulness.ok) {
-      rejected.push({ suggestion, reason: usefulness.reason })
+      rejected.push({ suggestion, reason: (usefulness as any).reason })
       continue
     }
     suggestions.push(suggestion)

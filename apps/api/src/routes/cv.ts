@@ -46,7 +46,7 @@ cvRouter.get("/", async (req, res, next) => {
 cvRouter.post("/", rateLimit("cv-create", 10, 60), async (req, res, next) => {
   try {
     const input = createCvSchema.parse(req.body)
-    const cv = await cvService.createCv({ userId: req.userId!, ...input })
+    const cv = await cvService.createCv({ userId: req.userId!, ...input } as any)
     res.status(201).json({ cv })
   } catch (e) { next(e) }
 })

@@ -10,7 +10,7 @@ if (env.SENTRY_DSN) {
 const app: Express = createApp()
 
 if (env.SENTRY_DSN) {
-  Sentry.setupExpressErrorHandler(app)
+  Sentry.setupExpressErrorHandler(app as any)
 }
 
 export default app

@@ -16,7 +16,7 @@ jobsRouter.get("/", async (req, res, next) => {
 jobsRouter.post("/", rateLimit("job-create", 10, 60), async (req, res, next) => {
   try {
     const input = createJobSchema.parse(req.body)
-    const job = await jobService.createJob({ userId: req.userId!, ...input })
+    const job = await jobService.createJob({ userId: req.userId!, ...input } as any)
     res.status(201).json({ job })
   } catch (e) { next(e) }
 })
