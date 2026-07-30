@@ -9,13 +9,13 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:studio": "npx prisma studio",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "build": "prisma generate"
+    "build": "npx prisma generate"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
