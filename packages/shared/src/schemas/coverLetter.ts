@@ -44,9 +44,11 @@ export type CoverLetterDto = {
     id: string
     title?: string
     company?: string
+    parsedJson?: any
   }
   analysis?: {
     id: string
     matchScore: number
   }
 }
+

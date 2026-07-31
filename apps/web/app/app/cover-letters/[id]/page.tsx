@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
+import { getJobDetails } from "@/components/cover-letters/cover-letter-card"
 
 type CoverLetterDetail = {
   id: string
@@ -34,6 +35,7 @@ type CoverLetterDetail = {
   jobPosting?: { id: string; rawText?: string; parsedJson?: any }
   analysis?: { id: string; matchScore: number }
 }
+
 
 export default function CoverLetterDetailPage({
   params,
@@ -144,8 +146,7 @@ export default function CoverLetterDetailPage({
     )
   }
 
-  const jobTitle = coverLetter.jobPosting?.parsedJson?.title || "Posisi Pekerjaan"
-  const companyName = coverLetter.jobPosting?.parsedJson?.company || "Perusahaan"
+  const { jobTitle, company: companyName, level } = getJobDetails(coverLetter, lang)
   const cvTitle = coverLetter.cv?.title || "CV"
 
   return (
@@ -211,10 +212,15 @@ export default function CoverLetterDetailPage({
         {/* Card Header Info */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-line pb-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="uppercase text-[10px] font-bold bg-panel border border-line px-2 py-0.5 rounded-md text-ink">
                 {coverLetter.template} • {coverLetter.language.toUpperCase()}
               </span>
+              {level && (
+                <span className="uppercase text-[10px] font-bold bg-yellow/30 border border-yellow/60 text-ink px-2 py-0.5 rounded-md">
+                  {level}
+                </span>
+              )}
               <span className="text-xs text-muted font-bold">
                 {coverLetter.wordCount} {lang === "id" ? "kata" : "words"}
               </span>
