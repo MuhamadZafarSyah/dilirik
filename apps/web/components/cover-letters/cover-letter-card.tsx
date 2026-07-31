@@ -43,7 +43,7 @@ export function getJobDetails(
     if (matchGreeting?.[1]) {
       company = matchGreeting[1].trim()
     } else {
-      const matchMelamar = cl.text.match(/melamar\s+posisi\s+.*?\s+di\s+([^,\.\n]+)/i)
+      const matchMelamar = cl.text.match(/melamar\s+posisi\s+.*?\s+di\s+([^,.\n]+)/i)
       if (matchMelamar?.[1]) {
         company = matchMelamar[1].trim()
       }
