@@ -10,19 +10,11 @@ import {
   FiArrowRight,
   FiCheckCircle,
   FiZap,
-  FiFileText,
-  FiShield,
   FiStar,
   FiChevronDown,
-  FiLock,
-  FiBriefcase,
   FiCheck,
   FiXCircle,
-  FiCpu,
-  FiLayers,
-  FiRefreshCw,
   FiCopy,
-  FiCheckSquare,
 } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky, Polaroid } from "@/components/ui/card"
@@ -69,6 +61,7 @@ const DEMO_SAMPLES = [
   {
     id: "frontend",
     role: "Senior Frontend Engineer",
+    shortRole: "Frontend",
     company: "GoTo Financial",
     cvName: "CV_Budi_Frontend_2026.docx",
     score: 88,
@@ -82,6 +75,7 @@ const DEMO_SAMPLES = [
   {
     id: "pm",
     role: "Product Manager",
+    shortRole: "Product Mgr",
     company: "Tokopedia",
     cvName: "CV_Siti_ProductManager.pdf",
     score: 76,
@@ -95,6 +89,7 @@ const DEMO_SAMPLES = [
   {
     id: "backend",
     role: "Backend Developer",
+    shortRole: "Backend",
     company: "Traveloka",
     cvName: "CV_Rian_Backend.docx",
     score: 92,
@@ -108,6 +103,7 @@ const DEMO_SAMPLES = [
   {
     id: "data",
     role: "Data Analyst",
+    shortRole: "Data Analyst",
     company: "Bukalapak",
     cvName: "CV_Dewi_DataAnalyst.pdf",
     score: 84,
@@ -183,22 +179,22 @@ export default function LandingPage() {
     <main className="paper-texture min-h-screen overflow-x-hidden text-ink font-sans selection:bg-red selection:text-paper">
       {/* ================= Sticky Navigation Header ================= */}
       <header className="sticky top-0 z-50 border-b-2 border-line bg-panel/90 backdrop-blur-md transition-all">
-        <div className="shell mx-auto flex max-w-shell items-center justify-between px-5 py-3.5">
-          <Link href="/" className="flex items-center gap-2.5 group">
+        <div className="shell mx-auto flex max-w-shell items-center justify-between px-4 sm:px-6 py-3">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
             <motion.div
               whileHover={{ rotate: 12, scale: 1.1 }}
-              className="bg-ink text-paper flex h-10 w-10 items-center justify-center rounded-xl shadow-paper text-xl font-bold"
+              className="bg-ink text-paper flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl shadow-paper text-lg sm:text-xl font-bold"
             >
               👀
             </motion.div>
             <div className="flex flex-col">
-              <span className="hand text-3xl font-bold tracking-tight text-ink leading-none">Dilirik</span>
-              <span className="label text-[10px] uppercase font-bold text-muted tracking-wider">AI CV Matcher</span>
+              <span className="hand text-2xl sm:text-3xl font-bold tracking-tight text-ink leading-none">Dilirik</span>
+              <span className="label text-[9px] sm:text-[10px] uppercase font-bold text-muted tracking-wider">AI CV Matcher</span>
             </div>
           </Link>
 
           {/* Desktop Links */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center gap-6">
             <a href="#showcase" className="label text-xs font-bold uppercase tracking-wider text-muted hover:text-ink transition-colors">
               App Showcase
             </a>
@@ -216,12 +212,12 @@ export default function LandingPage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link href="/login" className="label text-xs font-bold text-ink hover:text-red transition-colors hidden sm:block">
               Masuk
             </Link>
-            <Link href="/register">
-              <Button variant="danger" size="sm" tape="yellow">
+            <Link href="/register" className="shrink-0">
+              <Button variant="danger" size="sm" tape="yellow" className="text-xs px-3 sm:px-4">
                 Coba Gratis ⚡
               </Button>
             </Link>
@@ -230,81 +226,83 @@ export default function LandingPage() {
       </header>
 
       {/* ================= HERO SECTION ================= */}
-      <section className="shell mx-auto max-w-shell px-5 pt-12 pb-16 md:pt-20 md:pb-24 text-center">
+      <section className="shell mx-auto max-w-shell px-4 sm:px-6 pt-10 pb-12 sm:pt-16 sm:pb-20 md:pt-20 md:pb-24 text-center">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="relative mx-auto max-w-4xl space-y-6"
+          className="relative mx-auto max-w-4xl space-y-5 sm:space-y-6"
         >
           {/* Announcement Pill Badge */}
-          <motion.div variants={popIn} className="inline-block">
-            <span className="label bg-yellow/40 border-2 border-yellow/80 text-ink px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-paper rotate-[-1deg] inline-flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
+          <motion.div variants={popIn} className="inline-block max-w-full">
+            <span className="label bg-yellow/40 border-2 border-yellow/80 text-ink px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-paper rotate-[-1deg] inline-flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap text-center max-w-full">
+              <span className="relative flex h-2 sm:h-2.5 w-2 sm:w-2.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red" />
+                <span className="relative inline-flex rounded-full h-2 sm:h-2.5 w-2 sm:w-2.5 bg-red" />
               </span>
-              AI Matcher CV & Guardrail Kejujuran 100% Fakta
+              <span>AI Matcher CV & Guardrail Kejujuran 100% Fakta</span>
             </span>
           </motion.div>
 
           {/* Main SaaS Display Headline */}
           <motion.h1
             variants={popIn}
-            className="hand text-5xl sm:text-7xl lg:text-8xl leading-[1.04] font-bold text-ink"
+            className="hand text-3xl xs:text-5xl sm:text-7xl lg:text-8xl leading-snug sm:leading-[1.06] font-bold text-ink"
           >
-            Bikin CV-mu <span className="text-red underline decoration-wavy">Dilirik HR</span>, Tanpa Pernah Bohong.
+            Bikin CV-mu <span className="text-red underline decoration-wavy inline-block">Dilirik HR</span>, Tanpa Pernah Bohong.
           </motion.h1>
 
           {/* Subtitle */}
           <motion.p
             variants={popIn}
-            className="text-muted text-base sm:text-xl max-w-2xl mx-auto leading-relaxed"
+            className="text-muted text-sm sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed px-2"
           >
             Tempelkan CV + lowongan incaranmu. Dapatkan skor kecocokan real-time, deteksi gap yang jujur, dan saran revisi instan — <strong className="text-ink font-bold">100% berdasarkan fakta asli CV kamu</strong>.
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div variants={popIn} className="pt-4 flex flex-wrap items-center justify-center gap-4">
-            <Link href="/register">
-              <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="px-8">
-                Mulai Analisis Gratis — 10 Sesi / Bulan
+          <motion.div variants={popIn} className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
+            <Link href="/register" className="w-full sm:w-auto">
+              <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base">
+                <span className="xs:hidden">Mulai Analisis Gratis ⚡</span>
+                <span className="hidden xs:inline">Mulai Analisis Gratis — 10 Sesi / Bulan</span>
               </Button>
             </Link>
-            <a href="#showcase">
-              <Button variant="outline" size="lg" icon={<FiArrowRight />}>
-                Lihat Interactive App Showcase ↓
+            <a href="#showcase" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" icon={<FiArrowRight />} className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base">
+                <span className="xs:hidden">Lihat Showcase ↓</span>
+                <span className="hidden xs:inline">Lihat Interactive App Showcase ↓</span>
               </Button>
             </a>
           </motion.div>
 
           {/* Key Value Proposition Badges */}
-          <motion.div variants={popIn} className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs font-bold text-muted uppercase tracking-wider">
+          <motion.div variants={popIn} className="pt-4 sm:pt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] sm:text-xs font-bold text-muted uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <FiCheckCircle className="text-green h-4 w-4" /> 0% Mengarang Pengalaman
+              <FiCheckCircle className="text-green h-4 w-4 shrink-0" /> 0% Mengarang Pengalaman
             </span>
             <span className="flex items-center gap-1.5">
-              <FiCheckCircle className="text-green h-4 w-4" /> Ekspor PDF & DOCX Native
+              <FiCheckCircle className="text-green h-4 w-4 shrink-0" /> Ekspor PDF & DOCX Native
             </span>
             <span className="flex items-center gap-1.5">
-              <FiCheckCircle className="text-green h-4 w-4" /> Tanpa Kartu Kredit
+              <FiCheckCircle className="text-green h-4 w-4 shrink-0" /> Tanpa Kartu Kredit
             </span>
           </motion.div>
         </motion.div>
       </section>
 
       {/* ================= TARGET COMPANIES MARQUEE ================= */}
-      <div className="border-y-2 border-line bg-panel/60 py-4 overflow-hidden shadow-inner">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <span className="label text-xs uppercase font-bold text-muted tracking-widest">
+      <div className="border-y-2 border-line bg-panel/60 py-3.5 sm:py-4 overflow-hidden shadow-inner">
+        <div className="flex items-center justify-center gap-2 px-4 mb-2 text-center">
+          <span className="label text-[11px] sm:text-xs uppercase font-bold text-muted tracking-widest block">
             Didesain untuk kandidat yang menargetkan perusahaan top indonesia
           </span>
         </div>
-        <div className="flex whitespace-nowrap animate-marquee gap-8">
+        <div className="flex whitespace-nowrap animate-marquee gap-4 sm:gap-8">
           {[...TARGET_COMPANIES, ...TARGET_COMPANIES, ...TARGET_COMPANIES].map((comp, idx) => (
             <span
               key={idx}
-              className="label bg-paper border border-line rounded-lg px-4 py-1.5 text-xs font-bold uppercase text-ink shadow-xs inline-flex items-center gap-2"
+              className="label bg-paper border border-line rounded-lg px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold uppercase text-ink shadow-xs inline-flex items-center gap-1.5 sm:gap-2"
             >
               🏢 {comp}
             </span>
@@ -313,76 +311,80 @@ export default function LandingPage() {
       </div>
 
       {/* ================= INTERACTIVE SAAS APP SHOWCASE ================= */}
-      <section id="showcase" className="shell mx-auto max-w-shell px-5 py-16 md:py-24">
-        <div className="text-center space-y-3 mb-10">
+      <section id="showcase" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 md:py-24">
+        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-10">
           <span className="label bg-blue/20 text-blue border border-blue/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Interactive SaaS App Demo
           </span>
-          <h2 className="hand text-4xl sm:text-6xl font-bold">Pengalaman Menggunakan Dilirik App ⚡</h2>
-          <p className="scrawl text-muted text-xl max-w-xl mx-auto">
+          <h2 className="hand text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">Pengalaman Menggunakan Dilirik App ⚡</h2>
+          <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Simulasikan bagaimana AI Dilirik membedah CV kamu secara real-time.
           </p>
         </div>
 
         {/* Role Selector Tabs */}
-        <div className="flex justify-center flex-wrap gap-2 mb-8">
+        <div className="flex justify-center flex-wrap gap-1.5 sm:gap-2 mb-6 sm:mb-8">
           {DEMO_SAMPLES.map((s, idx) => (
             <button
               key={s.id}
               onClick={() => {
                 setActiveDemo(idx)
               }}
-              className={`label rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer select-none ${activeDemo === idx
-                ? "bg-ink text-paper shadow-paper -rotate-1 scale-105"
+              className={`label rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold transition-all cursor-pointer select-none ${activeDemo === idx
+                ? "bg-ink text-paper shadow-paper scale-105"
                 : "bg-panel border-2 border-line text-ink hover:border-ink"
                 }`}
             >
-              {s.role} @ {s.company}
+              <span className="sm:hidden">{s.shortRole}</span>
+              <span className="hidden sm:inline">{s.role} @ {s.company}</span>
             </button>
           ))}
         </div>
 
         {/* Interactive App Window Frame */}
-        <Card tape="red" pin className="max-w-4xl mx-auto p-0  border-2 border-line shadow-lift">
+        <Card tape="red" pin className="max-w-4xl mx-auto p-0 border-2 border-line shadow-lift ">
           {/* Simulated App Title Bar */}
-          <div className="bg-panel border-b-2 border-line p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-red" />
-              <span className="h-3 w-3 rounded-full bg-yellow" />
-              <span className="h-3 w-3 rounded-full bg-green" />
-              <span className="label text-xs font-bold text-ink ml-2 uppercase truncate max-w-[200px] sm:max-w-none">
-                Sesi Match: {sample.role} vs {sample.company}
+          <div className="bg-panel border-b-2 border-line p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="h-3 w-3 rounded-full bg-red shrink-0" />
+              <span className="h-3 w-3 rounded-full bg-yellow shrink-0" />
+              <span className="h-3 w-3 rounded-full bg-green shrink-0" />
+              <span className="label text-xs font-bold text-ink ml-1 uppercase truncate min-w-0">
+                Sesi Match: {sample.role}
               </span>
             </div>
 
             {/* Sub-view Nav Tabs */}
-            <div className="flex items-center gap-1 bg-paper/80 p-1 rounded-lg border border-line text-xs">
+            <div className="inline-flex items-center gap-1 bg-paper/80 p-1 rounded-lg border border-line text-xs overflow-x-auto custom-scrollbar self-center sm:self-auto max-w-full">
               <button
                 onClick={() => setActiveTab("match")}
-                className={`label px-3 py-1 rounded font-bold text-xs ${activeTab === "match" ? "bg-ink text-paper" : "text-muted hover:text-ink"
+                className={`label px-2.5 sm:px-3 py-1 rounded font-bold text-xs whitespace-nowrap ${activeTab === "match" ? "bg-ink text-paper" : "text-muted hover:text-ink"
                   }`}
               >
-                1. Match Score
+                <span className="sm:hidden">1. Score</span>
+                <span className="hidden sm:inline">1. Match Score</span>
               </button>
               <button
                 onClick={() => setActiveTab("gaps")}
-                className={`label px-3 py-1 rounded font-bold text-xs ${activeTab === "gaps" ? "bg-ink text-paper" : "text-muted hover:text-ink"
+                className={`label px-2.5 sm:px-3 py-1 rounded font-bold text-xs whitespace-nowrap ${activeTab === "gaps" ? "bg-ink text-paper" : "text-muted hover:text-ink"
                   }`}
               >
-                2. Gap Jujur
+                <span className="sm:hidden">2. Gaps</span>
+                <span className="hidden sm:inline">2. Gap Jujur</span>
               </button>
               <button
                 onClick={() => setActiveTab("revision")}
-                className={`label px-3 py-1 rounded font-bold text-xs ${activeTab === "revision" ? "bg-ink text-paper" : "text-muted hover:text-ink"
+                className={`label px-2.5 sm:px-3 py-1 rounded font-bold text-xs whitespace-nowrap ${activeTab === "revision" ? "bg-ink text-paper" : "text-muted hover:text-ink"
                   }`}
               >
-                3. Revisi Teks
+                <span className="sm:hidden">3. Revisi</span>
+                <span className="hidden sm:inline">3. Revisi Teks</span>
               </button>
             </div>
           </div>
 
           {/* App Body Content */}
-          <div className="p-6 sm:p-8 bg-panel/40 min-h-[380px]">
+          <div className="p-4 sm:p-8 bg-panel/40 min-h-[360px]">
             <AnimatePresence mode="wait">
               {activeTab === "match" && (
                 <motion.div
@@ -394,12 +396,12 @@ export default function LandingPage() {
                   className="space-y-6"
                 >
                   <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <ScoreGauge score={sample.score} size={160} />
+                    <ScoreGauge score={sample.score} size={140} />
                     <div className="flex-1 text-center md:text-left space-y-2">
                       <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
                         Kualifikasi Match
                       </span>
-                      <h3 className="hand text-3xl font-bold text-ink">
+                      <h3 className="hand text-2xl sm:text-3xl font-bold text-ink">
                         {sample.cvName}
                       </h3>
                       <p className="text-muted text-xs leading-relaxed">
@@ -411,12 +413,12 @@ export default function LandingPage() {
                   </div>
 
                   <div className="pt-4 border-t border-line/60">
-                    <h4 className="label text-xs font-bold uppercase text-green mb-2 flex items-center gap-1">
-                      <FiCheckCircle className="h-4 w-4" /> Skill Wajib Yang Cocok
+                    <h4 className="label text-xs font-bold uppercase text-green mb-2 flex items-center justify-center md:justify-start gap-1">
+                      <FiCheckCircle className="h-4 w-4 shrink-0" /> Skill Wajib Yang Cocok
                     </h4>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap justify-center md:justify-start gap-2">
                       {sample.matchSkills.map((sk) => (
-                        <span key={sk} className="label bg-green/15 border border-green/40 text-green rounded-md px-3 py-1 text-xs font-bold">
+                        <span key={sk} className="label bg-green/15 border border-green/40 text-green rounded-md px-2.5 sm:px-3 py-1 text-xs font-bold">
                           ✓ {sk}
                         </span>
                       ))}
@@ -432,9 +434,9 @@ export default function LandingPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="grid gap-4 md:grid-cols-2"
+                  className="grid gap-4 sm:grid-cols-2"
                 >
-                  <Sticky tone="red" rotate={-0.8} className="space-y-2 p-5">
+                  <Sticky tone="red" rotate={0} className="space-y-2 p-4 sm:p-5">
                     <span className="label bg-red/20 text-red px-2.5 py-0.5 rounded text-[11px] font-bold uppercase">
                       Gap Beneran (Real Gap)
                     </span>
@@ -444,7 +446,7 @@ export default function LandingPage() {
                     </p>
                   </Sticky>
 
-                  <Sticky tone="yellow" rotate={0.8} className="space-y-2 p-5">
+                  <Sticky tone="yellow" rotate={0} className="space-y-2 p-4 sm:p-5">
                     <span className="label bg-yellow/40 text-ink px-2.5 py-0.5 rounded text-[11px] font-bold uppercase">
                       Gap Penyajian (Presentation Gap)
                     </span>
@@ -465,13 +467,13 @@ export default function LandingPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
-                      Saran Revisi 1-Click (Guardrail Checked)
+                      Saran Revisi (Guardrail Verified)
                     </span>
                     <button
                       onClick={() => copyText(sample.afterText)}
-                      className="label text-xs font-bold text-muted hover:text-ink flex items-center gap-1"
+                      className="label text-xs font-bold text-muted hover:text-ink flex items-center gap-1 cursor-pointer"
                     >
                       {copied ? <FiCheck className="text-green" /> : <FiCopy />}
                       {copied ? "Tersalin!" : "Salin Teks Revisi"}
@@ -481,14 +483,14 @@ export default function LandingPage() {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <span className="label text-xs font-bold uppercase text-red">Teks Asli CV Sebelum Revisi:</span>
-                      <p className="p-3 bg-red/10 border border-red/30 rounded-lg text-xs font-mono text-muted line-through">
+                      <p className="p-3 bg-red/10 border border-red/30 rounded-lg text-xs font-mono text-muted line-through break-words whitespace-pre-wrap">
                         {sample.beforeText}
                       </p>
                     </div>
 
                     <div className="space-y-1">
                       <span className="label text-xs font-bold uppercase text-green">Teks Hasil Revisi Dilirik (100% Fakta):</span>
-                      <p className="p-3 bg-green/10 border border-green/40 rounded-lg text-xs font-mono font-bold text-ink">
+                      <p className="p-3 bg-green/10 border border-green/40 rounded-lg text-xs font-mono font-bold text-ink break-words whitespace-pre-wrap">
                         {sample.afterText}
                       </p>
                     </div>
@@ -499,9 +501,9 @@ export default function LandingPage() {
           </div>
 
           {/* Footer Bar */}
-          <div className="bg-panel border-t-2 border-line p-4 text-center">
+          <div className="bg-panel border-t-2 border-line p-3.5 sm:p-4 text-center">
             <Link href="/register">
-              <Button variant="danger" size="lg" icon={<FiZap />}>
+              <Button variant="danger" size="lg" icon={<FiZap />} className="w-full sm:w-auto text-sm sm:text-base">
                 Analisis & Revisi CV Kamu Sekarang Gratis →
               </Button>
             </Link>
@@ -510,31 +512,31 @@ export default function LandingPage() {
       </section>
 
       {/* ================= BESPOKE FEATURE BENTO GRID ================= */}
-      <section id="bento" className="shell mx-auto max-w-shell px-5 py-16 border-t-2 border-line">
-        <div className="text-center space-y-3 mb-12">
+      <section id="bento" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
+        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Arsitektur Dilirik
           </span>
-          <h2 className="hand text-4xl sm:text-6xl font-bold">Fitur Utama Yang Didesain Khusus 🛠️</h2>
-          <p className="scrawl text-muted text-xl max-w-xl mx-auto">
+          <h2 className="hand text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">Fitur Utama Yang Didesain Khusus 🛠️</h2>
+          <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Bukan sekadar AI penulisa ulang teks biasa, Dilirik didesain khusus untuk efisiensi lamaran kerja.
           </p>
         </div>
 
         {/* Bento Grid */}
-        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 max-w-5xl mx-auto">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 max-w-5xl mx-auto">
           {/* Card 1: Large 2-column Guardrail */}
-          <Card tape="yellow" rotate={-0.6} className="md:col-span-2 p-6 sm:p-8 space-y-4 flex flex-col justify-between">
+          <Card tape="yellow" rotate={0} className="md:col-span-2 p-5 sm:p-8 space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
-              <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
+              <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase inline-block">
                 Fitur Utama 🛡️
               </span>
-              <h3 className="hand text-3xl font-bold text-ink">Guardrail Kejujuran 3-Titik</h3>
+              <h3 className="hand text-2xl sm:text-3xl font-bold text-ink">Guardrail Kejujuran 3-Titik</h3>
               <p className="text-muted text-xs sm:text-sm leading-relaxed">
                 Setiap saran revisi yang dihasilkan AI selalu melewati 3 tahap validasi ketat: (1) Lock data asli CV sebagai source of truth, (2) Deteksi pemisahan gap, dan (3) Cek fakta anti-mengarang.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-line">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 pt-2 border-t border-line">
               <div className="bg-paper p-2.5 rounded-lg border border-line text-center">
                 <span className="label text-xs font-bold block text-ink">1. Lock Fakta</span>
                 <span className="text-[10px] text-muted">Bebas Halusinasi</span>
@@ -551,23 +553,23 @@ export default function LandingPage() {
           </Card>
 
           {/* Card 2: Match Score Gauge */}
-          <Card tape="blue" pin rotate={0.8} className="p-6 text-center space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="label bg-blue/20 text-blue border border-blue/40 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase">
+          <Card tape="blue" pin rotate={0} className="p-5 text-center space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <span className="label bg-blue/20 text-blue border border-blue/40 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase inline-block">
                 Match Engine
               </span>
               <h3 className="hand text-2xl font-bold text-ink">Skor Match Presisi</h3>
             </div>
             <div className="py-2 flex justify-center">
-              <ScoreGauge score={88} size={130} />
+              <ScoreGauge score={88} size={120} />
             </div>
             <p className="text-muted text-xs">Algoritma menghitung persentase kualifikasi wajib lowongan.</p>
           </Card>
 
           {/* Card 3: Native DOCX Revision */}
-          <Card tape="red" rotate={-0.8} className="p-6 space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="label bg-red/20 text-red px-2.5 py-0.5 rounded text-[10px] font-bold uppercase">
+          <Card tape="red" rotate={0} className="p-5 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <span className="label bg-red/20 text-red px-2.5 py-0.5 rounded text-[10px] font-bold uppercase inline-block">
                 Docx Engine
               </span>
               <h3 className="hand text-2xl font-bold text-ink">Revisi .DOCX Native</h3>
@@ -581,9 +583,9 @@ export default function LandingPage() {
           </Card>
 
           {/* Card 4: Application Tracker */}
-          <Card rotate={0.5} className="md:col-span-2 p-6 space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="label bg-green/20 text-green border border-green/40 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase">
+          <Card rotate={0} className="md:col-span-2 p-5 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <span className="label bg-green/20 text-green border border-green/40 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase inline-block">
                 Kanban Tracker
               </span>
               <h3 className="hand text-2xl font-bold text-ink">Tracker Pelamaran Terintegrasi</h3>
@@ -600,9 +602,9 @@ export default function LandingPage() {
           </Card>
 
           {/* Card 5: ATS Friendly PDF */}
-          <Card tape="yellow" rotate={-0.4} className="md:col-span-2 p-6 space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="label bg-ink text-paper px-2.5 py-0.5 rounded text-[10px] font-bold uppercase">
+          <Card tape="yellow" rotate={0} className="md:col-span-2 p-5 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <span className="label bg-ink text-paper px-2.5 py-0.5 rounded text-[10px] font-bold uppercase inline-block">
                 ATS Friendly
               </span>
               <h3 className="hand text-2xl font-bold text-ink">Ekspor PDF Ramah Parser ATS</h3>
@@ -618,22 +620,22 @@ export default function LandingPage() {
       </section>
 
       {/* ================= PROBLEM VS SOLUTION ================= */}
-      <section id="mengapa" className="shell mx-auto max-w-shell px-5 py-16 border-t-2 border-line">
-        <div className="text-center space-y-3 mb-12">
-          <h2 className="hand text-4xl sm:text-5xl font-bold">Kenapa 80% CV Bagus Tetap Diabaikan HR? 🤔</h2>
-          <p className="scrawl text-muted text-xl max-w-xl mx-auto">
+      <section id="mengapa" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
+        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
+          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Kenapa 80% CV Bagus Tetap Diabaikan HR? 🤔</h2>
+          <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Masalah utamanya bukan kurang pengalaman, tapi cara menyajikan fakta dan kata kunci yang tidak pas.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
+        <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
           {/* Old Way */}
-          <Card tape="red" rotate={-1} className="space-y-4 p-6 bg-red/5 border-red/40">
+          <Card tape="red" rotate={0} className="space-y-4 p-5 sm:p-6 bg-red/5 border-red/40">
             <div className="flex items-center gap-2 text-red font-bold">
-              <FiXCircle className="h-6 w-6 shrink-0" />
-              <h3 className="hand text-3xl">Cara Lama (Berisiko & Buta)</h3>
+              <FiXCircle className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+              <h3 className="hand text-2xl sm:text-3xl leading-snug">Cara Lama (Berisiko & Buta)</h3>
             </div>
-            <ul className="space-y-3 text-xs sm:text-sm text-ink font-medium leading-relaxed">
+            <ul className="space-y-2.5 sm:space-y-3 text-xs sm:text-sm text-ink font-medium leading-relaxed">
               <li className="flex items-start gap-2">
                 <span className="text-red font-bold shrink-0">✕</span>
                 <span>Asal sebar CV yang sama ke 50 lowongan tanpa optimasi keyword.</span>
@@ -654,12 +656,12 @@ export default function LandingPage() {
           </Card>
 
           {/* Dilirik Way */}
-          <Card tape="yellow" pin rotate={1} className="space-y-4 p-6 bg-green/5 border-green/40">
+          <Card tape="yellow" pin rotate={0} className="space-y-4 p-5 sm:p-6 bg-green/5 border-green/40">
             <div className="flex items-center gap-2 text-green font-bold">
-              <FiCheckCircle className="h-6 w-6 shrink-0" />
-              <h3 className="hand text-3xl">Solusi Dilirik (Smart & Jujur)</h3>
+              <FiCheckCircle className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+              <h3 className="hand text-2xl sm:text-3xl leading-snug">Solusi Dilirik (Smart & Jujur)</h3>
             </div>
-            <ul className="space-y-3 text-xs sm:text-sm text-ink font-medium leading-relaxed">
+            <ul className="space-y-2.5 sm:space-y-3 text-xs sm:text-sm text-ink font-medium leading-relaxed">
               <li className="flex items-start gap-2">
                 <span className="text-green font-bold shrink-0">✓</span>
                 <span>Ekstraksi kata kunci spesifik untuk tiap lowongan incaran.</span>
@@ -682,50 +684,50 @@ export default function LandingPage() {
       </section>
 
       {/* ================= ROI METRICS COUNTER ================= */}
-      <section className="shell mx-auto max-w-shell px-5 py-16 border-t-2 border-line">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Card rotate={-0.8} className="text-center p-6 hover:scale-[1.02] transition-transform">
-            <p className="hand text-6xl font-bold text-red">3.5×</p>
-            <p className="scrawl text-muted text-xl font-bold mt-1">Peluang Dipanggil HR</p>
+      <section className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
+        <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
+          <Card rotate={0} className="text-center p-4 sm:p-6 hover:scale-[1.02] transition-transform">
+            <p className="hand text-4xl xs:text-5xl sm:text-6xl font-bold text-red">3.5×</p>
+            <p className="scrawl text-muted text-base sm:text-xl font-bold mt-1">Peluang Dipanggil HR</p>
             <p className="text-muted text-xs mt-1">Dibandingkan mengirimkan CV generik tanpa match keyword.</p>
           </Card>
 
-          <Card rotate={0.8} tape="yellow" className="text-center p-6 hover:scale-[1.02] transition-transform">
-            <p className="hand text-6xl font-bold text-ink">100%</p>
-            <p className="scrawl text-muted text-xl font-bold mt-1">Fakta Asli Terverifikasi</p>
+          <Card rotate={0} tape="yellow" className="text-center p-4 sm:p-6 hover:scale-[1.02] transition-transform">
+            <p className="hand text-4xl xs:text-5xl sm:text-6xl font-bold text-ink">100%</p>
+            <p className="scrawl text-muted text-base sm:text-xl font-bold mt-1">Fakta Asli Terverifikasi</p>
             <p className="text-muted text-xs mt-1">Bebas dari risiko manipulasi atau pengarang fakta oleh AI.</p>
           </Card>
 
-          <Card rotate={-0.5} tape="blue" className="text-center p-6 hover:scale-[1.02] transition-transform">
-            <p className="hand text-6xl font-bold text-blue">&lt; 15s</p>
-            <p className="scrawl text-muted text-xl font-bold mt-1">Waktu Analisis Match</p>
+          <Card rotate={0} tape="blue" className="text-center p-4 sm:p-6 hover:scale-[1.02] transition-transform">
+            <p className="hand text-4xl xs:text-5xl sm:text-6xl font-bold text-blue">&lt; 15s</p>
+            <p className="scrawl text-muted text-base sm:text-xl font-bold mt-1">Waktu Analisis Match</p>
             <p className="text-muted text-xs mt-1">Proses instan untuk langsung melihat skor & revisi teks.</p>
           </Card>
 
-          <Card rotate={0.5} className="text-center p-6 hover:scale-[1.02] transition-transform">
-            <p className="hand text-6xl font-bold text-green">10</p>
-            <p className="scrawl text-muted text-xl font-bold mt-1">Analisis Gratis / Bulan</p>
+          <Card rotate={0} className="text-center p-4 sm:p-6 hover:scale-[1.02] transition-transform">
+            <p className="hand text-4xl xs:text-5xl sm:text-6xl font-bold text-green">10</p>
+            <p className="scrawl text-muted text-base sm:text-xl font-bold mt-1">Analisis Gratis / Bulan</p>
             <p className="text-muted text-xs mt-1">Setiap bulan selama masa beta untuk semua kandidat.</p>
           </Card>
         </div>
       </section>
 
       {/* ================= TESTIMONI SCRAPBOOK CORKBOARD ================= */}
-      <section id="testimoni" className="shell mx-auto max-w-shell px-5 py-16 border-t-2 border-line">
-        <div className="text-center space-y-3 mb-12">
+      <section id="testimoni" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
+        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Kisah Sukses Kandidat
           </span>
-          <h2 className="hand text-4xl sm:text-5xl font-bold">Apa Kata Mereka Yang Sudah Dilirik HR 💬</h2>
-          <p className="scrawl text-muted text-xl max-w-xl mx-auto">
+          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Apa Kata Mereka Yang Sudah Dilirik HR 💬</h2>
+          <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Testimoni jujur dari para pencari kerja yang berhasil lolos ke tahap interview.
           </p>
         </div>
 
         {/* Corkboard Styling Container */}
-        <div className="corkboard rounded-2xl border-4 p-6 sm:p-10 shadow-lift">
+        <div className="corkboard rounded-2xl border-2 sm:border-4 p-4 sm:p-8 md:p-10 shadow-lift overflow-hidden">
           <div className="grid gap-6 md:grid-cols-3">
-            <Polaroid tape="yellow" pin rotate={-2} className="h-full flex flex-col justify-between">
+            <Polaroid tape="yellow" pin rotate={0} className="h-full flex flex-col justify-between p-4 sm:p-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-1 text-yellow">
                   {[...Array(5)].map((_, i) => (
@@ -737,12 +739,12 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="pt-4 border-t border-line/60 mt-4">
-                <p className="hand text-xl font-bold text-ink">Budi Pratama</p>
-                <p className="label text-muted text-[11px] uppercase">Backend Dev @ Startup Fintech</p>
+                <p className="hand text-lg sm:text-xl font-bold text-ink">Budi Pratama</p>
+                <p className="label text-muted text-[10px] sm:text-[11px] uppercase">Backend Dev @ Startup Fintech</p>
               </div>
             </Polaroid>
 
-            <Sticky tone="yellow" rotate={1} className="h-full flex flex-col justify-between p-6">
+            <Sticky tone="yellow" rotate={0} className="h-full flex flex-col justify-between p-4 sm:p-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-1 text-ink">
                   {[...Array(5)].map((_, i) => (
@@ -754,12 +756,12 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="pt-4 border-t border-yellow/60 mt-4">
-                <p className="hand text-xl font-bold text-ink">Siti Rahmawati</p>
-                <p className="label text-muted text-[11px] uppercase">UI/UX Designer @ E-commerce</p>
+                <p className="hand text-lg sm:text-xl font-bold text-ink">Siti Rahmawati</p>
+                <p className="label text-muted text-[10px] sm:text-[11px] uppercase">UI/UX Designer @ E-commerce</p>
               </div>
             </Sticky>
 
-            <Polaroid tape="red" pin rotate={-1} className="h-full flex flex-col justify-between">
+            <Polaroid tape="red" pin rotate={0} className="h-full flex flex-col justify-between p-4 sm:p-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-1 text-red">
                   {[...Array(5)].map((_, i) => (
@@ -771,8 +773,8 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="pt-4 border-t border-line/60 mt-4">
-                <p className="hand text-xl font-bold text-ink">Rian Kurnia</p>
-                <p className="label text-muted text-[11px] uppercase">Frontend Engineer @ GoTo</p>
+                <p className="hand text-lg sm:text-xl font-bold text-ink">Rian Kurnia</p>
+                <p className="label text-muted text-[10px] sm:text-[11px] uppercase">Frontend Engineer @ GoTo</p>
               </div>
             </Polaroid>
           </div>
@@ -780,25 +782,25 @@ export default function LandingPage() {
       </section>
 
       {/* ================= INTERACTIVE FAQ ACCORDION ================= */}
-      <section id="faq" className="shell mx-auto max-w-shell px-5 py-16 border-t-2 border-line">
-        <div className="text-center space-y-3 mb-12">
-          <h2 className="hand text-4xl sm:text-5xl font-bold">Pertanyaan Sering Diajukan (FAQ) ❓</h2>
-          <p className="scrawl text-muted text-xl max-w-xl mx-auto">
+      <section id="faq" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
+        <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
+          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Pertanyaan Sering Diajukan (FAQ) ❓</h2>
+          <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Semua hal yang perlu kamu ketahui tentang Dilirik.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="max-w-3xl mx-auto space-y-3 sm:space-y-4">
           {FAQS.map((faq, idx) => {
             const isOpen = openFaq === idx
             return (
-              <Card key={idx} rotate={idx % 2 === 0 ? 0.4 : -0.4} className="p-0 overflow-hidden">
+              <Card key={idx} rotate={0} className="p-0 overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base sm:text-lg cursor-pointer hover:bg-paper/50 transition-colors"
+                  className="w-full p-4 sm:p-5 text-left flex items-start sm:items-center justify-between gap-3 font-bold text-base sm:text-lg cursor-pointer hover:bg-paper/50 transition-colors"
                 >
-                  <span className="hand text-2xl text-ink">{faq.q}</span>
-                  <FiChevronDown className={`h-5 w-5 shrink-0 transition-transform ${isOpen ? "rotate-180 text-red" : "text-muted"}`} />
+                  <span className="hand text-xl sm:text-2xl text-ink leading-snug">{faq.q}</span>
+                  <FiChevronDown className={`h-5 w-5 shrink-0 mt-0.5 sm:mt-0 transition-transform ${isOpen ? "rotate-180 text-red" : "text-muted"}`} />
                 </button>
                 <AnimatePresence>
                   {isOpen && (
@@ -808,7 +810,7 @@ export default function LandingPage() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.25 }}
                     >
-                      <div className="p-5 pt-0 text-xs sm:text-sm text-muted leading-relaxed border-t border-line/60">
+                      <div className="p-4 sm:p-5 pt-0 text-xs sm:text-sm text-muted leading-relaxed border-t border-line/60">
                         {faq.a}
                       </div>
                     </motion.div>
@@ -821,23 +823,23 @@ export default function LandingPage() {
       </section>
 
       {/* ================= FINAL HERO CALL TO ACTION ================= */}
-      <section className="shell mx-auto max-w-shell px-5 pb-24">
-        <Card tape="red" pin rotate={-1} className="max-w-3xl mx-auto text-center p-8 sm:p-12 space-y-6">
-          <div className="space-y-3">
-            <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+      <section className="shell mx-auto max-w-shell px-4 sm:px-6 pb-16 sm:pb-24">
+        <Card tape="red" pin rotate={0} className="max-w-3xl mx-auto text-center p-6 sm:p-12 space-y-5 sm:space-y-6">
+          <div className="space-y-2 sm:space-y-3">
+            <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block">
               Mulai Dalam 15 Detik
             </span>
-            <h2 className="hand text-4xl sm:text-6xl font-bold text-ink">
+            <h2 className="hand text-3xl xs:text-4xl sm:text-6xl font-bold text-ink leading-snug">
               Siap Bikin CV-mu Dilirik HR Hari Ini? ⚡
             </h2>
-            <p className="scrawl text-muted text-xl max-w-lg mx-auto">
+            <p className="scrawl text-muted text-base sm:text-xl max-w-lg mx-auto">
               Dapatkan 10 kali analisis match gratis bulan ini. Tanpa kartu kredit.
             </p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 pt-2">
-            <Link href="/register">
-              <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="px-10">
+            <Link href="/register" className="w-full sm:w-auto">
+              <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="w-full sm:w-auto px-6 sm:px-10 text-sm sm:text-base">
                 Daftar Gratis Sekarang →
               </Button>
             </Link>
@@ -846,18 +848,18 @@ export default function LandingPage() {
       </section>
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t-2 border-line bg-panel/80 py-10 text-center backdrop-blur-xs">
-        <div className="shell mx-auto max-w-shell px-5 space-y-4">
+      <footer className="border-t-2 border-line bg-panel/80 py-8 sm:py-10 text-center backdrop-blur-xs">
+        <div className="shell mx-auto max-w-shell px-4 sm:px-6 space-y-4">
           <div className="flex items-center justify-center gap-2">
             <div className="bg-ink text-paper flex h-8 w-8 items-center justify-center rounded-lg shadow-paper text-sm font-bold">
               👀
             </div>
-            <span className="hand text-3xl font-bold">Dilirik</span>
+            <span className="hand text-2xl sm:text-3xl font-bold">Dilirik</span>
           </div>
-          <p className="scrawl text-muted text-lg max-w-md mx-auto">
+          <p className="scrawl text-muted text-base sm:text-lg max-w-md mx-auto">
             AI Matcher CV & Tracker Pelamaran Kerja dengan Guardrail Kejujuran.
           </p>
-          <div className="flex items-center justify-center gap-4 text-xs label font-bold text-muted">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs label font-bold text-muted">
             <Link href="/legal/privacy" className="hover:underline">Kebijakan Privasi</Link>
             <span>·</span>
             <Link href="/legal/terms" className="hover:underline">Ketentuan Layanan</Link>
