@@ -177,7 +177,7 @@ export function Sidebar() {
 
               {/* Mobile Drawer Footer Controls */}
               <div className="flex flex-col gap-2 pt-4 border-t border-line">
-                <button
+                {/* <button
                   onClick={() => setLang(lang === "id" ? "en" : "id")}
                   className="label text-muted hover:text-ink flex items-center justify-between rounded-xl border-2 border-line bg-paper px-4 py-2.5 text-xs font-bold shadow-xs"
                 >
@@ -186,7 +186,7 @@ export function Sidebar() {
                     <span>{lang === "id" ? "Bahasa Indonesia" : "English"}</span>
                   </span>
                   <span className="uppercase text-[10px] bg-panel px-2 py-0.5 rounded border border-line">{lang}</span>
-                </button>
+                </button> */}
 
                 <button
                   onClick={async () => {
@@ -311,7 +311,7 @@ export function Sidebar() {
 
         {/* Footer controls (desktop) */}
         <div className={cn("flex flex-col gap-2 pt-4 border-t border-line mt-auto overflow-hidden", collapsed && "items-center px-0")}>
-          <div className={cn("flex items-center justify-between w-full", collapsed ? "justify-center" : "px-2")}>
+          {/* <div className={cn("flex items-center justify-between w-full", collapsed ? "justify-center" : "px-2")}>
             <button
               onClick={() => setLang(lang === "id" ? "en" : "id")}
               className={cn(
@@ -323,7 +323,7 @@ export function Sidebar() {
               <FiGlobe className="h-4 w-4 shrink-0" />
               {!collapsed && <span className="uppercase truncate">{lang === "id" ? "Bahasa Indonesia" : "English"}</span>}
             </button>
-          </div>
+          </div> */}
 
           <button
             onClick={handleSignOut}

@@ -120,7 +120,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Language Preferences */}
-      <motion.div variants={itemVariants}>
+      {/* <motion.div variants={itemVariants}>
         <Card rotate={0.5} tape="blue">
           <h3 className="label text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5 mb-3">
             <FiGlobe className="h-4 w-4 text-blue" /> Preferensi Bahasa Antarmuka (UI)
@@ -149,7 +149,7 @@ export default function SettingsPage() {
             Catatan: Bahasa hasil analisis AI selalu menyesuaikan bahasa asli CV kamu secara otomatis.
           </p>
         </Card>
-      </motion.div>
+      </motion.div> */}
 
       {/* Connected Accounts */}
       <motion.div variants={itemVariants}>
@@ -164,8 +164,8 @@ export default function SettingsPage() {
                 <span
                   key={provider}
                   className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase border shadow-xs ${isConnected
-                      ? "bg-green/15 border-green/40 text-green"
-                      : "bg-line/20 border-line text-muted"
+                    ? "bg-green/15 border-green/40 text-green"
+                    : "bg-line/20 border-line text-muted"
                     }`}
                 >
                   {provider === "credential" ? "Email Password" : provider}
