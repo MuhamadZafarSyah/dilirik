@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 /**
  * Content Security Policy — lapisan utama anti-XSS di sisi web.
@@ -18,27 +18,34 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${API_URL} https://www.google.com https://challenges.cloudflare.com https://*.posthog.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com`,
+  `connect-src 'self' blob: ${API_URL} https://www.google.com https://challenges.cloudflare.com https://*.posthog.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com`,
   "frame-src https://www.google.com https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "media-src 'self' blob: data:",
-  "object-src 'none'",
+  "object-src 'self' blob:",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-].join("; ")
+  "frame-src 'self' blob: https://www.google.com https://challenges.cloudflare.com",
+].join("; ");
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: csp },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=()" },
-  { key: "Strict-Transport-Security", value: "max-age=15552000; includeSubDomains" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(self), geolocation=(), payment=()",
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=15552000; includeSubDomains",
+  },
   // 'on': izinkan browser meresolusi DNS domain pihak ketiga (fonts, GA, PostHog)
   // lebih awal. Menghemat puluhan hingga ratusan milidetik pada koneksi seluler.
   { key: "X-DNS-Prefetch-Control", value: "on" },
-]
+];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -51,7 +58,7 @@ const nextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
-    ]
+    ];
   },
   async rewrites() {
     return [
@@ -67,10 +74,10 @@ const nextConfig = {
         source: "/ingest/:path*",
         destination: "https://us.i.posthog.com/:path*",
       },
-    ]
+    ];
   },
   // Required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-}
+};
 
-export default nextConfig
+export default nextConfig;
