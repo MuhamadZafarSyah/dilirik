@@ -150,21 +150,21 @@ export default function CoverLetterDetailPage({
   const cvTitle = coverLetter.cv?.title || "CV"
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto p-4 md:p-6">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 max-w-5xl mx-auto p-2.5 sm:p-4 md:p-6">
       {/* Top Bar Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
         <Link
           href="/app/cover-letters"
-          className="label text-muted hover:text-ink flex items-center gap-2 text-sm font-bold w-fit"
+          className="label text-muted hover:text-ink flex items-center gap-1.5 text-xs sm:text-sm font-bold w-fit"
         >
           <FiArrowLeft className="h-4 w-4" />
           <span>{lang === "id" ? "Kembali ke Daftar Surat Lamaran" : "Back to Cover Letters"}</span>
         </Link>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <button
             onClick={handleCopy}
-            className="label bg-paper hover:bg-panel border-2 border-line rounded-xl px-3.5 py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
+            className="label bg-paper hover:bg-panel border-2 border-line rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
           >
             {copied ? <FiCheck className="text-green-600" /> : <FiCopy />}
             <span>{copied ? (lang === "id" ? "Tersalin!" : "Copied!") : lang === "id" ? "Salin Teks" : "Copy Text"}</span>
@@ -172,7 +172,7 @@ export default function CoverLetterDetailPage({
 
           <button
             onClick={() => downloadFile(`/api/cover-letters/${id}/text`, `Surat_Lamaran_${id.slice(-6)}.txt`)}
-            className="label bg-paper hover:bg-panel border-2 border-line rounded-xl px-3.5 py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
+            className="label bg-paper hover:bg-panel border-2 border-line rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
           >
             <FiDownload />
             <span>TXT</span>
@@ -180,7 +180,7 @@ export default function CoverLetterDetailPage({
 
           <button
             onClick={() => downloadFile(`/api/cover-letters/${id}/docx`, `Surat_Lamaran_${id.slice(-6)}.docx`)}
-            className="label bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-900 rounded-xl px-3.5 py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
+            className="label bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-900 rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
           >
             <FiDownload />
             <span>DOCX</span>
@@ -188,7 +188,7 @@ export default function CoverLetterDetailPage({
 
           <button
             onClick={() => downloadFile(`/api/cover-letters/${id}/pdf`, `Surat_Lamaran_${id.slice(-6)}.pdf`)}
-            className="label bg-red-100 hover:bg-red-200 border-2 border-red-400 text-red-900 rounded-xl px-3.5 py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
+            className="label bg-red-100 hover:bg-red-200 border-2 border-red-400 text-red-900 rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 font-bold text-xs shadow-xs flex items-center gap-1.5"
           >
             <FiDownload />
             <span>PDF</span>
@@ -196,7 +196,7 @@ export default function CoverLetterDetailPage({
 
           <button
             onClick={handleDelete}
-            className="label bg-paper hover:bg-red/10 border-2 border-line text-muted hover:text-red rounded-xl p-2 font-bold shadow-xs"
+            className="label bg-paper hover:bg-red/10 border-2 border-line text-muted hover:text-red rounded-xl p-1.5 sm:p-2 font-bold shadow-xs"
             title="Hapus"
           >
             <FiTrash2 className="h-4 w-4" />
@@ -205,14 +205,14 @@ export default function CoverLetterDetailPage({
       </div>
 
       {/* Main Cover Letter Scrapbook Card */}
-      <div className="relative polaroid bg-paper border-2 border-line p-6 md:p-10 rounded-2xl shadow-lift space-y-6">
+      <div className="relative polaroid bg-paper border-2 border-line p-3.5 sm:p-6 md:p-10 rounded-2xl shadow-lift space-y-4 sm:space-y-6">
         {/* Tape Accent */}
-        <div className="tape-top absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-6 bg-yellow/40 border border-line/30 rotate-1 pointer-events-none" />
+        <div className="tape-top absolute -top-3 left-1/2 -translate-x-1/2 w-28 sm:w-32 h-5 sm:h-6 bg-yellow/40 border border-line/30 rotate-1 pointer-events-none" />
 
         {/* Card Header Info */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-line pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b-2 border-line pb-3 sm:pb-4">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <span className="uppercase text-[10px] font-bold bg-panel border border-line px-2 py-0.5 rounded-md text-ink">
                 {coverLetter.template} • {coverLetter.language.toUpperCase()}
               </span>
@@ -225,32 +225,32 @@ export default function CoverLetterDetailPage({
                 {coverLetter.wordCount} {lang === "id" ? "kata" : "words"}
               </span>
             </div>
-            <h1 className="hand text-3xl font-bold text-ink mt-1">{jobTitle}</h1>
-            <p className="text-sm font-bold text-muted">{companyName}</p>
+            <h1 className="hand text-2xl sm:text-3xl font-bold text-ink mt-1 leading-snug">{jobTitle}</h1>
+            <p className="text-xs sm:text-sm font-bold text-muted">{companyName}</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 shrink-0">
             {coverLetter.relevanceScore !== null && (
-              <div className="bg-green-100 border-2 border-green-400 text-green-900 rounded-xl px-4 py-2 text-center shadow-xs">
-                <span className="block text-[10px] uppercase font-bold text-green-700">Relevance</span>
-                <span className="text-xl font-bold">{coverLetter.relevanceScore}%</span>
+              <div className="bg-green-100 border-2 border-green-400 text-green-900 rounded-xl px-3 py-1 sm:px-4 sm:py-2 text-center shadow-xs">
+                <span className="block text-[9px] sm:text-[10px] uppercase font-bold text-green-700">Relevance</span>
+                <span className="text-base sm:text-xl font-bold">{coverLetter.relevanceScore}%</span>
               </div>
             )}
 
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="label bg-yellow hover:bg-yellow/90 border-2 border-line rounded-xl px-4 py-2 font-bold text-xs shadow-paper flex items-center gap-1.5"
+                className="label bg-yellow hover:bg-yellow/90 border-2 border-line rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 font-bold text-xs shadow-paper flex items-center gap-1.5"
               >
                 <FiEdit2 />
                 <span>{lang === "id" ? "Edit Teks" : "Edit Text"}</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={handleSaveEdit}
                   disabled={saving}
-                  className="label bg-green-500 text-white border-2 border-line rounded-xl px-4 py-2 font-bold text-xs shadow-paper flex items-center gap-1.5"
+                  className="label bg-green-500 text-white border-2 border-line rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 font-bold text-xs shadow-paper flex items-center gap-1.5"
                 >
                   <FiSave />
                   <span>{saving ? "Simpan..." : "Simpan"}</span>
@@ -261,7 +261,7 @@ export default function CoverLetterDetailPage({
                     setEditText(coverLetter.text)
                   }}
                   disabled={saving}
-                  className="label bg-panel border-2 border-line rounded-xl px-3 py-2 font-bold text-xs"
+                  className="label bg-panel border-2 border-line rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 font-bold text-xs"
                 >
                   <FiX />
                 </button>
@@ -272,25 +272,25 @@ export default function CoverLetterDetailPage({
 
         {/* Content Body */}
         {editing ? (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <label className="block text-xs font-bold text-muted uppercase">
               {lang === "id" ? "Edit Isi Surat Lamaran:" : "Edit Cover Letter Content:"}
             </label>
             <textarea
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              rows={16}
-              className="w-full bg-panel border-2 border-line p-4 rounded-xl font-mono text-sm leading-relaxed text-ink focus:outline-none focus:border-ink"
+              rows={14}
+              className="w-full bg-panel border-2 border-line p-3 sm:p-4 rounded-xl font-mono text-xs sm:text-sm leading-relaxed text-ink focus:outline-none focus:border-ink"
             />
           </div>
         ) : (
-          <div className="bg-panel/40 border-2 border-line p-6 md:p-8 rounded-xl space-y-4 font-serif text-ink text-base md:text-lg leading-relaxed whitespace-pre-wrap selection:bg-yellow">
+          <div className="bg-panel/40 border-2 border-line p-3.5 sm:p-6 md:p-8 rounded-xl font-serif text-ink text-sm sm:text-base md:text-lg leading-relaxed whitespace-pre-wrap selection:bg-yellow">
             {coverLetter.text}
           </div>
         )}
 
         {/* Card Footer */}
-        <div className="pt-4 border-t-2 border-line flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted font-bold gap-2">
+        <div className="pt-3 sm:pt-4 border-t-2 border-line flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted font-bold gap-1.5 sm:gap-2">
           <span>
             {lang === "id" ? "Berdasarkan CV:" : "Based on CV:"}{" "}
             <span className="text-ink font-semibold">{cvTitle}</span>
