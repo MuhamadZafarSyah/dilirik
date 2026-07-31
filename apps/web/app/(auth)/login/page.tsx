@@ -43,7 +43,7 @@ function LoginForm() {
       setError(err.message ?? "Email atau password salah")
       return
     }
-    router.push(next)
+    window.location.href = next
   }
 
   async function oauth(provider: "google" | "github") {
