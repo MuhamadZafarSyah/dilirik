@@ -84,9 +84,10 @@ export function CvDesignPanel({
   return (
     <PdfViewer
       file={pdfQuery.data ?? null}
-      isLoading={pdfQuery.isLoading || statusQuery.isLoading}
+      isLoading={pdfQuery.isLoading || (isDocx && statusQuery.isLoading)}
       error={pdfQuery.isError ? "Gagal memuat preview desain — coba muat ulang halaman" : null}
       maxHeightClassName={maxHeightClassName}
     />
   )
 }
+
