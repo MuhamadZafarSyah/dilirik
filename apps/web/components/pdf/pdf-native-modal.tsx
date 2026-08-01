@@ -78,9 +78,9 @@ export function PdfNativeModal({
         {/* Modal Body: Maximized Embed Container */}
         <div className="flex-1 w-full bg-paper rounded-xl border-2 border-line overflow-hidden relative shadow-inner">
           {objectUrl ? (
-            <embed
+            <iframe
               src={objectUrl}
-              type="application/pdf"
+              title={title}
               className="w-full h-full border-none"
             />
           ) : (
