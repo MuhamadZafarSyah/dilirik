@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Document, Page, pdfjs } from "react-pdf"
 import { FiDownload, FiExternalLink, FiFileText } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 import {
@@ -8,12 +9,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/modal"
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString()
 
 export function PdfNativeModal({
   file,
-  title = "Preview PDF Native",
+  title = "Preview PDF",
   isOpen,
   onClose,
 }: {
@@ -22,18 +27,35 @@ export function PdfNativeModal({
   isOpen: boolean
   onClose: () => void
 }) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  const [numPages, setNumPages] = useState(0)
+
+  const objectUrl = useMemo(() => {
+    if (!file || !isOpen) return null
+    return URL.createObjectURL(file)
+  }, [file, isOpen])
 
   useEffect(() => {
-    if (file && isOpen) {
-      const url = URL.createObjectURL(file)
-      setObjectUrl(url)
-      return () => {
-        URL.revokeObjectURL(url)
-        setObjectUrl(null)
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
       }
     }
-  }, [file, isOpen])
+  }, [objectUrl])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => {
+      const newWidth = Math.max(0, el.clientWidth - 24)
+      setWidth((prev) => (prev === 0 || Math.abs(prev - newWidth) > 8 ? newWidth : prev))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isOpen])
 
   const handleDownload = () => {
     if (!objectUrl) return
@@ -56,8 +78,11 @@ export function PdfNativeModal({
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl text-ink min-w-0 w-full sm:w-auto">
             <FiFileText className="h-5 w-5 text-blue shrink-0" />
             <span className="truncate">{title}</span>
+            {numPages > 0 && (
+              <span className="text-xs text-muted font-normal ml-1">({numPages} Halaman)</span>
+            )}
           </DialogTitle>
-          {/* <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
             {objectUrl && (
               <a
                 href={objectUrl}
@@ -72,21 +97,46 @@ export function PdfNativeModal({
             <Button variant="primary" size="sm" icon={<FiDownload />} onClick={handleDownload}>
               Unduh
             </Button>
-          </div> */}
+          </div>
         </DialogHeader>
 
-        {/* Modal Body: Maximized Embed Container */}
-        <div className="flex-1 w-full bg-paper rounded-xl border-2 border-line overflow-hidden relative shadow-inner">
+        {/* Modal Body: Scrollable PDF Canvas Container */}
+        <div
+          ref={containerRef}
+          className="flex-1 w-full bg-white rounded-xl border-2 border-line overflow-y-auto overflow-x-hidden p-3 shadow-inner"
+        >
           {objectUrl ? (
-            <iframe
-              src={objectUrl}
-              title={title}
-              className="w-full h-full border-none"
-            />
+            <Document
+              file={objectUrl}
+              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+              loading={
+                <div className="flex flex-col items-center justify-center h-64 space-y-3">
+                  <div className="bg-line/30 h-48 w-full animate-pulse rounded-lg" />
+                  <p className="scrawl text-muted text-sm">Menyiapkan preview PDF…</p>
+                </div>
+              }
+              error={<p className="text-red text-xs font-semibold p-4">Gagal membaca file PDF</p>}
+            >
+              {width > 0 && (
+                <div className="space-y-4 flex flex-col items-center">
+                  {Array.from({ length: numPages }, (_, i) => (
+                    <div key={i} className="border border-line/60 shadow-md rounded overflow-hidden">
+                      <Page
+                        pageNumber={i + 1}
+                        width={width}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        loading={null}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Document>
           ) : (
-            <div className="flex-1 h-full flex flex-col items-center justify-center space-y-2 p-8 text-center">
-              <div className="bg-line/30 h-20 w-20 sm:h-24 sm:w-24 animate-pulse rounded-full" />
-              <p className="scrawl text-muted text-base">Menyiapkan preview PDF native…</p>
+            <div className="h-full flex flex-col items-center justify-center space-y-2 p-8 text-center">
+              <div className="bg-line/30 h-24 w-24 animate-pulse rounded-full" />
+              <p className="scrawl text-muted text-base">Menyiapkan preview PDF…</p>
             </div>
           )}
         </div>
@@ -94,4 +144,3 @@ export function PdfNativeModal({
     </Dialog>
   )
 }
-
