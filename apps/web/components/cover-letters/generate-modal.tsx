@@ -159,7 +159,7 @@ export function GenerateCoverLetterModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-6 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-6 gap-0 ">
         <DialogHeader className="pb-4 border-b-2 border-line shrink-0">
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <span className="p-2 bg-yellow/30 border border-yellow/60 rounded-xl text-xl">✍️</span>
