@@ -121,8 +121,8 @@ export const COVER_LETTER_TEMPLATE_LABELS: Record<
     id: "Kreatif",
     en: "Creative",
     description: {
-      id: "Pendekatan bercerita (storytelling) dengan sentuhan estetika Y2K",
-      en: "Storytelling approach with Y2K aesthetic touch",
+      id: "Pendekatan bercerita (storytelling) dengan sentuhan estetika scrapbook",
+      en: "Storytelling approach with scrapbook aesthetic touch",
     },
   },
 }

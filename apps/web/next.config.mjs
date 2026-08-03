@@ -19,7 +19,6 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' blob: ${API_URL} https://www.google.com https://challenges.cloudflare.com https://*.posthog.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com`,
-  "frame-src https://www.google.com https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "media-src 'self' blob: data:",
   "object-src 'self' blob:",

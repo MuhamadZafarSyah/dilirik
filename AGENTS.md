@@ -51,7 +51,7 @@ packages/
 - **Auth:** Better Auth (email/password + Google + GitHub). Session cookie name `better-auth.session_token`. Middleware Next.js redirect `/app/*` → `/login` kalau cookie hilang (lapisan UX cepat).
 - **Quota:** Field `analysisQuota` (default 10) + `analysisUsedThisPeriod` di User model. Reset periodik via `quotaResetAt`. Check di `@dilirik/ai` pipeline.
 - **API routes:** `/api/cv/*`, `/api/jobs/*`, `/api/applications/*`, `/api/analyze/*`, `/api/dashboard/*`, `/api/settings/*`. Semua via `requireAuth`.
-- **CSS Y2K scrapbook style.** Class utility: `.hand`, `.scrawl`, `.label`, `.card`, `.polaroid`, `.paper-texture`, `.tape*`, `.sticky-note`. Dark mode via class `.dark`.
+- **CSS scrapbook style.** Class utility: `.hand`, `.scrawl`, `.label`, `.card`, `.polaroid`, `.paper-texture`, `.tape*`, `.sticky-note`. Dark mode via class `.dark`.
 
 ## Testing
 

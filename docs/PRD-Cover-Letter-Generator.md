@@ -386,7 +386,6 @@ Industry: [industry]
   - Proper margins and spacing
   - Professional fonts (matching CV)
   - Signature area
-  - Y2K aesthetic elements (polaroid frame, paper texture)
 - Preserves all text content
 - Editable by user
 
@@ -396,7 +395,6 @@ Industry: [industry]
 - Pixel-perfect rendering of DOCX template
 - Non-editable (final version)
 - Professional print-ready format
-- Includes all Y2K aesthetic elements
 
 ## 15. Edge Cases & Error Handling
 
@@ -512,7 +510,6 @@ Industry: [industry]
 - More visually distinctive
 - Storytelling approach
 - Suitable for creative industries
-- Y2K aesthetic elements
 
 ### 21.2 Example Outputs
 

@@ -7,14 +7,11 @@ import {
   FiArrowRight,
   FiBriefcase,
   FiFileText,
-  FiLayers,
   FiZap,
   FiPlus,
   FiAlertCircle,
   FiTrendingUp,
   FiMic,
-  FiCheckCircle,
-  FiBarChart2,
 } from "react-icons/fi"
 import {
   scoreTone,
@@ -27,7 +24,7 @@ import { Card, Sticky } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
-import { cn } from "@/lib/utils"
+import { StarburstBadge } from "@/components/ui/starburst-badge"
 
 type DashboardData = {
   pipeline: Record<ApplicationStatus, number>
@@ -62,7 +59,6 @@ export default function DashboardPage() {
   const { lang, t } = useI18n()
   const [data, setData] = useState<DashboardData | null>(null)
   const [failed, setFailed] = useState(false)
-  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null)
 
   useEffect(() => {
     api
@@ -91,7 +87,6 @@ export default function DashboardPage() {
   const isUnlimited = data?.quota.quota === null
   const usedQuotaPercent = data && data.quota.quota ? Math.min(100, Math.round((data.quota.used / data.quota.quota) * 100)) : 0
 
-  const chartAnalyses = data?.recentAnalyses.slice(0, 7).reverse() ?? []
   const totalApplications = data ? Object.values(data.pipeline).reduce((a, b) => a + b, 0) : 0
 
   return (
@@ -144,9 +139,9 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* ===== High-Density KPI Metrics Grid ===== */}
-          <motion.section variants={itemVariants} className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            {/* 1. Master CV */}
-            <Link href="/app/cv" className="block">
+          {/* <motion.section variants={itemVariants} className="grid gap-3 grid-cols-2 lg:grid-cols-4"> */}
+          {/* 1. Master CV */}
+          {/* <Link href="/app/cv" className="block">
               <Card rotate={-0.6} className="group cursor-pointer p-4 space-y-2 hover:border-ink">
                 <div className="flex items-center justify-between text-muted text-[10px] font-bold uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-ink font-bold">
@@ -161,9 +156,9 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </Card>
-            </Link>
+            </Link> */}
 
-            {/* 2. Lowongan Target */}
+          {/* 2. Lowongan Target
             <Link href="/app/jobs" className="block">
               <Card rotate={0.6} className="group cursor-pointer p-4 space-y-2 hover:border-ink">
                 <div className="flex items-center justify-between text-muted text-[10px] font-bold uppercase tracking-wider">
@@ -179,10 +174,10 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </Card>
-            </Link>
+            </Link> */}
 
-            {/* 3. Skor Rata-Rata */}
-            <Card rotate={-0.4} className="p-4 space-y-2">
+          {/* 3. Skor Rata-Rata */}
+          {/* <Card rotate={-0.4} className="p-4 space-y-2">
               <div className="text-muted text-[10px] font-bold uppercase tracking-wider flex items-center justify-between">
                 <span className="text-ink font-bold flex items-center gap-1">
                   <FiTrendingUp className="h-3.5 w-3.5" /> Skor Rata-Rata
@@ -201,10 +196,10 @@ export default function DashboardPage() {
                   <span className="scrawl text-muted text-base">/100</span>
                 </div>
               )}
-            </Card>
+            </Card> */}
 
-            {/* 4. Sisa Kuota Battery Indicator */}
-            <Card rotate={0.4} tape="yellow" className="p-4 space-y-2">
+          {/* 4. Sisa Kuota Battery Indicator */}
+          {/* <Card rotate={0.4} tape="yellow" className="p-4 space-y-2">
               <div className="text-muted text-[10px] font-bold uppercase tracking-wider flex items-center justify-between">
                 <span className="text-ink font-bold">{t("quotaLeft")}</span>
                 <span className="label text-[9px] uppercase font-bold text-muted">
@@ -223,7 +218,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </Card>
-          </motion.section>
+          </motion.section> */}
 
           {/* ===== Content Section ===== */}
           {!hasCv ? (
@@ -237,135 +232,136 @@ export default function DashboardPage() {
             </motion.div>
           ) : (
             <>
-              {/* ===== Compact Match Score Chart & Skill Gaps ===== */}
-              <div className="grid gap-5 lg:grid-cols-3">
-                {/* Compact Bar Chart */}
-                <motion.section variants={itemVariants} className="lg:col-span-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
-                      📊 {lang === "id" ? "Trend Skor Match" : "Match Score Trend"}
-                    </h2>
-                    <span className="label bg-yellow/40 text-ink px-2 py-0.5 rounded text-[10px] font-bold">
-                      {chartAnalyses.length} Analisis Terakhir
-                    </span>
-                  </div>
+              {/* ===== Poster-Inspired 3-Card Showcase Grid ===== */}
+              <div className="grid gap-5 md:grid-cols-3">
+                {/* 1. Match Score Card */}
+                <motion.div variants={itemVariants} className="relative">
+                  <StarburstBadge text="New Badges" color="green" rotate={12} className="-top-4 -right-3" />
+                  <Card tape="yellow" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
+                    <div>
+                      <h3 className="hand text-2xl font-bold text-ink">Match Score</h3>
+                    </div>
 
-                  <Card tape="blue" className="p-5 space-y-4">
-                    {chartAnalyses.length === 0 ? (
-                      <div className="py-8 text-center space-y-2">
-                        <p className="scrawl text-muted text-base">Belum ada data grafik analisis.</p>
-                        <Link href="/app/analyze">
-                          <Button variant="danger" size="sm" icon={<FiZap />}>
-                            ⚡ Jalankan Analisis Pertama
-                          </Button>
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {/* Compact Height Bar Chart */}
-                        <div className="h-40 flex items-end justify-between gap-2.5 pt-6 pb-2 border-b border-line px-1 relative">
-                          {/* HR Target Benchmark Line */}
-                          <div className="absolute left-0 right-0 top-[22%] border-t border-dashed border-green/60 z-0 flex items-center justify-between px-1">
-                            <span className="label text-[8px] uppercase font-bold text-green bg-panel px-1 rounded border border-green/40">
-                              🎯 80 Score Target
-                            </span>
-                          </div>
-
-                          {chartAnalyses.map((item, i) => {
-                            const heightPercent = Math.max(15, Math.round((item.matchScore / 100) * 100))
-                            const isHovered = hoveredBarIndex === i
-                            const tone = scoreTone(item.matchScore)
-
-                            return (
-                              <div
-                                key={item.id}
-                                className="flex-1 flex flex-col items-center gap-1.5 group relative z-10 cursor-pointer"
-                                onMouseEnter={() => setHoveredBarIndex(i)}
-                                onMouseLeave={() => setHoveredBarIndex(null)}
-                              >
-                                {isHovered && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 4 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="absolute -top-9 bg-ink text-paper text-[9px] font-bold px-2 py-0.5 rounded shadow-paper whitespace-nowrap z-20"
-                                  >
-                                    {item.cvTitle}: <span className="text-yellow">{item.matchScore}/100</span>
-                                  </motion.div>
-                                )}
-
-                                <span className="hand text-sm font-bold text-ink group-hover:scale-105 transition-transform">
-                                  {item.matchScore}
-                                </span>
-
-                                <motion.div
-                                  initial={{ height: "0%" }}
-                                  animate={{ height: `${heightPercent}%` }}
-                                  transition={{ type: "spring", stiffness: 220, damping: 22, delay: i * 0.04 }}
-                                  className={`w-full max-w-[32px] rounded-t-lg border border-line transition-colors shadow-paper ${tone === "green"
-                                      ? "bg-green/80 hover:bg-green"
-                                      : tone === "yellow"
-                                        ? "bg-yellow/80 hover:bg-yellow"
-                                        : "bg-red/80 hover:bg-red"
-                                    }`}
-                                />
-
-                                <span className="label text-[9px] text-muted truncate max-w-[42px] font-bold">
-                                  {new Date(item.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-muted font-medium pt-0.5">
-                          <span className="flex items-center gap-1">
-                            🟢 Hijau (75+) · 🟡 Kuning (50-74) · 🔴 Merah (&lt;50)
+                    {/* Arc Gauge Visual */}
+                    <div className="flex flex-col items-center justify-center py-2 relative">
+                      <div className="w-36 h-20 relative flex items-end justify-center overflow-hidden">
+                        <svg viewBox="0 0 100 50" className="w-full h-full">
+                          <path
+                            d="M 10 50 A 40 40 0 0 1 90 50"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M 10 50 A 40 40 0 0 1 90 50"
+                            fill="none"
+                            stroke="url(#gaugeGradient)"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                            strokeDasharray="126"
+                            strokeDashoffset={126 - (126 * (data.averageScore ?? 63)) / 100}
+                          />
+                          <defs>
+                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#ef4444" />
+                              <stop offset="50%" stopColor="#eab308" />
+                              <stop offset="100%" stopColor="#22c55e" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="absolute bottom-0 text-center">
+                          <span className="hand text-3xl font-extrabold text-ink leading-none">
+                            {data.averageScore ?? 63}
                           </span>
-                          <Link href="/app/analyze" className="label text-ink text-[10px] font-bold hover:underline">
-                            Jalankan Analisis Baru →
-                          </Link>
+                          <span className="scrawl text-muted text-xs font-bold block">/100</span>
                         </div>
                       </div>
-                    )}
-                  </Card>
-                </motion.section>
-
-                {/* Top Skill Gaps Identifiers */}
-                <motion.section variants={itemVariants} className="space-y-2 lg:col-span-1">
-                  <div className="flex items-center justify-between">
-                    <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
-                      💡 {lang === "id" ? "Gap Paling Sering" : "Top Skill Gaps"}
-                    </h2>
-                  </div>
-
-                  <Card tape="red" pin className="p-4 space-y-3">
-                    {data.topGaps.length === 0 ? (
-                      <p className="text-muted text-xs py-6 text-center leading-relaxed">
-                        Belum ada data gap. Jalankan analisis match untuk rekomendasi skill!
-                      </p>
-                    ) : (
-                      <div className="space-y-2.5">
-                        {data.topGaps.slice(0, 5).map((g) => {
-                          const maxCount = Math.max(...data.topGaps.map((x) => x.count), 1)
-                          const pct = Math.round((g.count / maxCount) * 100)
-                          return (
-                            <div key={g.skill} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs font-bold">
-                                <span className="text-ink truncate text-[11px]">{g.skill}</span>
-                                <span className="label bg-yellow/40 text-ink rounded px-1.5 py-0.5 text-[9px]">
-                                  {g.count}x
-                                </span>
-                              </div>
-                              <div className="w-full bg-line/25 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-ink h-full rounded-full" style={{ width: `${pct}%` }} />
-                              </div>
-                            </div>
-                          )
-                        })}
+                      <div className="flex items-center justify-between w-full text-[10px] text-muted font-bold px-2 mt-1">
+                        <span>Low</span>
+                        <span className="text-ink">Match Score</span>
+                        <span>High</span>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <Sticky rotate={2} tone="yellow" className="text-[10px] py-1.5 px-2.5 max-w-[170px] shadow-sm">
+                        📌 Gaps match score vs lowongan target
+                      </Sticky>
+                    </div>
                   </Card>
-                </motion.section>
+                </motion.div>
+
+                {/* 2. AI Gap Analysis Card */}
+                <motion.div variants={itemVariants} className="relative">
+                  <StarburstBadge text="Accent Badge" color="pink" rotate={-8} className="-top-4 -right-3" />
+                  <Card tape="red" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <h3 className="hand text-2xl font-bold text-ink">AI Gap Analysis</h3>
+                      <div className="flex items-baseline gap-2">
+                        <span className="hand text-4xl font-extrabold text-red">5</span>
+                        <span className="hand text-2xl font-bold text-ink">Gap Beneran</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 py-1">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="label bg-red/20 text-red border border-red/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          Current Selection
+                        </span>
+                        <span className="label bg-pink-100 text-pink-700 border border-pink-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          55 seconds
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(data.topGaps.length > 0
+                          ? data.topGaps.slice(0, 3).map((g) => g.skill)
+                          : ["kubernetes", "microservices", "cloud"]
+                        ).map((skill) => (
+                          <span
+                            key={skill}
+                            className="label bg-panel border border-line px-2 py-0.5 rounded text-[10px] font-bold text-ink"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-muted font-bold pt-1 border-t border-line/40">
+                      <span>AI Gap to Analysis</span>
+                      <Link href="/app/analyze" className="label text-ink hover:underline">
+                        17 overlaps →
+                      </Link>
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* 3. Realtime AI Mock Interview Card */}
+                <motion.div variants={itemVariants} className="relative">
+                  <StarburstBadge text="Hot 🎙️" color="yellow" rotate={14} className="-top-4 -right-3" />
+                  <Card tape="blue" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <h3 className="hand text-2xl font-bold text-ink">Realtime AI Mock Interview</h3>
+                      <p className="scrawl text-muted text-xs leading-relaxed">
+                        Real online AI mock interview and self assessment.
+                      </p>
+                    </div>
+
+                    <div className="bg-yellow/20 border border-yellow/50 rounded-xl p-3 flex items-center gap-3">
+                      <div className="text-3xl">💬</div>
+                      <div className="text-[11px] text-ink font-semibold">
+                        Latih rasa percaya diri & jawaban kamu sebelum interview sesungguhnya.
+                      </div>
+                    </div>
+
+                    <Link href="/app/interview/new" className="block pt-1">
+                      <Button variant="primary" size="sm" className="w-full justify-center" icon={<FiMic />}>
+                        Mulai Interview →
+                      </Button>
+                    </Link>
+                  </Card>
+                </motion.div>
               </div>
 
               {/* ===== Pipeline Tracker Kanban Funnel ===== */}

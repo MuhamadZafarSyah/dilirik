@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion"
 import {
   FiBarChart2,
   FiBriefcase,
@@ -13,7 +13,6 @@ import {
   FiMic,
   FiSettings,
   FiZap,
-  FiGlobe,
   FiChevronLeft,
   FiChevronRight,
   FiMenu,
@@ -30,7 +29,7 @@ const ROTATIONS = [-1.2, 0.8, -0.6, 1.2, -0.8, 0.6, -1.0]
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { lang, setLang, t } = useI18n()
+  const { lang, t } = useI18n()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -70,10 +69,15 @@ export function Sidebar() {
     { href: "/app/settings", label: t("settings"), icon: FiSettings },
   ]
 
+  const activeIndex = items.findIndex((item) =>
+    item.exact ? pathname === item.href : pathname.startsWith(item.href)
+  )
+
+  const activeRotate = activeIndex !== -1 ? ROTATIONS[activeIndex % ROTATIONS.length] : 0
 
   return (
     <>
-      {/* ===== MOBILE TOP APP BAR (Shadcn Sidebar Mobile Header) ===== */}
+      {/* ===== MOBILE TOP APP BAR ===== */}
       <div className="border-line bg-panel/80 sticky top-0 z-40 flex items-center justify-between border-b-2 px-4 py-3 backdrop-blur-md md:hidden w-full shadow-xs">
         <div className="flex items-center gap-3">
           <button
@@ -96,7 +100,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* ===== MOBILE SHEET DRAWER (Shadcn Sidebar Mobile Drawer) ===== */}
+      {/* ===== MOBILE SHEET DRAWER ===== */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -140,10 +144,22 @@ export function Sidebar() {
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex flex-col gap-1.5">
+                <nav className="flex flex-col gap-1.5 relative">
+                  {/* Single Persistent Animated Active Pill */}
+                  {activeIndex !== -1 && (
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        top: activeIndex * 50,
+                        rotate: activeRotate,
+                      }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      className="absolute inset-x-0 h-[44px] bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
+                    />
+                  )}
+
                   {items.map(({ href, label, icon: Icon, exact }, index) => {
                     const active = exact ? pathname === href : pathname.startsWith(href)
-                    const rotateDeg = ROTATIONS[index % ROTATIONS.length]
 
                     return (
                       <Link
@@ -151,19 +167,10 @@ export function Sidebar() {
                         href={href}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "label relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-colors select-none",
+                          "label relative flex items-center gap-3 rounded-xl px-4 h-[44px] text-sm font-bold transition-colors select-none",
                           active ? "text-paper z-10" : "text-ink hover:bg-line/30"
                         )}
                       >
-                        {active && (
-                          <motion.div
-                            layoutId="mobileSidebarBg"
-                            initial={false}
-                            animate={{ rotate: rotateDeg }}
-                            className="absolute inset-0 bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
-                            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                          />
-                        )}
                         <Icon className={cn("h-4 w-4 shrink-0 z-10", active ? "text-yellow" : "text-muted")} />
                         <span className="z-10">{label}</span>
                         {active && (
@@ -177,17 +184,6 @@ export function Sidebar() {
 
               {/* Mobile Drawer Footer Controls */}
               <div className="flex flex-col gap-2 pt-4 border-t border-line">
-                <button
-                  onClick={() => setLang(lang === "id" ? "en" : "id")}
-                  className="label text-muted hover:text-ink flex items-center justify-between rounded-xl border-2 border-line bg-paper px-4 py-2.5 text-xs font-bold shadow-xs"
-                >
-                  <span className="flex items-center gap-2">
-                    <FiGlobe className="h-4 w-4 text-ink" />
-                    <span>{lang === "id" ? "Bahasa Indonesia" : "English"}</span>
-                  </span>
-                  <span className="uppercase text-[10px] bg-panel px-2 py-0.5 rounded border border-line">{lang}</span>
-                </button>
-
                 <button
                   onClick={async () => {
                     setMobileOpen(false)
@@ -204,13 +200,11 @@ export function Sidebar() {
         )}
       </AnimatePresence>
 
-      {/* ===== DESKTOP SIDEBAR (Shadcn Collapsible Desktop Sidebar) ===== */}
-      <motion.aside
-        initial={false}
-        animate={{ width: collapsed ? 80 : 256 }}
-        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      {/* ===== DESKTOP SIDEBAR ===== */}
+      <aside
         className={cn(
-          "hidden md:flex border-line bg-panel relative flex-col border-r-2 p-4 sticky top-0 h-screen shrink-0"
+          "hidden md:flex border-line bg-panel relative flex-col border-r-2 p-4 sticky top-0 h-screen shrink-0 transition-all duration-300 ease-in-out",
+          collapsed ? "w-20" : "w-64"
         )}
       >
         {/* Brand logo & Collapse Toggle Button */}
@@ -222,20 +216,12 @@ export function Sidebar() {
             >
               👀
             </motion.div>
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.div
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="flex flex-col whitespace-nowrap overflow-hidden"
-                >
-                  <span className="hand text-ink text-3xl leading-none font-bold">Dilirik</span>
-                  <span className="scrawl text-muted text-xs leading-none -mt-1">smart CV matcher</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {!collapsed && (
+              <div className="flex flex-col whitespace-nowrap overflow-hidden">
+                <span className="hand text-ink text-3xl leading-none font-bold">Dilirik</span>
+                <span className="scrawl text-muted text-xs leading-none -mt-1">smart CV matcher</span>
+              </div>
+            )}
           </Link>
 
           {/* Desktop Collapse Toggle Button */}
@@ -249,52 +235,51 @@ export function Sidebar() {
         </div>
 
         {/* Navigation items */}
-        <nav className="flex flex-col gap-1.5 flex-1 overflow-visible relative">
-          {items.map(({ href, label, icon: Icon, exact }, index) => {
+        <nav className="flex flex-col gap-1.5 flex-1 relative">
+          {/* Single Persistent Animated Active Pill */}
+          {activeIndex !== -1 && (
+            <motion.div
+              initial={false}
+              animate={{
+                top: activeIndex * 46,
+                rotate: activeRotate,
+              }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="absolute inset-x-0 h-[40px] bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
+            />
+          )}
+
+          {/* Single Persistent Animated Yellow Dot */}
+          {activeIndex !== -1 && !collapsed && (
+            <motion.span
+              initial={false}
+              animate={{
+                top: activeIndex * 46 + 16,
+              }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="bg-yellow absolute right-3.5 h-2 w-2 rounded-full hidden md:block z-10 pointer-events-none"
+            />
+          )}
+
+          {items.map(({ href, label, icon: Icon, exact }) => {
             const active = exact ? pathname === href : pathname.startsWith(href)
-            const rotateDeg = ROTATIONS[index % ROTATIONS.length]
 
             return (
               <div key={href} className="relative group">
                 <Link
                   href={href}
                   className={cn(
-                    "label relative flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold whitespace-nowrap transition-colors select-none",
+                    "label relative flex items-center gap-2.5 rounded-xl px-3.5 h-[40px] text-sm font-bold whitespace-nowrap transition-colors select-none",
                     collapsed && "justify-center px-0 w-full",
                     active ? "text-paper z-10" : "text-ink hover:bg-line/30"
                   )}
                 >
-                  {active && (
-                    <motion.div
-                      layoutId="activeSidebarBg"
-                      initial={false}
-                      animate={{ rotate: rotateDeg }}
-                      className="absolute inset-0 bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                    />
-                  )}
                   <Icon className={cn("h-4 w-4 shrink-0 z-10", active ? "text-yellow" : "text-muted")} />
 
-                  <AnimatePresence>
-                    {!collapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="z-10 overflow-hidden whitespace-nowrap"
-                      >
-                        {label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-
-                  {active && !collapsed && (
-                    <motion.span
-                      layoutId="activeSidebarDot"
-                      className="bg-yellow absolute right-3.5 h-2 w-2 rounded-full hidden md:block z-10 pointer-events-none"
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                    />
+                  {!collapsed && (
+                    <span className="z-10 overflow-hidden whitespace-nowrap">
+                      {label}
+                    </span>
                   )}
                 </Link>
 
@@ -311,20 +296,6 @@ export function Sidebar() {
 
         {/* Footer controls (desktop) */}
         <div className={cn("flex flex-col gap-2 pt-4 border-t border-line mt-auto overflow-hidden", collapsed && "items-center px-0")}>
-          <div className={cn("flex items-center justify-between w-full", collapsed ? "justify-center" : "px-2")}>
-            <button
-              onClick={() => setLang(lang === "id" ? "en" : "id")}
-              className={cn(
-                "label text-muted hover:text-ink flex items-center gap-1.5 rounded-lg border border-line bg-paper py-1.5 text-xs font-bold shadow-xs transition-colors",
-                collapsed ? "px-2 justify-center" : "px-3 w-full"
-              )}
-              title={collapsed ? (lang === "id" ? "Bahasa Indonesia" : "English") : undefined}
-            >
-              <FiGlobe className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="uppercase truncate">{lang === "id" ? "Bahasa Indonesia" : "English"}</span>}
-            </button>
-          </div>
-
           <button
             onClick={handleSignOut}
             className={cn(
@@ -337,7 +308,7 @@ export function Sidebar() {
             {!collapsed && <span className="whitespace-nowrap">{t("logout")}</span>}
           </button>
         </div>
-      </motion.aside>
+      </aside>
     </>
   )
 }

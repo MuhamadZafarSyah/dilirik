@@ -101,7 +101,6 @@ function VerifyEmailContent() {
         <div className="space-y-4">
           <div className="py-6 flex justify-center">
             <div className="relative">
-              {/* Spinning dashed Y2K circle */}
               <div className="absolute -inset-2 rounded-full border-2 border-dashed border-ink animate-spin [animation-duration:6s]" />
               <div className="relative bg-yellow/30 text-ink rounded-full p-4 border-2 border-ink shadow-paper">
                 <FiLoader className="h-10 w-10 animate-spin text-ink stroke-[2.5]" />
