@@ -1,4 +1,10 @@
-import { ENGINE_VERSION, type AnalysisResult, type CvStructured, type JobParsed } from "@dilirik/shared"
+import {
+  ENGINE_VERSION,
+  PROMPT_VERSION,
+  type AnalysisResult,
+  type CvStructured,
+  type JobParsed,
+} from "@dilirik/shared"
 import { ruleBasedScore } from "../scoring/ruleBased"
 import { blendScores, semanticScore } from "../scoring/semantic"
 import { generateAnalysisReport, pickSuggestionMode } from "../analysis/report"
@@ -27,7 +33,7 @@ export async function analyze(args: {
   // 2) Semantic: bila gagal validasi → fallback ke rule-based (PRD §12 Reliabilitas)
   let semantic: number | null = null
   try {
-    const s = await semanticScore(cv, job)
+    const s = await semanticScore(cv, job, language)
     semantic = s.score
   } catch {
     semantic = null
@@ -61,5 +67,6 @@ export async function analyze(args: {
     careerNote: report.careerNote,
     language,
     engineVersion: ENGINE_VERSION,
+    promptVersion: PROMPT_VERSION,
   }
 }
