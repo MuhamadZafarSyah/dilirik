@@ -157,7 +157,7 @@ export default function InterviewResultPage({ params }: { params: Promise<{ id: 
       {/* Generating Feedback Loader State */}
       {session.status === "ENDED" && !feedback && (
         <Card tape="blue" className="p-8 text-center space-y-3">
-          <div className="inline-block animate-spin text-3xl">✨</div>
+          <div className="inline-block  text-3xl">✨</div>
           <h2 className="hand text-3xl font-bold">
             {feedbackMutation.isPending
               ? lang === "id" ? "AI Coach Sedang Menilai Performa Kamu..." : "AI Coach is Scoring Your Performance..."
