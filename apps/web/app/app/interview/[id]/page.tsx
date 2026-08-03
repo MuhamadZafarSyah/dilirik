@@ -253,7 +253,7 @@ export default function InterviewResultPage({ params }: { params: Promise<{ id: 
           {feedback.questionReviews.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="hand text-3xl font-bold text-ink flex items-center gap-2">
+                <h2 className="hand text-sm md:text-3xl font-bold text-ink flex items-center gap-2">
                   📝 {lang === "id" ? "Review Pertanyaan demi Pertanyaan" : "Per-Question Review Breakdown"}
                 </h2>
                 <span className="label bg-yellow/40 text-ink px-2.5 py-0.5 rounded text-xs font-bold">

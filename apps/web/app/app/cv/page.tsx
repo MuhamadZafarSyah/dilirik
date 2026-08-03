@@ -51,9 +51,14 @@ export default function CvListPage() {
   )
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="hand text-4xl sm:text-5xl font-bold flex items-center gap-2">
             Dokumen CV 📄
@@ -66,21 +71,23 @@ export default function CvListPage() {
             + Tambah Master CV
           </Button>
         </Link>
-      </div>
+      </motion.div>
 
       <Skeleton name="cv-list" loading={!cvs} animate="shimmer" fallback={<CvListSkeleton />}>
         {cvs ? (
           roots.length === 0 ? (
-            <EmptyState
-              title={t("emptyCvTitle")}
-              note="Upload PDF/DOCX atau tempel teks CV kamu — Bahasa Indonesia maupun Inggris."
-              ctaLabel={t("emptyCvCta")}
-              ctaHref="/app/cv/new"
-            />
+            <motion.div variants={itemVariants}>
+              <EmptyState
+                title={t("emptyCvTitle")}
+                note="Upload PDF/DOCX atau tempel teks CV kamu — Bahasa Indonesia maupun Inggris."
+                ctaLabel={t("emptyCvCta")}
+                ctaHref="/app/cv/new"
+              />
+            </motion.div>
           ) : filteredRoots.length === 0 ? (
-            <div className="text-center py-12">
+            <motion.div variants={itemVariants} className="text-center py-12">
               <p className="scrawl text-muted text-2xl">CV yang kamu cari tidak ditemukan 🔍</p>
-            </div>
+            </motion.div>
           ) : (
             <motion.div
               variants={containerVariants}
@@ -92,7 +99,12 @@ export default function CvListPage() {
                 const versions = versionsOf(cv.id)
                 const tapeColor = i % 3 === 0 ? "yellow" : i % 3 === 1 ? "blue" : "red"
                 return (
-                  <motion.div key={cv.id} variants={itemVariants}>
+                  <motion.div
+                    key={cv.id}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  >
                     <Polaroid tape={tapeColor} pin rotate={i % 2 === 0 ? -1.5 : 1.5} className="group h-full">
                       <Link href={`/app/cv/${cv.id}`} className="block">
                         <div className="bg-paper/80 border-line flex h-36 items-center justify-center rounded-lg border-2 shadow-inner group-hover:bg-paper transition-colors relative overflow-hidden">
@@ -145,7 +157,7 @@ export default function CvListPage() {
           )
         ) : null}
       </Skeleton>
-    </div>
+    </motion.div>
   )
 }
 

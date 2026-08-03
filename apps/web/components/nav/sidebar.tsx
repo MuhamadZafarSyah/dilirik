@@ -87,12 +87,12 @@ export function Sidebar() {
           >
             <FiMenu className="h-5 w-5" />
           </button>
-          <Link href="/app" className="flex items-center gap-2">
+          {/* <Link href="/app" className="flex items-center gap-2">
             <span className="bg-ink text-paper h-7 w-7 flex items-center justify-center rounded-lg font-bold text-xs shadow-xs">
               👀
             </span>
             <span className="hand text-ink text-2xl font-bold">Dilirik</span>
-          </Link>
+          </Link> */}
         </div>
 
         <div className="flex items-center gap-2">

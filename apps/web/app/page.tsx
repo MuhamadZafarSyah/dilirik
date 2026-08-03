@@ -247,7 +247,7 @@ export default function LandingPage() {
           {/* Main SaaS Display Headline */}
           <motion.h1
             variants={popIn}
-            className="hand text-3xl xs:text-5xl sm:text-7xl lg:text-8xl leading-snug sm:leading-[1.06] font-bold text-ink"
+            className="hand text-3xl sm:text-5xl lg:text-6xl font-bold text-ink leading-tight sm:leading-tight"
           >
             Bikin CV-mu <span className="text-red underline decoration-wavy inline-block">Dilirik HR</span>, Tanpa Pernah Bohong.
           </motion.h1>
@@ -316,7 +316,7 @@ export default function LandingPage() {
           <span className="label bg-blue/20 text-blue border border-blue/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Interactive SaaS App Demo
           </span>
-          <h2 className="hand text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">Pengalaman Menggunakan Dilirik App ⚡</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pengalaman Menggunakan Dilirik App ⚡</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Simulasikan bagaimana AI Dilirik membedah CV kamu secara real-time.
           </p>
@@ -342,7 +342,7 @@ export default function LandingPage() {
         </div>
 
         {/* Interactive App Window Frame */}
-        <Card tape="red" pin className="max-w-4xl mx-auto p-0 border-2 border-line shadow-lift ">
+        <Card tape="red" pin className="w-full max-w-4xl mx-auto p-0 border-2 border-line shadow-lift overflow-hidden">
           {/* Simulated App Title Bar */}
           <div className="bg-panel border-b-2 border-line p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -384,7 +384,7 @@ export default function LandingPage() {
           </div>
 
           {/* App Body Content */}
-          <div className="p-4 sm:p-8 bg-panel/40 min-h-[360px]">
+          <div className="p-3 sm:p-6 md:p-8 bg-panel/40 min-h-[340px] overflow-hidden">
             <AnimatePresence mode="wait">
               {activeTab === "match" && (
                 <motion.div
@@ -395,13 +395,13 @@ export default function LandingPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <ScoreGauge score={sample.score} size={140} />
-                    <div className="flex-1 text-center md:text-left space-y-2">
-                      <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
+                    <ScoreGauge score={sample.score} size={130} />
+                    <div className="flex-1 text-center md:text-left space-y-2 min-w-0 w-full">
+                      <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase inline-block">
                         Kualifikasi Match
                       </span>
-                      <h3 className="hand text-2xl sm:text-3xl font-bold text-ink">
+                      <h3 className="hand text-xl sm:text-2xl font-bold text-ink truncate max-w-full">
                         {sample.cvName}
                       </h3>
                       <p className="text-muted text-xs leading-relaxed">
@@ -517,7 +517,7 @@ export default function LandingPage() {
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Arsitektur Dilirik
           </span>
-          <h2 className="hand text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">Fitur Utama Yang Didesain Khusus 🛠️</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Fitur Utama Yang Didesain Khusus 🛠️</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Bukan sekadar AI penulisa ulang teks biasa, Dilirik didesain khusus untuk efisiensi lamaran kerja.
           </p>
@@ -622,7 +622,7 @@ export default function LandingPage() {
       {/* ================= PROBLEM VS SOLUTION ================= */}
       <section id="mengapa" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
         <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
-          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Kenapa 80% CV Bagus Tetap Diabaikan HR? 🤔</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Kenapa 80% CV Bagus Tetap Diabaikan HR? 🤔</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Masalah utamanya bukan kurang pengalaman, tapi cara menyajikan fakta dan kata kunci yang tidak pas.
           </p>
@@ -718,7 +718,7 @@ export default function LandingPage() {
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Kisah Sukses Kandidat
           </span>
-          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Apa Kata Mereka Yang Sudah Dilirik HR 💬</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Apa Kata Mereka Yang Sudah Dilirik HR 💬</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Testimoni jujur dari para pencari kerja yang berhasil lolos ke tahap interview.
           </p>
@@ -784,7 +784,7 @@ export default function LandingPage() {
       {/* ================= INTERACTIVE FAQ ACCORDION ================= */}
       <section id="faq" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
         <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
-          <h2 className="hand text-3xl sm:text-5xl font-bold leading-tight">Pertanyaan Sering Diajukan (FAQ) ❓</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pertanyaan Sering Diajukan (FAQ) ❓</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Semua hal yang perlu kamu ketahui tentang Dilirik.
           </p>
@@ -829,7 +829,7 @@ export default function LandingPage() {
             <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block">
               Mulai Dalam 15 Detik
             </span>
-            <h2 className="hand text-3xl xs:text-4xl sm:text-6xl font-bold text-ink leading-snug">
+            <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold text-ink leading-snug">
               Siap Bikin CV-mu Dilirik HR Hari Ini? ⚡
             </h2>
             <p className="scrawl text-muted text-base sm:text-xl max-w-lg mx-auto">
