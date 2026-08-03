@@ -24,8 +24,19 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * v2.0.0: gaps+suggestions+careerNote digabung jadi SATU panggilan LLM (satu
  * rantai pemikiran), mode adaptif (optimize/reframe/honest_pivot) dari coverage
  * must-have, taksonomi gap, dan guardrail relevansi/anti-kosmetik.
+ * v3.0.0: pencocokan skill berbasis token + peta alias (bukan substring dua
+ * arah), schema saran v3 (addressesGap/whatChanged/rationale/impact), guardrail
+ * 5 titik (anchor verbatim, kejujuran, frasa terlarang, kebergunaan, dedup),
+ * repair loop pada output terstruktur, dan refund kuota saat pipeline gagal.
  */
-export const ENGINE_VERSION = "2.0.0"
+export const ENGINE_VERSION = "3.0.0"
+
+/**
+ * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
+ * bisa menginvalidasi cache TANPA mengklaim perubahan arsitektur mesin.
+ * WAJIB dinaikkan setiap kali isi prompt analisis diubah, sekecil apa pun.
+ */
+export const PROMPT_VERSION = "p3.0.0-2026-08-03"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
@@ -126,4 +137,3 @@ export const COVER_LETTER_TEMPLATE_LABELS: Record<
     },
   },
 }
-

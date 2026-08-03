@@ -35,16 +35,57 @@ export const gapSchema = z.object({
 
 export const gapsSchema = z.object({ gaps: z.array(gapSchema).default([]) })
 
+/** Bagian CV yang boleh disentuh saran — enum supaya UI bisa mengelompokkan. */
+export const SUGGESTION_SECTIONS = [
+  "summary",
+  "experience",
+  "projects",
+  "skills",
+  "education",
+  "achievements",
+  "other",
+] as const
+export type SuggestionSection = (typeof SUGGESTION_SECTIONS)[number]
+
 /**
- * Saran tulis ulang — WAJIB merujuk fakta yang ada di CV (guardrail titik-3)
- * DAN menyebut requirement lowongan yang dijawab (guardrail relevansi, v2).
+ * Jenis perubahan yang diklaim saran (engine v3).
+ * Dipakai guardrail untuk MEMVERIFIKASI klaim itu (mis. "added_metric" wajib
+ * benar-benar memunculkan angka baru), menggantikan aturan anti-kosmetik lama
+ * yang justru mendorong keyword stuffing.
+ */
+export const SUGGESTION_CHANGE_KINDS = [
+  "added_metric",
+  "added_scope",
+  "added_tool",
+  "added_outcome",
+  "reordered_for_relevance",
+] as const
+export type SuggestionChangeKind = (typeof SUGGESTION_CHANGE_KINDS)[number]
+
+export const SUGGESTION_IMPACTS = ["high", "medium", "low"] as const
+export type SuggestionImpact = (typeof SUGGESTION_IMPACTS)[number]
+
+/**
+ * Saran tulis ulang (v3) — schema MENGIKAT apa yang prompt cuma bisa memohon:
+ * - basedOnFacts: fakta CV yang dirujuk (guardrail kejujuran).
+ * - targetRequirement: requirement lowongan yang dijawab (guardrail relevansi).
+ * - addressesGap: menghubungkan saran ke gap hasil diagnosis (anti saran yatim).
+ * - whatChanged: klaim perubahan yang bisa DIVERIFIKASI kode.
+ * - impact: dipakai untuk mengurutkan saran paling berdampak lebih dulu.
+ *
+ * Catatan kompatibilitas: field baru memakai default supaya analisis lama yang
+ * tersimpan di DB/Redis tetap bisa di-parse.
  */
 export const suggestionSchema = z.object({
-  section: z.string(),
+  section: z.enum(SUGGESTION_SECTIONS).catch("other"),
   before: z.string(),
   after: z.string(),
   basedOnFacts: z.array(z.string()).min(1),
   targetRequirement: z.string().default(""),
+  addressesGap: z.string().default(""),
+  whatChanged: z.array(z.enum(SUGGESTION_CHANGE_KINDS)).default([]),
+  rationale: z.string().default(""),
+  impact: z.enum(SUGGESTION_IMPACTS).default("medium"),
 })
 
 export const suggestionsSchema = z.object({
@@ -78,6 +119,8 @@ export type AnalysisResult = {
   careerNote: string
   language: string
   engineVersion: string
+  /** Versi prompt yang menghasilkan laporan ini — bahan utama evaluasi A/B. */
+  promptVersion: string
 }
 
 export const runAnalysisSchema = z.object({
