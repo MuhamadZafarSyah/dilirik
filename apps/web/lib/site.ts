@@ -50,14 +50,29 @@ export const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_APP_URL)
 export const siteName = "Dilirik"
 
 /** Judul default halaman utama. Ditahan <= 60 karakter agar tidak terpotong di SERP. */
-export const defaultTitle = "Dilirik — Cek Kecocokan CV dengan Lowongan, Gratis"
+export const defaultTitle = "Dilirik — Cek Kecocokan CV ATS & Buat Surat Lamaran AI Gratis"
 
 /** Template judul untuk halaman turunan, mis. "Harga — Dilirik". */
 export const titleTemplate = `%s — ${siteName}`
 
 /** Deskripsi default. Ditahan <= 155 karakter agar utuh di SERP. */
 export const defaultDescription =
-	"Cocokkan CV dengan lowongan kerja: skor kecocokan, analisis gap, dan saran perbaikan yang jujur — tanpa mengarang. Gratis, tanpa kartu kredit."
+	"Dilirik (dilirik.tech): Cek skor kecocokan CV dengan lowongan kerja, analisis gap ATS, dan buat surat lamaran AI otomatis secara akurat & gratis."
+
+/** Kata kunci utama SEO (Keywords) untuk mesin pencari. */
+export const defaultKeywords: readonly string[] = [
+	"Dilirik",
+	"dilirik.tech",
+	"Dilirik CV",
+	"Cek CV Dilirik",
+	"Cek CV ATS Gratis",
+	"Cek Skor Kecocokan CV",
+	"Analisis CV ATS",
+	"Buat Surat Lamaran AI",
+	"Cover Letter Generator Indonesia",
+	"Contoh Surat Lamaran Kerja",
+	"CV Checker Indonesia",
+]
 
 export const defaultLocale = "id_ID"
 export const defaultLanguage = "id-ID"
