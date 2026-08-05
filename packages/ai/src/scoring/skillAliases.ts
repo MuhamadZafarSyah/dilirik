@@ -6,11 +6,17 @@
  * - "Java" dianggap tercakup oleh "JavaScript"
  * - "R" tercakup oleh "Retail", "Go" oleh "Google", "C" oleh hampir semua kata
  * - "AI" tercakup oleh "Mail"
- * Efek berantainya fatal: matchedMust membengkak → coverage palsu → mode saran
+ * Efek berantainya fatal: matchedMust membengkak \u2192 coverage palsu \u2192 mode saran
  * salah ("optimize" untuk CV yang sebenarnya lintas bidang).
  *
  * SOLUSI: pencocokan berbasis TOKEN (kata utuh) untuk skill satu kata dan frasa
  * utuh untuk skill multi-kata. Kemiripan yang SAH ditangani eksplisit di sini.
+ *
+ * BATAS TANGGUNG JAWAB FILE INI (v3.1): hanya EKUIVALENSI \u2014 penulisan berbeda
+ * untuk skill yang sama. Relasi turunan satu arah ("SvelteKit \u27f9 Svelte",
+ * "React \u27f9 HTML") TIDAK boleh masuk ke sini, karena `ALIAS_INDEX` bersifat
+ * simetris: memasukkannya berarti CV yang cuma menulis "Svelte" ikut dianggap
+ * menguasai "SvelteKit". Relasi semacam itu tinggal di `skillImplications.ts`.
  *
  * ATURAN MENAMBAH GRUP:
  * 1. Satu grup = SATU skill dengan penulisan berbeda, bukan skill yang mirip.
@@ -18,15 +24,20 @@
  * 2. Tulis semua anggota dalam bentuk ternormalisasi: huruf kecil, hanya sisakan
  *    spasi dan karakter + # . / - (lihat `normalize()` di guardrail/postCheck).
  * 3. Prioritaskan istilah yang benar-benar dipakai lowongan Indonesia.
+ * 4. Uji cepat sebelum menambah: kalau A \u27f9 B benar tapi B \u27f9 A salah, itu BUKAN
+ *    alias \u2014 tempatnya di skillImplications.ts.
  */
 export const SKILL_ALIAS_GROUPS: string[][] = [
   // --- Bahasa & runtime ---
-  ["javascript", "js", "ecmascript", "java script"],
+  ["javascript", "js", "ecmascript", "java script", "es6", "es2015"],
   ["typescript", "ts"],
   ["node.js", "nodejs", "node js", "node"],
   ["python", "phyton"],
   ["golang", "go", "go lang"],
-  ["c#", "c sharp", "csharp", ".net", "dotnet", "dot net"],
+  ["c#", "c sharp", "csharp"],
+  // .NET adalah platform, C# adalah bahasa \u2014 bukan hal yang sama (F#/VB juga .NET).
+  // Relasi ".net \u27f9 c#" ditangani sebagai implikasi `likely`.
+  [".net", "dotnet", "dot net", "net framework", "asp.net"],
   ["c++", "cpp", "c plus plus"],
   ["r", "bahasa r", "r language"],
   ["php"],
@@ -35,15 +46,26 @@ export const SKILL_ALIAS_GROUPS: string[][] = [
   ["swift"],
   ["dart"],
 
+  // --- Fondasi web ---
+  // Sengaja dipisah dari framework: ini yang jadi sasaran implikasi.
+  ["html", "html5", "hypertext markup language"],
+  ["css", "css3", "cascading style sheets"],
+  ["dom", "document object model"],
+  ["responsive design", "responsive", "desain responsif", "responsive web design", "mobile first"],
+  ["web accessibility", "aksesibilitas", "a11y", "wcag"],
+
   // --- Frontend ---
   ["react", "reactjs", "react.js", "react js"],
   ["next.js", "nextjs", "next js"],
   ["vue", "vuejs", "vue.js", "vue js"],
   ["nuxt", "nuxtjs", "nuxt.js"],
   ["angular", "angularjs", "angular js"],
-  ["svelte", "sveltekit"],
+  // SvelteKit dibangun DI ATAS Svelte \u2014 hubungan induk-anak, bukan alias.
+  ["svelte"],
+  ["sveltekit", "svelte kit"],
   ["tailwind", "tailwindcss", "tailwind css"],
   ["bootstrap"],
+  ["shadcn/ui", "shadcn", "shadcn ui"],
   ["react native", "reactnative", "react-native"],
   ["flutter"],
 
@@ -68,7 +90,10 @@ export const SKILL_ALIAS_GROUPS: string[][] = [
   ["docker", "dockerize", "containerisasi", "containerization"],
   ["kubernetes", "k8s"],
   ["ci/cd", "cicd", "ci cd", "continuous integration", "continuous deployment"],
-  ["git", "github", "gitlab", "version control", "kontrol versi"],
+  // GitHub/GitLab adalah platform DI ATAS Git \u2014 implikasi, bukan ekuivalensi.
+  ["git", "version control", "kontrol versi"],
+  ["github"],
+  ["gitlab"],
   ["aws", "amazon web services"],
   ["gcp", "google cloud", "google cloud platform"],
   ["linux", "unix"],
@@ -141,11 +166,32 @@ for (const group of SKILL_ALIAS_GROUPS) {
 
 /**
  * Varian pendek ("go", "r", "ai", "js") terlalu berisiko dicocokkan ke seluruh
- * isi CV — hanya boleh dicari di daftar skill/section eksplisit, bukan di
+ * isi CV \u2014 hanya boleh dicari di daftar skill/section eksplisit, bukan di
  * kalimat bebas seperti "go to market" atau "AI-powered".
  */
 export function isShortToken(variant: string): boolean {
   return variant.replace(/[^a-z0-9]/g, "").length <= 2
+}
+
+/** Apakah istilah ini dikenal engine? Dipakai untuk memutuskan aman-tidaknya memecah requirement majemuk. */
+export function isKnownTerm(term: string): boolean {
+  return ALIAS_INDEX.has(term)
+}
+
+/**
+ * Buang akhiran versi bila sisanya istilah yang dikenal: "html5" \u2192 "html",
+ * "vue 3" \u2192 "vue", "svelte 5" \u2192 "svelte".
+ *
+ * Lowongan nyata sangat sering menulis versi, dan tanpa ini "HTML5" tidak akan
+ * pernah cocok dengan "HTML" \u2014 sumber gap palsu yang sulit terlihat.
+ * Syarat "sisanya harus istilah dikenal" mencegah pemotongan ngawur seperti
+ * "C4" atau "Level 2".
+ */
+export function stripVersionSuffix(term: string): string {
+  const match = /^([a-z#+./ -]{2,}?)\s?\d{1,2}$/.exec(term)
+  if (!match) return term
+  const base = (match[1] ?? "").trim()
+  return base && ALIAS_INDEX.has(base) ? base : term
 }
 
 /** Perluas satu skill lowongan (sudah ternormalisasi) jadi seluruh varian sahnya. */
