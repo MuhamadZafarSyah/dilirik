@@ -33,6 +33,17 @@ type DashboardData = {
   counts: { cvs: number; jobs: number }
   quota: { quota: number | null; used: number; remaining: number | null; resetAt: string }
   recentAnalyses: Array<{ id: string; matchScore: number; cvTitle: string; createdAt: string }>
+  latestInterview?: {
+    id: string
+    title: string
+    status: string
+    persona: string
+    durationSec: number
+    createdAt: string
+    overallScore: number | null
+    summary: string | null
+  } | null
+  totalInterviews?: number
 }
 
 const toneText = { red: "text-red", yellow: "text-yellow", green: "text-green" } as const
@@ -233,135 +244,182 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* ===== Poster-Inspired 3-Card Showcase Grid ===== */}
-              <div className="grid gap-5 md:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-3 items-stretch">
                 {/* 1. Match Score Card */}
-                <motion.div variants={itemVariants} className="relative">
-                  <StarburstBadge text="New Badges" color="green" rotate={12} className="-top-4 -right-3" />
-                  <Card tape="yellow" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
-                    <div>
-                      <h3 className="hand text-2xl font-bold text-ink">Match Score</h3>
-                    </div>
+                {(() => {
+                  const scoreBadgeText = data.averageScore !== null
+                    ? `${data.averageScore}% Match`
+                    : data.counts.cvs > 0
+                      ? `${data.counts.cvs} CV Aktif`
+                      : "Siap Match"
 
-                    {/* Arc Gauge Visual */}
-                    <div className="flex flex-col items-center justify-center py-2 relative">
-                      <div className="w-36 h-20 relative flex items-end justify-center overflow-hidden">
-                        <svg viewBox="0 0 100 50" className="w-full h-full">
-                          <path
-                            d="M 10 50 A 40 40 0 0 1 90 50"
-                            fill="none"
-                            stroke="#e5e7eb"
-                            strokeWidth="10"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 10 50 A 40 40 0 0 1 90 50"
-                            fill="none"
-                            stroke="url(#gaugeGradient)"
-                            strokeWidth="10"
-                            strokeLinecap="round"
-                            strokeDasharray="126"
-                            strokeDashoffset={126 - (126 * (data.averageScore ?? 63)) / 100}
-                          />
-                          <defs>
-                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#ef4444" />
-                              <stop offset="50%" stopColor="#eab308" />
-                              <stop offset="100%" stopColor="#22c55e" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute bottom-0 text-center">
-                          <span className="hand text-3xl font-extrabold text-ink leading-none">
-                            {data.averageScore ?? 63}
-                          </span>
-                          <span className="scrawl text-muted text-xs font-bold block">/100</span>
+                  return (
+                    <motion.div variants={itemVariants} className="relative flex flex-col h-full">
+                      <StarburstBadge text={scoreBadgeText} color="green" rotate={12} className="-top-4 -right-3" />
+                      <Card tape="yellow" className="p-5 space-y-3 relative overflow-visible flex-1 flex flex-col justify-between h-full">
+                        <div>
+                          <h3 className="hand text-2xl font-bold text-ink">Match Score</h3>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between w-full text-[10px] text-muted font-bold px-2 mt-1">
-                        <span>Low</span>
-                        <span className="text-ink">Match Score</span>
-                        <span>High</span>
-                      </div>
-                    </div>
 
-                    <div className="flex justify-end pt-1">
-                      <Sticky rotate={2} tone="yellow" className="text-[10px] py-1.5 px-2.5 max-w-[170px] shadow-sm">
-                        📌 Gaps match score vs lowongan target
-                      </Sticky>
-                    </div>
-                  </Card>
-                </motion.div>
+                        {/* Arc Gauge Visual */}
+                        <div className="flex flex-col items-center justify-center py-2 relative">
+                          <div className="w-36 h-20 relative flex items-end justify-center overflow-hidden">
+                            <svg viewBox="0 0 100 50" className="w-full h-full">
+                              <path
+                                d="M 10 50 A 40 40 0 0 1 90 50"
+                                fill="none"
+                                stroke="#e5e7eb"
+                                strokeWidth="10"
+                                strokeLinecap="round"
+                              />
+                              <path
+                                d="M 10 50 A 40 40 0 0 1 90 50"
+                                fill="none"
+                                stroke="url(#gaugeGradient)"
+                                strokeWidth="10"
+                                strokeLinecap="round"
+                                strokeDasharray="126"
+                                strokeDashoffset={126 - (126 * (data.averageScore ?? 0)) / 100}
+                              />
+                              <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                  <stop offset="0%" stopColor="#ef4444" />
+                                  <stop offset="50%" stopColor="#eab308" />
+                                  <stop offset="100%" stopColor="#22c55e" />
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                            <div className="absolute bottom-0 text-center">
+                              <span className="hand text-3xl font-extrabold text-ink leading-none">
+                                {data.averageScore !== null ? data.averageScore : "—"}
+                              </span>
+                              <span className="scrawl text-muted text-xs font-bold block">
+                                {data.averageScore !== null ? "/100" : "Belum Analisis"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between w-full text-[10px] text-muted font-bold px-2 mt-1">
+                            <span>Low</span>
+                            <span className="text-ink">Rata-Rata Match</span>
+                            <span>High</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <Sticky rotate={2} tone="yellow" className="text-[10px] py-1.5 px-2.5 max-w-[170px] shadow-sm">
+                            📌 Rata-rata kecocokan CV vs Lowongan
+                          </Sticky>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  )
+                })()}
 
                 {/* 2. AI Gap Analysis Card */}
-                <motion.div variants={itemVariants} className="relative">
-                  <StarburstBadge text="Accent Badge" color="pink" rotate={-8} className="-top-4 -right-3" />
-                  <Card tape="red" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
-                    <div className="space-y-1">
-                      <h3 className="hand text-2xl font-bold text-ink">AI Gap Analysis</h3>
-                      <div className="flex items-baseline gap-2">
-                        <span className="hand text-4xl font-extrabold text-red">5</span>
-                        <span className="hand text-2xl font-bold text-ink">Gap Beneran</span>
-                      </div>
-                    </div>
+                {(() => {
+                  const totalGaps = data.topGaps.reduce((acc, g) => acc + g.count, 0)
+                  const gapBadgeText = totalGaps > 0
+                    ? `${totalGaps} Skill Gap`
+                    : data.recentAnalyses.length > 0
+                      ? "Bebas Gap 🎉"
+                      : "Deteksi Gap"
 
-                    <div className="space-y-1.5 py-1">
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="label bg-red/20 text-red border border-red/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                          Current Selection
-                        </span>
-                        <span className="label bg-pink-100 text-pink-700 border border-pink-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                          55 seconds
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {(data.topGaps.length > 0
-                          ? data.topGaps.slice(0, 3).map((g) => g.skill)
-                          : ["kubernetes", "microservices", "cloud"]
-                        ).map((skill) => (
-                          <span
-                            key={skill}
-                            className="label bg-panel border border-line px-2 py-0.5 rounded text-[10px] font-bold text-ink"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                  return (
+                    <motion.div variants={itemVariants} className="relative flex flex-col h-full">
+                      <StarburstBadge text={gapBadgeText} color="pink" rotate={-8} className="-top-4 -right-3" />
+                      <Card tape="red" className="p-5 space-y-3 relative overflow-visible flex-1 flex flex-col justify-between h-full">
+                        <div className="space-y-1">
+                          <h3 className="hand text-2xl font-bold text-ink">AI Gap Analysis</h3>
+                          <div className="flex items-baseline gap-2">
+                            <span className="hand text-4xl font-extrabold text-red">{totalGaps}</span>
+                            <span className="hand text-2xl font-bold text-ink">Skill Gap</span>
+                          </div>
+                        </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-muted font-bold pt-1 border-t border-line/40">
-                      <span>AI Gap to Analysis</span>
-                      <Link href="/app/analyze" className="label text-ink hover:underline">
-                        17 overlaps →
-                      </Link>
-                    </div>
-                  </Card>
-                </motion.div>
+                        <div className="space-y-1.5 py-1">
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="label bg-red/20 text-red border border-red/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                              {data.counts.jobs} Lowongan Target
+                            </span>
+                            <span className="label bg-pink-100 text-pink-700 border border-pink-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                              {data.recentAnalyses.length} Sesi Analisis
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {(data.topGaps.length > 0
+                              ? data.topGaps.slice(0, 3).map((g) => g.skill)
+                              : ["Belum Ada Gap"]
+                            ).map((skill) => (
+                              <span
+                                key={skill}
+                                className="label bg-panel border border-line px-2 py-0.5 rounded text-[10px] font-bold text-ink"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-muted font-bold pt-1 border-t border-line/40">
+                          <span>Top Skill Gap</span>
+                          <Link href="/app/analyze" className="label text-ink hover:underline">
+                            {data.recentAnalyses.length > 0 ? `${data.recentAnalyses.length} Sesi Selesai →` : "Jalankan Analisis →"}
+                          </Link>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  )
+                })()}
 
                 {/* 3. Realtime AI Mock Interview Card */}
-                <motion.div variants={itemVariants} className="relative">
-                  <StarburstBadge text="Hot 🎙️" color="yellow" rotate={14} className="-top-4 -right-3" />
-                  <Card tape="blue" className="p-5 space-y-3 relative overflow-visible min-h-[230px] flex flex-col justify-between">
-                    <div className="space-y-1">
-                      <h3 className="hand text-2xl font-bold text-ink">Realtime AI Mock Interview</h3>
-                      <p className="scrawl text-muted text-xs leading-relaxed">
-                        Real online AI mock interview and self assessment.
-                      </p>
-                    </div>
+                {(() => {
+                  const interviewBadgeText = (data.totalInterviews ?? 0) > 0
+                    ? `${data.totalInterviews} Sesi 🎙️`
+                    : data.pipeline.INTERVIEW > 0
+                      ? `${data.pipeline.INTERVIEW} Interview 🎯`
+                      : "AI Voice 🎙️"
 
-                    <div className="bg-yellow/20 border border-yellow/50 rounded-xl p-3 flex items-center gap-3">
-                      <div className="text-3xl">💬</div>
-                      <div className="text-[11px] text-ink font-semibold">
-                        Latih rasa percaya diri & jawaban kamu sebelum interview sesungguhnya.
-                      </div>
-                    </div>
+                  const latest = data.latestInterview
 
-                    <Link href="/app/interview/new" className="block pt-1">
-                      <Button variant="primary" size="sm" className="w-full justify-center" icon={<FiMic />}>
-                        Mulai Interview →
-                      </Button>
-                    </Link>
-                  </Card>
-                </motion.div>
+                  return (
+                    <motion.div variants={itemVariants} className="relative flex flex-col h-full">
+                      <StarburstBadge text={interviewBadgeText} color="yellow" rotate={14} className="-top-4 -right-3 sm:-right-12" />
+                      <Card tape="blue" className="p-5 space-y-3 relative overflow-visible flex-1 flex flex-col justify-between h-full">
+                        <div className="space-y-1">
+                          <h3 className="hand text-2xl font-bold text-ink">Realtime AI Mock Interview</h3>
+                          <p className="scrawl text-muted text-xs leading-relaxed">
+                            Simulasi wawancara kerja AI interaktif dan asesmen otomatis.
+                          </p>
+                        </div>
+
+                        <div className="bg-yellow/20 border border-yellow/50 rounded-xl p-3 flex items-center gap-3">
+                          <div className="text-2xl shrink-0">💬</div>
+                          <div className="text-[11px] text-ink font-semibold leading-snug">
+                            {latest ? (
+                              latest.overallScore !== null ? (
+                                <span>
+                                  Sesi Terakhir: <strong className="text-green font-bold">{latest.overallScore}% Skor</strong> ({latest.title})
+                                </span>
+                              ) : (
+                                <span>
+                                  Sesi Terakhir: <strong>{latest.title}</strong> (Persona {latest.persona.toLowerCase()})
+                                </span>
+                              )
+                            ) : (
+                              "Latih rasa percaya diri & jawaban kamu sebelum interview sesungguhnya."
+                            )}
+                          </div>
+                        </div>
+
+                        <Link href="/app/interview/new" className="block pt-1">
+                          <Button variant="primary" size="sm" className="w-full justify-center" icon={<FiMic />}>
+                            Mulai Interview →
+                          </Button>
+                        </Link>
+                      </Card>
+                    </motion.div>
+                  )
+                })()}
               </div>
 
               {/* ===== Pipeline Tracker Kanban Funnel ===== */}
