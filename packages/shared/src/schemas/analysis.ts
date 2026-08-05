@@ -9,21 +9,27 @@ export const semanticScoreSchema = z.object({
     .default([]),
 })
 
-/** Mode strategi saran — dipilih DETERMINISTIK di kode dari coverage must-have (bukan oleh LLM). */
+/** Mode strategi saran \u2014 dipilih DETERMINISTIK di kode dari coverage must-have (bukan oleh LLM). */
 export const SUGGESTION_MODES = ["optimize", "reframe", "honest_pivot"] as const
 export type SuggestionMode = (typeof SUGGESTION_MODES)[number]
 
 /**
- * Gap — taksonomi penuh (engine v2):
- * - type: "real" = tidak ada jejaknya di CV; "presentation" = ada tapi tak terlihat.
+ * Gap \u2014 taksonomi penuh (engine v3.1):
+ * - type:
+ *   - "real" = tidak ada jejaknya di CV.
+ *   - "presentation" = ada faktanya di CV tapi tak terlihat.
+ *   - "implied" = SUDAH DIPASTIKAN dikuasai lewat skill lain (React \u27f9 HTML).
+ *     Bukan kekurangan. Nilai tambahan sebagai kata kunci ATS ditangani lewat
+ *     `keywordGapSchema`, bukan di sini \u2014 laporan gap harus tetap berisi hal
+ *     yang benar-benar kurang.
  * - severity: "must" = dari requirement wajib; "nice" = nice-to-have.
  * - fixability:
- *   - "fixable_by_editing": faktanya ADA di CV, tinggal disajikan → hanya jenis ini yang boleh melahirkan saran revisi.
- *   - "requires_experience": jujur — butuh pengalaman/belajar nyata, tidak bisa ditambal tulisan.
- *   - "fit_constraint": faktor kecocokan non-skill (atribut personal/lokasi/identitas) — informasi netral, bukan bahan saran.
+ *   - "fixable_by_editing": faktanya ADA di CV, tinggal disajikan \u2192 hanya jenis ini yang boleh melahirkan saran revisi.
+ *   - "requires_experience": jujur \u2014 butuh pengalaman/belajar nyata, tidak bisa ditambal tulisan.
+ *   - "fit_constraint": faktor kecocokan non-skill (atribut personal/lokasi/identitas) \u2014 informasi netral, bukan bahan saran.
  */
 export const gapSchema = z.object({
-  type: z.enum(["real", "presentation"]),
+  type: z.enum(["real", "presentation", "implied"]).catch("real"),
   skill: z.string(),
   explanation: z.string(),
   advice: z.string(),
@@ -35,7 +41,33 @@ export const gapSchema = z.object({
 
 export const gapsSchema = z.object({ gaps: z.array(gapSchema).default([]) })
 
-/** Bagian CV yang boleh disentuh saran — enum supaya UI bisa mengelompokkan. */
+/**
+ * Kata kunci hilang (engine v3.1) \u2014 KELAS TERSENDIRI, bukan gap dan bukan saran.
+ *
+ * Kenapa tetap ditampilkan padahal kandidat jelas menguasainya: filter ATS
+ * mencocokkan kata secara HARFIAH. Kandidat yang membangun 170+ komponen Vue
+ * jelas bisa HTML, tapi kalau kata "HTML" tidak pernah muncul di CV, sebagian
+ * sistem pelacak pelamar tetap menyingkirkannya. Menyembunyikan informasi ini
+ * membuat laporan terlihat bersih tapi merugikan pengguna diam-diam.
+ *
+ * Kenapa bukan gap: menuduh orang tidak bisa HTML itu salah secara faktual.
+ * Kenapa bukan suggestion biasa: aksinya 5 detik dan dampaknya rendah \u2014 kalau
+ * ikut memakan jatah MODE_MAX_SUGGESTIONS, ia akan menggeser saran berdampak
+ * tinggi. Karena itu kuotanya sendiri, di luar daftar saran.
+ *
+ * `evidence` WAJIB terisi: kalimatnya harus selalu menyebut dasarnya ("lewat
+ * React & SvelteKit") supaya terasa membela, bukan menuduh.
+ */
+export const keywordGapSchema = z.object({
+  skill: z.string(),
+  confidence: z.enum(["certain", "likely"]).default("certain"),
+  evidence: z.array(z.string()).default([]),
+  severity: z.enum(["must", "nice"]).default("must"),
+})
+
+export type KeywordGap = z.infer<typeof keywordGapSchema>
+
+/** Bagian CV yang boleh disentuh saran \u2014 enum supaya UI bisa mengelompokkan. */
 export const SUGGESTION_SECTIONS = [
   "summary",
   "experience",
@@ -66,7 +98,7 @@ export const SUGGESTION_IMPACTS = ["high", "medium", "low"] as const
 export type SuggestionImpact = (typeof SUGGESTION_IMPACTS)[number]
 
 /**
- * Saran tulis ulang (v3) — schema MENGIKAT apa yang prompt cuma bisa memohon:
+ * Saran tulis ulang (v3) \u2014 schema MENGIKAT apa yang prompt cuma bisa memohon:
  * - basedOnFacts: fakta CV yang dirujuk (guardrail kejujuran).
  * - targetRequirement: requirement lowongan yang dijawab (guardrail relevansi).
  * - addressesGap: menghubungkan saran ke gap hasil diagnosis (anti saran yatim).
@@ -94,7 +126,7 @@ export const suggestionsSchema = z.object({
 
 /**
  * Laporan analisis GABUNGAN (engine v2): gaps + suggestions + careerNote lahir
- * dari SATU panggilan LLM — satu rantai pemikiran, tidak bisa saling bertentangan,
+ * dari SATU panggilan LLM \u2014 satu rantai pemikiran, tidak bisa saling bertentangan,
  * dan lebih hemat token (1x kirim CV+lowongan).
  */
 export const analysisReportSchema = z.object({
@@ -119,8 +151,15 @@ export type AnalysisResult = {
   careerNote: string
   language: string
   engineVersion: string
-  /** Versi prompt yang menghasilkan laporan ini — bahan utama evaluasi A/B. */
+  /** Versi prompt yang menghasilkan laporan ini \u2014 bahan utama evaluasi A/B. */
   promptVersion: string
+  /**
+   * Kata kunci yang jelas dikuasai tapi belum tertulis di CV.
+   * OPSIONAL dengan sengaja: analisis lama yang tersimpan di DB/Redis tidak
+   * punya field ini, dan pemanggil yang menyusun AnalysisResult secara literal
+   * tidak ikut rusak saat field ini ditambahkan.
+   */
+  keywordGaps?: KeywordGap[]
 }
 
 export const runAnalysisSchema = z.object({
