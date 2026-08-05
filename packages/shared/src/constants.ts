@@ -33,15 +33,24 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * dropImpliedGaps yang membuang gap untuk skill yang jelas sudah dikuasai,
  * keluaran baru keywordGaps ("kata kunci hilang", bukan "gap beneran"), dan
  * pemecahan alias yang lebih ketat (svelte ≠ sveltekit, .net ≠ c#, git ≠ github).
+ * v3.2.0: peta konsep ⟹ implementasi (OCR ← PaddleOCR, data visualization ←
+ * ApexCharts, enkripsi ← AES-256-GCM) sebagai bahan gap "presentation";
+ * instruksi diagnosis dipindahkan dari analysis/gaps.ts yang ternyata KODE MATI
+ * ke analysis/report.ts yang benar-benar dieksekusi; gap presentation wajib
+ * menyertakan evidenceQuote verbatim yang diverifikasi kode; promoteHintedGaps
+ * menaikkan real → presentation secara deterministik sehingga bisa melahirkan
+ * saran revisi; repairTemplateGaps menimpa kalimat cetakan "tidak ada
+ * pengalaman atau pengetahuan tentang X"; dan guardrail ketujuh memastikan saran
+ * benar-benar mengantarkan kata kunci gap yang diklaimnya.
  */
-export const ENGINE_VERSION = "3.1.0"
+export const ENGINE_VERSION = "3.2.0"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
  * bisa menginvalidasi cache TANPA mengklaim perubahan arsitektur mesin.
  * WAJIB dinaikkan setiap kali isi prompt analisis diubah, sekecil apa pun.
  */
-export const PROMPT_VERSION = "p3.1.0-2026-08-05"
+export const PROMPT_VERSION = "p3.2.0-2026-08-05"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
