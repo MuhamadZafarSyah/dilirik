@@ -14,7 +14,7 @@ export const SUGGESTION_MODES = ["optimize", "reframe", "honest_pivot"] as const
 export type SuggestionMode = (typeof SUGGESTION_MODES)[number]
 
 /**
- * Gap \u2014 taksonomi penuh (engine v3.1):
+ * Gap \u2014 taksonomi penuh (engine v3.2):
  * - type:
  *   - "real" = tidak ada jejaknya di CV.
  *   - "presentation" = ada faktanya di CV tapi tak terlihat.
@@ -37,6 +37,20 @@ export const gapSchema = z.object({
   fixability: z
     .enum(["fixable_by_editing", "requires_experience", "fit_constraint"])
     .default("requires_experience"),
+  /**
+   * Kutipan VERBATIM teks CV yang membuktikan gap ini cuma soal penyajian.
+   *
+   * WAJIB untuk type "presentation". Kewajiban MENGUTIP inilah yang mematikan
+   * output isi-blanko: kalimat template seperti "tidak ada pengalaman tentang X"
+   * bisa dikarang tanpa membaca CV, tapi kutipan verbatim tidak \u2014 dan kutipan
+   * palsu bisa dideteksi kode.
+   */
+  evidenceQuote: z.string().default(""),
+  /**
+   * Istilah yang sudah disisir di CV sebelum memutuskan sesuatu benar-benar
+   * tidak ada. Memaksa model MENCARI lebih dulu, bukan langsung memvonis.
+   */
+  searchedFor: z.array(z.string()).default([]),
 })
 
 export const gapsSchema = z.object({ gaps: z.array(gapSchema).default([]) })

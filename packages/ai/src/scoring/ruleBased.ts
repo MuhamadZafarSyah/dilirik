@@ -1,5 +1,6 @@
 import type { CvStructured, JobParsed } from "@dilirik/shared"
 import { normalize } from "../guardrail/postCheck"
+import { findConceptEvidence } from "./conceptEvidence"
 import { expandSkill, isKnownTerm, isShortToken, stripVersionSuffix } from "./skillAliases"
 import {
   displayNameFor,
@@ -200,6 +201,24 @@ export type ImpliedRequirement = {
   severity: "must" | "nice"
 }
 
+/**
+ * Petunjuk bahwa sebuah requirement kemungkinan SUDAH dikerjakan kandidat, hanya
+ * tidak memakai istilah yang dipakai lowongan ("OCR" vs "PaddleOCR").
+ *
+ * SENGAJA tidak menambah skor: kepastiannya di bawah graf implikasi, dan
+ * menaikkan angka di layar user berdasarkan dugaan akan merusak arti angka itu.
+ * Nilainya ada di hilir \u2014 ini bahan baku gap bertipe "presentation", yang justru
+ * satu-satunya jenis gap yang bisa langsung diperbaiki dengan menyunting teks.
+ */
+export type PresentationHint = {
+  skill: string
+  severity: "must" | "nice"
+  /** Istilah konkret di CV yang memicu dugaan, mis. "paddleocr". */
+  term: string
+  /** Potongan teks CV apa adanya \u2014 dipakai sebagai kutipan bukti. */
+  quote: string
+}
+
 export type RuleBasedResult = {
   score: number
   matchedMust: string[]
@@ -208,6 +227,30 @@ export type RuleBasedResult = {
   missingNice: string[]
   impliedMust: ImpliedRequirement[]
   impliedNice: ImpliedRequirement[]
+  presentationHints: PresentationHint[]
+}
+
+/**
+ * Untuk setiap requirement yang dinyatakan hilang, cek sekali lagi dengan peta
+ * konsep \u2192 implementasi sebelum laporan dikirim ke model.
+ *
+ * Hanya dijalankan pada daftar yang HILANG, jadi biayanya sebanding dengan
+ * jumlah requirement yang tidak cocok \u2014 biasanya segelintir.
+ */
+function buildPresentationHints(
+  missingMust: string[],
+  missingNice: string[],
+  corpusEntries: string[],
+): PresentationHint[] {
+  const hints: PresentationHint[] = []
+  const collect = (skill: string, severity: "must" | "nice") => {
+    for (const evidence of findConceptEvidence(skill, corpusEntries)) {
+      hints.push({ skill, severity, term: evidence.term, quote: evidence.quote })
+    }
+  }
+  for (const skill of missingMust) collect(skill, "must")
+  for (const skill of missingNice) collect(skill, "nice")
+  return hints
 }
 
 /**
@@ -219,6 +262,9 @@ export type RuleBasedResult = {
  * Engine v3.1: hasilnya TIGA kelas, bukan dua. Skill yang tersirat dari skill
  * lain (HTML dari React) tidak lagi masuk `missingMust` \u2014 kalau tetap dihitung
  * hilang, skor turun palsu dan mode saran ikut salah pilih.
+ *
+ * Engine v3.2: requirement yang tetap hilang diperiksa sekali lagi dengan peta
+ * konsep \u2192 implementasi, hasilnya di `presentationHints` (tidak menambah skor).
  */
 export function ruleBasedScore(cv: CvStructured, job: JobParsed): RuleBasedResult {
   // Korpus "ketat": tempat skill dideklarasikan secara eksplisit.
@@ -272,6 +318,8 @@ export function ruleBasedScore(cv: CvStructured, job: JobParsed): RuleBasedResul
       })
   }
 
+  const presentationHints = buildPresentationHints(missingMust, missingNice, corpus)
+
   const totalWeight =
     job.mustHaveSkills.length * MUST_WEIGHT + job.niceToHaveSkills.length * NICE_WEIGHT
   if (totalWeight === 0) {
@@ -284,6 +332,7 @@ export function ruleBasedScore(cv: CvStructured, job: JobParsed): RuleBasedResul
       missingNice,
       impliedMust,
       impliedNice,
+      presentationHints,
     }
   }
 
@@ -303,5 +352,6 @@ export function ruleBasedScore(cv: CvStructured, job: JobParsed): RuleBasedResul
     missingNice,
     impliedMust,
     impliedNice,
+    presentationHints,
   }
 }
