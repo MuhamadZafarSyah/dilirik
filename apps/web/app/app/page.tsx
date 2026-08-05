@@ -424,8 +424,12 @@ export default function DashboardPage() {
                             rotate={i % 2 ? 0.3 : -0.3}
                             className="p-4 space-y-2 hover:border-ink transition-colors"
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="hand text-xl font-bold text-ink truncate">{a.cvTitle}</span>
+                            <div className="flex items-start justify-between gap-2 min-w-0">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="hand text-xl font-bold text-ink truncate max-w-56" title={a.cvTitle}>
+                                  {a.cvTitle}
+                                </h3>
+                              </div>
                               <span className={`hand text-2xl font-bold shrink-0 ${toneText[scoreTone(a.matchScore)]}`}>
                                 {a.matchScore}
                               </span>

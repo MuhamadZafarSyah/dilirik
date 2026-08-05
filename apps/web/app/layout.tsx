@@ -2,9 +2,15 @@ import type { Metadata, Viewport } from "next"
 import { Caveat, Gochi_Hand, Inter } from "next/font/google"
 import { AnalyticsProvider } from "@/components/analytics/analytics-provider"
 import { JsonLd } from "@/components/seo/json-ld"
-import { organizationJsonLd, webSiteJsonLd } from "@/lib/seo/jsonld"
+import {
+  organizationJsonLd,
+  webSiteJsonLd,
+  softwareApplicationJsonLd,
+  faqJsonLd,
+} from "@/lib/seo/jsonld"
 import {
   defaultDescription,
+  defaultKeywords,
   defaultLocale,
   defaultTitle,
   ogImagePath,
@@ -21,10 +27,6 @@ const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat", display: 
 
 /**
  * Metadata dasar seluruh situs.
- *
- * `metadataBase` wajib ada: tanpa itu Next.js tidak bisa mengubah path relatif
- * (`/og-image.png`, `alternates.canonical`) menjadi URL absolut, dan tag
- * Open Graph akan diabaikan oleh crawler.
  */
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -33,6 +35,7 @@ export const metadata: Metadata = {
     template: titleTemplate,
   },
   description: defaultDescription,
+  keywords: [...defaultKeywords],
   applicationName: siteName,
   alternates: {
     canonical: "/",
@@ -87,7 +90,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.variable} ${gochi.variable} ${caveat.variable} bg-paper text-ink font-sans paper-texture min-h-screen antialiased`}
       >
         {children}
-        <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
+        <JsonLd
+          data={[
+            organizationJsonLd(),
+            webSiteJsonLd(),
+            softwareApplicationJsonLd(),
+            faqJsonLd(),
+          ]}
+        />
         <AnalyticsProvider />
       </body>
     </html>

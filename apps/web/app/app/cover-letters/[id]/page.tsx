@@ -16,6 +16,8 @@ import {
 import { api, errorMessage } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { getJobDetails } from "@/components/cover-letters/cover-letter-card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 
 type CoverLetterDetail = {
   id: string
@@ -46,6 +48,7 @@ export default function CoverLetterDetailPage({
   const id = resolvedParams.id
   const router = useRouter()
   const { lang, t } = useI18n()
+  const { toast } = useToast()
 
   const [coverLetter, setCoverLetter] = useState<CoverLetterDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,6 +60,7 @@ export default function CoverLetterDetailPage({
 
   const [copied, setCopied] = useState(false)
   const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchDetail()
@@ -86,8 +90,12 @@ export default function CoverLetterDetailPage({
       })
       setCoverLetter(res.data.coverLetter)
       setEditing(false)
+      toast(
+        lang === "id" ? "Surat lamaran berhasil disimpan" : "Cover letter saved successfully",
+        "success"
+      )
     } catch (err) {
-      alert(errorMessage(err))
+      toast(errorMessage(err), "error")
     } finally {
       setSaving(false)
     }
@@ -98,9 +106,10 @@ export default function CoverLetterDetailPage({
     try {
       await navigator.clipboard.writeText(coverLetter.text)
       setCopied(true)
+      toast(lang === "id" ? "Teks berhasil disalin" : "Text copied successfully", "success")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      alert("Gagal menyalin teks")
+      toast(lang === "id" ? "Gagal menyalin teks" : "Failed to copy text", "error")
     }
   }
 
@@ -113,12 +122,15 @@ export default function CoverLetterDetailPage({
   }
 
   async function handleDelete() {
-    if (!confirm(lang === "id" ? "Hapus surat lamaran ini?" : "Delete this cover letter?")) return
     try {
       await api.delete(`/api/cover-letters/${id}`)
+      toast(
+        lang === "id" ? "Surat lamaran berhasil dihapus" : "Cover letter deleted successfully",
+        "success"
+      )
       router.push("/app/cover-letters")
     } catch (err) {
-      alert(errorMessage(err))
+      toast(errorMessage(err), "error")
     }
   }
 
@@ -195,7 +207,7 @@ export default function CoverLetterDetailPage({
           </button>
 
           <button
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className="label bg-paper hover:bg-red/10 border-2 border-line text-muted hover:text-red rounded-xl p-1.5 sm:p-2 font-bold shadow-xs"
             title="Hapus"
           >
@@ -300,6 +312,21 @@ export default function CoverLetterDetailPage({
           </span>
         </div>
       </div>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={lang === "id" ? "Hapus Surat Lamaran?" : "Delete Cover Letter?"}
+        description={
+          lang === "id"
+            ? "Surat lamaran ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+            : "This cover letter will be permanently deleted. This action cannot be undone."
+        }
+        confirmLabel={lang === "id" ? "Ya, Hapus" : "Yes, Delete"}
+        cancelLabel={lang === "id" ? "Batal" : "Cancel"}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

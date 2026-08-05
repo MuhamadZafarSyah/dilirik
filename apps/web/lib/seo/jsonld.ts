@@ -58,9 +58,7 @@ export function webSiteJsonLd(): JsonLdObject {
 }
 
 /**
- * Deskripsi produk + harga. Ditempel di `/pricing` karena di sanalah harga
- * ditampilkan; nominalnya WAJIB sama dengan yang terlihat pengguna (Rp0 selama
- * beta), kalau tidak Google menandainya sebagai structured data menyesatkan.
+ * Deskripsi produk + harga.
  */
 export function softwareApplicationJsonLd(): JsonLdObject {
 	return compact({
@@ -69,7 +67,7 @@ export function softwareApplicationJsonLd(): JsonLdObject {
 		name: siteName,
 		url: siteUrl,
 		applicationCategory: "BusinessApplication",
-		operatingSystem: "Web",
+		operatingSystem: "Web Browser",
 		description: defaultDescription,
 		inLanguage: defaultLanguage,
 		publisher: { "@id": ORGANIZATION_ID },
@@ -80,5 +78,42 @@ export function softwareApplicationJsonLd(): JsonLdObject {
 			url: absoluteUrl("/pricing"),
 			availability: "https://schema.org/InStock",
 		},
+	})
+}
+
+/**
+ * FAQPage Schema untuk hasil pencarian Google (Rich Snippet Accordion).
+ */
+export function faqJsonLd(): JsonLdObject {
+	const faqs = [
+		{
+			q: "Apa itu Dilirik?",
+			a: "Dilirik (dilirik.tech) adalah platform AI analisis kecocokan CV ATS dan pembuat surat lamaran kerja (cover letter) otomatis yang disesuaikan khusus dengan kualifikasi lowongan kerja.",
+		},
+		{
+			q: "Apakah layanan analisis CV di Dilirik gratis?",
+			a: "Ya, Dilirik menyediakan kuota analisis CV dan pembuatan surat lamaran AI secara gratis setiap bulannya tanpa memerlukan kartu kredit.",
+		},
+		{
+			q: "Bagaimana cara kerja analisis kecocokan CV ATS di Dilirik?",
+			a: "Dilirik membandingkan teks CV Anda dengan deskripsi pekerjaan yang ditargetkan, mengidentifikasi kata kunci yang hilang (gap analysis), dan memberikan saran konkret tanpa mengarang data.",
+		},
+		{
+			q: "Apakah Dilirik mendukung format CV PDF dan Word?",
+			a: "Ya, Anda bisa mengunggah file CV berformat PDF atau DOCX. Dilirik akan mengekstrak teksnya dan melakukan analisis kecocokan secara instan.",
+		},
+	]
+
+	return compact({
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		mainEntity: faqs.map((faq) => ({
+			"@type": "Question",
+			name: faq.q,
+			acceptedAnswer: {
+				"@type": "Answer",
+				text: faq.a,
+			},
+		})),
 	})
 }

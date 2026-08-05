@@ -46,9 +46,14 @@ export default function JobsPage() {
   }) ?? []
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="hand text-4xl sm:text-5xl font-bold flex items-center gap-2">
             Target Lowongan 🎯
@@ -63,21 +68,23 @@ export default function JobsPage() {
             + Simpan Lowongan Baru
           </Button>
         </Link>
-      </div>
+      </motion.div>
 
       <Skeleton name="jobs-list" loading={!jobs} animate="shimmer" fallback={<JobsListSkeleton />}>
         {jobs ? (
           jobs.length === 0 ? (
-            <EmptyState
-              title={t("emptyJobTitle")}
-              note="Paste teks deskripsi lowongan atau tautkan link pekerjaan."
-              ctaLabel={t("emptyJobCta")}
-              ctaHref="/app/jobs/new"
-            />
+            <motion.div variants={itemVariants}>
+              <EmptyState
+                title={t("emptyJobTitle")}
+                note="Paste teks deskripsi lowongan atau tautkan link pekerjaan."
+                ctaLabel={t("emptyJobCta")}
+                ctaHref="/app/jobs/new"
+              />
+            </motion.div>
           ) : filteredJobs.length === 0 ? (
-            <div className="text-center py-12">
+            <motion.div variants={itemVariants} className="text-center py-12">
               <p className="scrawl text-muted text-2xl">Lowongan tidak ditemukan 🔍</p>
-            </div>
+            </motion.div>
           ) : (
             <motion.div
               variants={containerVariants}
@@ -86,7 +93,12 @@ export default function JobsPage() {
               className="grid gap-4 md:grid-cols-2"
             >
               {filteredJobs.map((job, i) => (
-                <motion.div key={job.id} variants={itemVariants}>
+                <motion.div
+                  key={job.id}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                >
                   <Card tape={i % 2 === 0 ? "blue" : "yellow"} className="space-y-3 h-full flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-2">
@@ -147,7 +159,7 @@ export default function JobsPage() {
           )
         ) : null}
       </Skeleton>
-    </div>
+    </motion.div>
   )
 }
 

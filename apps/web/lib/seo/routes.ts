@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { JOB_ROLES_SEO_DATA } from "./seo-data";
+import { absoluteUrl } from "@/lib/site";
 
 export type SitemapEntry = MetadataRoute.Sitemap[number];
 
@@ -21,18 +23,35 @@ export const staticRoutes: readonly StaticRoute[] = [
 ];
 
 /**
- * Rute artikel blog. Masih kosong karena Fase 3 ditunda (K10).
- * Sengaja dibuat async agar nanti bisa membaca berkas MDX tanpa mengubah
- * `app/sitemap.ts` sama sekali.
+ * Rute artikel blog.
  */
 export async function getBlogRoutes(): Promise<SitemapEntry[]> {
   return [];
 }
 
 /**
- * Rute programatik (`/contoh-cv/[posisi]`, dll). Masih kosong karena Fase 3
- * ditunda (K10). Titik sambung yang sama seperti `getBlogRoutes`.
+ * Rute programatik (`/contoh-surat-lamaran/[slug]`, `/contoh-cv/[slug]`).
  */
 export async function getProgrammaticRoutes(): Promise<SitemapEntry[]> {
-  return [];
+  const lastModified = new Date();
+  const slugs = Object.keys(JOB_ROLES_SEO_DATA);
+
+  const routes: SitemapEntry[] = [];
+
+  for (const slug of slugs) {
+    routes.push({
+      url: absoluteUrl(`/contoh-surat-lamaran/${slug}`),
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    });
+    routes.push({
+      url: absoluteUrl(`/contoh-cv/${slug}`),
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    });
+  }
+
+  return routes;
 }

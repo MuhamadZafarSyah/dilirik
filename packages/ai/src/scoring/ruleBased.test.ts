@@ -13,6 +13,7 @@ const cv = (skills: string[]): CvStructured => ({
   sections: [],
 })
 
+const cvWith = (over: Partial<CvStructured>): CvStructured => ({ ...cv([]), ...over })
 
 const job = (must: string[], nice: string[] = []): JobParsed => ({
   jobTitle: "FE Engineer",
@@ -56,5 +57,70 @@ describe("ruleBasedScore", () => {
   it("case-insensitive & toleran variasi", () => {
     const r = ruleBasedScore(cv(["react", "node.js"]), job(["React", "Node.js"]))
     expect(r.score).toBe(100)
+  })
+})
+
+describe("ruleBasedScore — regresi false positive (engine v3)", () => {
+  it("Java TIDAK dianggap tercakup oleh JavaScript", () => {
+    const r = ruleBasedScore(cv(["JavaScript", "React"]), job(["Java"]))
+    expect(r.matchedMust).toEqual([])
+    expect(r.score).toBe(0)
+  })
+
+  it("R TIDAK dianggap tercakup oleh kata Retail", () => {
+    const r = ruleBasedScore(cv(["Retail Management"]), job(["R"]))
+    expect(r.score).toBe(0)
+  })
+
+  it("Go TIDAK dianggap tercakup oleh frasa 'go to market' di pengalaman", () => {
+    const candidate = cvWith({
+      skills: ["Copywriting"],
+      experiences: [
+        {
+          title: "Marketing Intern",
+          company: "PT Contoh",
+          period: "2025",
+          highlights: ["Menyusun go to market strategy untuk produk baru"],
+        },
+      ],
+    })
+    expect(ruleBasedScore(candidate, job(["Go"])).score).toBe(0)
+  })
+
+  it("AI TIDAK dianggap tercakup oleh kata Mail", () => {
+    const r = ruleBasedScore(cv(["Email Marketing"]), job(["AI"]))
+    expect(r.score).toBe(0)
+  })
+
+  it("alias sah tetap dikenali: JS → JavaScript", () => {
+    expect(ruleBasedScore(cv(["JS"]), job(["JavaScript"])).score).toBe(100)
+  })
+
+  it("alias sah tetap dikenali: Postgres → PostgreSQL", () => {
+    expect(ruleBasedScore(cv(["Postgres"]), job(["PostgreSQL"])).score).toBe(100)
+  })
+
+  it("alias sah tetap dikenali: pemasaran digital → Digital Marketing", () => {
+    expect(ruleBasedScore(cv(["Pemasaran Digital"]), job(["Digital Marketing"])).score).toBe(100)
+  })
+
+  it("skill multi-kata dicocokkan sebagai frasa utuh", () => {
+    expect(ruleBasedScore(cv(["Google Ads"]), job(["Google Ads"])).score).toBe(100)
+    expect(ruleBasedScore(cv(["Google Analytics"]), job(["Google Ads"])).score).toBe(0)
+  })
+
+  it("skill di pengalaman tetap terhitung (korpus luas)", () => {
+    const candidate = cvWith({
+      skills: [],
+      experiences: [
+        {
+          title: "Frontend Developer",
+          company: "PT Contoh",
+          period: "2025",
+          highlights: ["Membangun dashboard dengan React dan TypeScript"],
+        },
+      ],
+    })
+    expect(ruleBasedScore(candidate, job(["React"])).score).toBe(100)
   })
 })
