@@ -28,15 +28,20 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * arah), schema saran v3 (addressesGap/whatChanged/rationale/impact), guardrail
  * 5 titik (anchor verbatim, kejujuran, frasa terlarang, kebergunaan, dedup),
  * repair loop pada output terstruktur, dan refund kuota saat pipeline gagal.
+ * v3.1.0: graf implikasi skill (Next.js ⟹ React ⟹ JavaScript ⟹ HTML) dengan
+ * confidence certain/likely + kedalaman maksimum 4, guardrail keenam
+ * dropImpliedGaps yang membuang gap untuk skill yang jelas sudah dikuasai,
+ * keluaran baru keywordGaps ("kata kunci hilang", bukan "gap beneran"), dan
+ * pemecahan alias yang lebih ketat (svelte ≠ sveltekit, .net ≠ c#, git ≠ github).
  */
-export const ENGINE_VERSION = "3.0.0"
+export const ENGINE_VERSION = "3.1.0"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
  * bisa menginvalidasi cache TANPA mengklaim perubahan arsitektur mesin.
  * WAJIB dinaikkan setiap kali isi prompt analisis diubah, sekecil apa pun.
  */
-export const PROMPT_VERSION = "p3.0.0-2026-08-03"
+export const PROMPT_VERSION = "p3.1.0-2026-08-05"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
