@@ -1,7 +1,7 @@
 import { normalize } from "../guardrail/postCheck"
 
 /**
- * Peta KONSEP \u2192 IMPLEMENTASI.
+ * Peta KONSEP → IMPLEMENTASI.
  *
  * Lowongan menulis konsep ("OCR", "data visualization", "enkripsi data"),
  * sedangkan CV menulis implementasi ("PaddleOCR", "ApexCharts", "AES-256-GCM").
@@ -11,29 +11,29 @@ import { normalize } from "../guardrail/postCheck"
  * Akibatnya rule-based jujur melaporkan "tidak cocok", lalu model menelan
  * laporan itu sebagai kesimpulan dan menulis "tidak ada pengalaman OCR di CV"
  * untuk CV yang jelas-jelas memakai PaddleOCR. Peta ini memutus rantai itu
- * secara deterministik \u2014 tanpa LLM, tanpa biaya token, dan bisa diuji.
+ * secara deterministik — tanpa LLM, tanpa biaya token, dan bisa diuji.
  *
  * Ini BUKAN pengganti graf implikasi di `skillImplications.ts`:
- * - implikasi skill : arah PASTI menurun (SvelteKit \u27f9 Svelte \u27f9 HTML) \u2192 menambah skor.
- * - konsep \u2192 impl   : DUGAAN bahwa faktanya ada tapi tidak tersaji \u2192 bahan gap
+ * - implikasi skill : arah PASTI menurun (SvelteKit ⟹ Svelte ⟹ HTML) → menambah skor.
+ * - konsep → impl   : DUGAAN bahwa faktanya ada tapi tidak tersaji → bahan gap
  *                     penyajian, TIDAK menambah skor.
  */
 
 export type ConceptEvidence = {
   /** Istilah konkret yang terdeteksi di CV, mis. "paddleocr". */
   term: string
-  /** Potongan teks CV apa adanya yang memuat istilah itu \u2014 dipakai sebagai kutipan. */
+  /** Potongan teks CV apa adanya yang memuat istilah itu — dipakai sebagai kutipan. */
   quote: string
 }
 
-/** Maksimum bukti per requirement \u2014 cukup meyakinkan, tidak membanjiri prompt. */
+/** Maksimum bukti per requirement — cukup meyakinkan, tidak membanjiri prompt. */
 const MAX_EVIDENCE_PER_SKILL = 2
 
 /**
  * Token yang terlalu umum untuk dipakai sebagai jangkar substring.
  *
  * Tanpa daftar ini, requirement "data visualization" akan cocok dengan kalimat
- * APA PUN yang memuat kata "data" \u2014 dan gap penyajian berubah jadi mesin
+ * APA PUN yang memuat kata "data" — dan gap penyajian berubah jadi mesin
  * positif palsu, persis kebalikan dari masalah yang sedang kita perbaiki.
  */
 const GENERIC_TOKENS = new Set([
@@ -228,7 +228,7 @@ function distinctiveTokens(normalized: string): string[] {
  * tidak memakai istilah yang dipakai lowongan.
  *
  * @param skill requirement lowongan yang rule-based nyatakan tidak tercakup.
- * @param corpusEntries potongan teks CV APA ADANYA (belum dinormalisasi) \u2014
+ * @param corpusEntries potongan teks CV APA ADANYA (belum dinormalisasi) —
  *   dipakai sebagai kutipan, jadi harus dalam bentuk aslinya.
  */
 export function findConceptEvidence(skill: string, corpusEntries: string[]): ConceptEvidence[] {
