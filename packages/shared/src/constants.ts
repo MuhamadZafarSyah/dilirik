@@ -20,6 +20,25 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
 }
 
 /**
+ * Bahasa yang didukung untuk LAPORAN analisis.
+ *
+ * Sengaja daftar tertutup dan sengaja sama dengan bahasa antarmuka di
+ * apps/web/lib/i18n.ts. Bahasa CV tidak dibatasi daftar ini — CV boleh berbahasa
+ * apa saja; yang dibatasi hanyalah bahasa penjelasan yang kita tulis sendiri.
+ */
+export const REPORT_LANGUAGES = ["id", "en"] as const
+
+/**
+ * Default bahasa laporan.
+ *
+ * "id", bukan bahasa CV dan bukan bahasa browser. Mayoritas pengguna Dilirik
+ * orang Indonesia yang melamar dengan CV berbahasa Inggris; menjadikan bahasa CV
+ * sebagai default persis itulah yang melahirkan laporan berbahasa Inggris untuk
+ * pengguna yang antarmukanya berbahasa Indonesia.
+ */
+export const DEFAULT_REPORT_LANGUAGE: (typeof REPORT_LANGUAGES)[number] = "id"
+
+/**
  * Versi mesin analisis — naikkan saat prompt/pipeline berubah agar cache invalid.
  * v2.0.0: gaps+suggestions+careerNote digabung jadi SATU panggilan LLM (satu
  * rantai pemikiran), mode adaptif (optimize/reframe/honest_pivot) dari coverage
@@ -76,8 +95,21 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * Kekuatan kutipan kini diukur dalam jumlah kata, semua kandidat diadu, dan
  * petunjuk hasil kode menang saat seri. Teks prompt laporan juga dipindahkan ke
  * analysis/reportPrompt.ts supaya analysis/report.ts murni berisi pemeriksaan.
+ * v3.3.0: bahasa laporan dilepas dari bahasa CV. Sebelumnya keduanya satu
+ * variabel (analyze({ language: cv.language })), sehingga pengguna Indonesia
+ * yang CV-nya berbahasa Inggris — praktis semua pelamar teknologi — menerima
+ * seluruh penjelasan gap, saran, dan careerNote dalam bahasa Inggris di
+ * antarmuka berbahasa Indonesia. Yang membaca penjelasan itu manusia, bukan ATS.
+ * Sekarang reportLanguage berdiri sendiri (body request → header Accept-Language
+ * → default "id") dan ikut masuk cacheKey, sementara before/after/basedOnFacts/
+ * evidenceQuote tetap mengikuti bahasa CV karena keempatnya kutipan atau calon
+ * isi dokumen. Ditambah guardrail kesembilan postCheckNaturalPhrasing: model
+ * gemar "mengantarkan" kata kunci gap dengan menempelkan istilah dalam kurung
+ * — mengubah "...via PaddleOCR" jadi "...via PaddleOCR (OCR)" — yang secara
+ * teknis lolos pemeriksaan pengantaran v3.2.3 tapi menghasilkan kalimat CV yang
+ * canggung dan berbau keyword stuffing, persis yang dilarang aturan #4.
  */
-export const ENGINE_VERSION = "3.2.3"
+export const ENGINE_VERSION = "3.3.0"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
@@ -86,7 +118,7 @@ export const ENGINE_VERSION = "3.2.3"
  * prompt ekstraksi CV/lowongan, bukan cuma prompt analisis, karena hasilnya
  * sama-sama mengubah laporan yang dilihat pengguna.
  */
-export const PROMPT_VERSION = "p3.2.3-2026-08-06"
+export const PROMPT_VERSION = "p3.3.0-2026-08-06"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
