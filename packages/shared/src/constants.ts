@@ -62,8 +62,22 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * ditulis sebagai instruksi sehingga repair loop generateStructured yang sudah
  * ada langsung memakainya tanpa mesin tambahan. parseJob juga turun ke
  * temperature 0 karena tugasnya menyalin, bukan mengarang.
+ * v3.2.3: dua celah guardrail yang sama-sama lolos karena diukur dengan cara
+ * yang salah. Pertama, addressesGap dulu string bebas: model menulis "OCR,
+ * Enkripsi Data" sebagai satu teks, pemeriksa pengantaran mencarinya dengan
+ * pencocokan longgar, menemukan kata "OCR" di dalamnya, lalu meloloskan seluruh
+ * saran — klaim keduanya tidak pernah diuji. Sekarang bentuknya array dan
+ * SETIAP elemen diperiksa sendiri; satu elemen yang tidak terantar membatalkan
+ * seluruh saran, karena saran setengah benar lebih berbahaya daripada tidak ada
+ * saran (pengguna menerapkannya utuh). Kedua, kutipan bukti dipilih berdasarkan
+ * URUTAN, bukan kualitas: gap "Design System" memajang "Shadcn/ui" — sembilan
+ * karakter, lolos ambang delapan dengan selisih satu — padahal ada kalimat
+ * pengalaman "maintain 100+ reusable components" yang jauh lebih membuktikan.
+ * Kekuatan kutipan kini diukur dalam jumlah kata, semua kandidat diadu, dan
+ * petunjuk hasil kode menang saat seri. Teks prompt laporan juga dipindahkan ke
+ * analysis/reportPrompt.ts supaya analysis/report.ts murni berisi pemeriksaan.
  */
-export const ENGINE_VERSION = "3.2.2"
+export const ENGINE_VERSION = "3.2.3"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
@@ -72,7 +86,7 @@ export const ENGINE_VERSION = "3.2.2"
  * prompt ekstraksi CV/lowongan, bukan cuma prompt analisis, karena hasilnya
  * sama-sama mengubah laporan yang dilihat pengguna.
  */
-export const PROMPT_VERSION = "p3.2.2-2026-08-06"
+export const PROMPT_VERSION = "p3.2.3-2026-08-06"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
