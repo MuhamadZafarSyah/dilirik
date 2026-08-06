@@ -19,6 +19,7 @@ import {
   squashWhitespace,
   type PostCheckResult,
 } from "../guardrail/postCheck"
+import { alignQuote } from "../guardrail/quoteLocator"
 import { findConceptEvidence } from "../scoring/conceptEvidence"
 import { expandSkill } from "../scoring/skillAliases"
 
@@ -56,6 +57,12 @@ const IMPLIED_COVERAGE_WEIGHT: Record<"certain" | "likely", number> = {
   certain: 1,
   likely: 0.6,
 }
+
+/**
+ * Panjang minimum sebuah kutipan bukti agar dianggap meyakinkan.
+ * Kutipan sependek satu kata bisa cocok secara kebetulan di CV mana pun.
+ */
+const MIN_EVIDENCE_CHARS = 8
 
 /**
  * Pilih mode strategi saran secara DETERMINISTIK dari coverage must-have
@@ -319,20 +326,33 @@ export function dropImpliedGaps(gaps: Gap[], implied: ImpliedInput[]): Gap[] {
  * bukti deterministik kalau ada, dan hanya kalau tidak ada sama sekali gap itu
  * diturunkan jadi "real" — bukan dibuang, karena membuangnya berarti
  * menyembunyikan requirement lowongan dari user.
+ *
+ * Engine v3.2a: pencocokannya diserahkan ke quoteLocator, dan yang DISIMPAN
+ * adalah potongan rawText hasil pelokalan, bukan tulisan model. Dua akibatnya:
+ * kutipan gap dijamin bisa disorot di dokumen asli, dan kutipan dari hints —
+ * yang sebelumnya dipakai mentah tanpa pernah diverifikasi ke rawText — ikut
+ * diluruskan. Hints berasal dari korpus structuredJson hasil parseCv, yang tidak
+ * selalu identik karakter demi karakter dengan teks PDF aslinya.
  */
 export function enforceGapEvidence(
   gaps: Gap[],
   rawText: string,
   hints: PresentationHintInput[] = [],
 ): Gap[] {
-  const haystack = squashWhitespace(rawText).toLowerCase()
   return gaps.map((gap) => {
     if (gap.type !== "presentation") return gap
-    const quote = squashWhitespace(gap.evidenceQuote ?? "")
-    if (quote.length >= 8 && haystack.includes(quote.toLowerCase())) return gap
+
+    const quoted = alignQuote(gap.evidenceQuote ?? "", rawText)
+    if (quoted && squashWhitespace(quoted).length >= MIN_EVIDENCE_CHARS) {
+      return { ...gap, evidenceQuote: quoted }
+    }
 
     const hint = matchHint(gap.skill, hints)
-    if (hint) return { ...gap, evidenceQuote: hint.quote }
+    // Kutipan hint dihasilkan kode dari korpus CV, jadi bukan halusinasi. Kalau
+    // pelokalan gagal, pakai apa adanya daripada menghukum gap yang benar.
+    if (hint) {
+      return { ...gap, evidenceQuote: alignQuote(hint.quote, rawText) ?? hint.quote }
+    }
 
     return {
       ...gap,
@@ -406,6 +426,31 @@ export function repairTemplateGaps(gaps: Gap[]): Gap[] {
 }
 
 /**
+ * Luruskan jangkar `before` ke bentuk yang benar-benar ada di teks CV
+ * (engine v3.2a).
+ *
+ * Model mengutip dari structuredJson yang ikut dikirim ke prompt, sedangkan
+ * jangkar dipakai untuk auto-replace di teks asli. Dua sumber itu tidak selalu
+ * identik karakter demi karakter: ekstraksi PDF menyisipkan pergantian baris,
+ * dash non-ASCII, dan kutip melengkung. Uji gold set #02 kehilangan saran untuk
+ * dua gap gara-gara ini, padahal kalimatnya jelas ada di CV.
+ *
+ * Memperbaiki lebih baik daripada menolak: posisi kutipannya sudah diketahui,
+ * jadi menolaknya tidak menyelamatkan siapa pun. Yang tidak bisa dilokalisasi
+ * dibiarkan apa adanya — itu memang tugas postCheckAnchor untuk menolak.
+ */
+export function alignSuggestionAnchors(
+  suggestions: Suggestion[],
+  rawText: string,
+): Suggestion[] {
+  return suggestions.map((suggestion) => {
+    const canonical = alignQuote(suggestion.before ?? "", rawText)
+    if (canonical === null || canonical === suggestion.before) return suggestion
+    return { ...suggestion, before: canonical }
+  })
+}
+
+/**
  * Laporan analisis GABUNGAN (engine v2): gaps + suggestions + careerNote dari
  * SATU panggilan LLM — satu rantai pemikiran (diagnosis → resep), tidak bisa
  * saling bertentangan, dan hemat token (CV+lowongan cukup dikirim sekali).
@@ -421,6 +466,11 @@ export function repairTemplateGaps(gaps: Gap[]): Gap[] {
  * buang gap tersirat, verifikasi kutipan bukti, naikkan gap yang buktinya sudah
  * ditemukan kode, lalu timpa teks yang masih berupa cetakan. Saran mendapat
  * guardrail ketujuh: gap yang diklaim harus benar-benar terantar.
+ *
+ * Engine v3.2a: jangkar saran diluruskan dulu ke teks CV asli sebelum guardrail
+ * menilainya, dan seluruh pencocokan kutipan memakai satu implementasi bersama
+ * (quoteLocator) supaya tidak ada lagi dua pemeriksa yang berbeda pendapat soal
+ * kalimat yang sama.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
@@ -529,7 +579,9 @@ export async function generateAnalysisReport(args: {
   const rejected: ReportOutcome["rejected"] = []
   const passed: Suggestion[] = []
 
-  const ordered = [...result.suggestions].sort(
+  // Luruskan jangkar dulu, baru dinilai — supaya yang ditolak postCheckAnchor
+  // benar-benar jangkar yang tidak ada di CV, bukan sekadar beda tanda baca.
+  const ordered = alignSuggestionAnchors(result.suggestions, rawText).sort(
     (a, b) => (IMPACT_ORDER[a.impact] ?? 1) - (IMPACT_ORDER[b.impact] ?? 1),
   )
 
