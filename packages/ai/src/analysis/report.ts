@@ -540,8 +540,10 @@ export async function generateAnalysisReport(args: {
       checkGapLink(suggestion, gaps),
       checkGapDelivered(suggestion, gaps),
     ]
-    const failed = checks.find((check) => !check.ok)
-    if (failed && !failed.ok) {
+    const failed = checks.find(
+      (check): check is { ok: false; reason: string } => !check.ok,
+    )
+    if (failed) {
       rejected.push({ suggestion, reason: failed.reason })
       continue
     }

@@ -30,7 +30,7 @@ const suggestion = (over: Partial<Suggestion> = {}): Suggestion => ({
   after: "Mengelola akun Instagram organisasi kampus dengan 3 posting konten per minggu",
   basedOnFacts: ["Mengelola akun Instagram organisasi kampus"],
   targetRequirement: "Menyusun konten media sosial",
-  addressesGap: "Instagram",
+  addressesGap: ["Instagram"],
   whatChanged: ["added_scope"],
   rationale: "Menegaskan kadensi konten yang diminta lowongan.",
   impact: "high",

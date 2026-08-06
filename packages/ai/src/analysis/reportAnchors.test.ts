@@ -31,7 +31,7 @@ function makeSuggestion(before: string): Suggestion {
     after: `${before} (Computer Vision)`,
     basedOnFacts: ["MediaPipe"],
     targetRequirement: "Computer Vision",
-    addressesGap: "Computer Vision",
+    addressesGap: ["Computer Vision"],
     whatChanged: ["added_scope"],
     rationale: "Menamai teknik yang sudah dikerjakan.",
     impact: "high",

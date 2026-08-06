@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 import type { NextFunction, Request, Response } from "express"
 import { fromNodeHeaders } from "better-auth/node"
 import { auth } from "../lib/auth"
