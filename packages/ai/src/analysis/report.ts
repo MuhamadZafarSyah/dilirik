@@ -513,7 +513,7 @@ export async function generateAnalysisReport(args: {
       hints.length > 0
         ? [
             "## KEMUNGKINAN HANYA SOAL PENYAJIAN (sistem sudah menemukan buktinya di CV)",
-            "Ini bukan kekurangan kemampuan. Requirement di bawah TIDAK cocok secara kata harfiah, tapi kode sudah menemukan fakta terkait di CV. Klasifikasikan sebagai type \\"presentation\\" dan pakai kutipan di bawah sebagai evidenceQuote.",
+            'Ini bukan kekurangan kemampuan. Requirement di bawah TIDAK cocok secara kata harfiah, tapi kode sudah menemukan fakta terkait di CV. Klasifikasikan sebagai type "presentation" dan pakai kutipan di bawah sebagai evidenceQuote.',
             JSON.stringify(
               hints.map((hint) => ({
                 requirement: hint.skill,

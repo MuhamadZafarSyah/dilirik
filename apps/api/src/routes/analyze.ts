@@ -37,7 +37,8 @@ analyzeRouter.post("/", rateLimit("analyze", 6, 60), async (req, res, next) => {
     })
     const { analysis, cached } = await analysisService.runAnalysis({
       userId: req.userId!,
-      ...input,
+      cvId: input.cvId,
+      jobPostingId: input.jobPostingId,
       reportLanguage,
     })
     res.status(201).json({ analysis, cached })

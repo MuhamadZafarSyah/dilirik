@@ -5,6 +5,7 @@ import {
   type CvStructured,
   type JobParsed,
   type KeywordGap,
+  type ReportLanguage,
 } from "@dilirik/shared"
 import { ruleBasedScore } from "../scoring/ruleBased"
 import { blendScores, semanticScore } from "../scoring/semantic"
@@ -82,10 +83,11 @@ export async function analyze(args: {
   rawText: string
   language: string
   /** Default ke bahasa CV supaya pemanggil lama tidak berubah perilakunya. */
-  reportLanguage?: string
+  reportLanguage?: ReportLanguage
 }): Promise<AnalysisResult> {
   const { cv, job, rawText, language } = args
-  const reportLanguage = args.reportLanguage ?? language
+  const reportLanguage: ReportLanguage | undefined =
+    args.reportLanguage ?? (language === "en" ? "en" : "id")
 
   // 1) Rule-based: deterministik, selalu tersedia (sanity check + fallback)
   const rule = ruleBasedScore(cv, job)
