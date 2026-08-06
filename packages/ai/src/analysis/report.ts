@@ -17,6 +17,7 @@ import {
   postCheckSuggestion,
   postCheckUsefulness,
   squashWhitespace,
+  stripBannedSentences,
   type PostCheckResult,
 } from "../guardrail/postCheck"
 import { alignQuote } from "../guardrail/quoteLocator"
@@ -462,6 +463,11 @@ export function alignSuggestionAnchors(
  * sehingga CV berbahasa Inggris memaksa seluruh laporan berbahasa Inggris
  * walaupun antarmukanya berbahasa Indonesia. Ditambah guardrail kesembilan yang
  * menolak saran yang seluruh perubahannya cuma menempelkan istilah dalam kurung.
+ *
+ * Engine v3.3.1: `careerNote` akhirnya ikut disaring frasa klise. Selama ini
+ * pemeriksaan itu hanya menyentuh `after` sebuah saran, sehingga careerNote jadi
+ * satu-satunya celah yang tersisa — dan memang dari sanalah "strong background"
+ * masih sampai ke pengguna.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
@@ -580,6 +586,6 @@ export async function generateAnalysisReport(args: {
     gaps,
     suggestions: kept.slice(0, limit),
     rejected,
-    careerNote: result.careerNote.trim(),
+    careerNote: stripBannedSentences(result.careerNote.trim()),
   }
 }
