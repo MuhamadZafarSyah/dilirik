@@ -6,7 +6,14 @@ import { dropImpliedGaps, enforceGapEvidence, promoteHintedGaps, repairTemplateG
 const QUOTE =
   "hardware and camera document capture via PaddleOCR, canvas-based digital signatures, and AES-256-GCM secured sessions"
 
-const RAW_CV = `Muhamad Zafar Syah\nSoftware Engineer\n\nDeveloped the frontend of the Persuratan TNI-AD correspondence management system using SvelteKit and Svelte 5, covering 21 pages and 60+ components, with ${QUOTE} with role-based access`
+/** Satu entri daftar skill — kutipan paling lemah yang tetap lolos ambang karakter. */
+const SKILL_ENTRY = "Shadcn/ui"
+
+/** Kalimat pengalaman yang membuktikan hal yang sama, jauh lebih meyakinkan. */
+const DESIGN_QUOTE =
+  "Translate Figma designs into pixel-perfect, responsive interfaces and maintain 100+ reusable components, integrating REST APIs across multiple client projects."
+
+const RAW_CV = `Muhamad Zafar Syah\nSoftware Engineer\n\nSKILLS\nNext.js, React, ${SKILL_ENTRY}, Tailwind CSS\n\nEXPERIENCE\nDeveloped the frontend of the Persuratan TNI-AD correspondence management system using SvelteKit and Svelte 5, covering 21 pages and 60+ components, with ${QUOTE} with role-based access\n${DESIGN_QUOTE}`
 
 const hint = { skill: "OCR", severity: "must" as const, term: "paddleocr", quote: QUOTE }
 
@@ -54,17 +61,47 @@ describe("promoteHintedGaps", () => {
     const input = makeGap({ skill: "OCR", type: "presentation", evidenceQuote: QUOTE })
     expect(promoteHintedGaps([input], [hint])[0]?.evidenceQuote).toBe(QUOTE)
   })
+
+  it("memakai petunjuk TERKUAT saat satu gap punya beberapa petunjuk", () => {
+    const hints = [
+      { skill: "Design System", severity: "must" as const, term: "shadcn", quote: SKILL_ENTRY },
+      {
+        skill: "Design System",
+        severity: "must" as const,
+        term: "reusable component",
+        quote: DESIGN_QUOTE,
+      },
+    ]
+    const [gap] = promoteHintedGaps([makeGap({ skill: "Design System" })], hints, RAW_CV)
+    expect(gap).toBeDefined()
+    expect(gap!.evidenceQuote).toBe(DESIGN_QUOTE)
+    // Istilah pada advice harus ikut petunjuk yang menang, bukan petunjuk lain.
+    expect(gap!.advice).toContain("reusable component")
+  })
+
+  it("tidak menaikkan gap bila petunjuknya tidak bisa dilacak di teks CV", () => {
+    const hints = [
+      {
+        skill: "Kubernetes",
+        severity: "must" as const,
+        term: "k8s",
+        quote: "mengelola cluster Kubernetes produksi lintas region",
+      },
+    ]
+    const input = makeGap({ skill: "Kubernetes" })
+    expect(promoteHintedGaps([input], hints, RAW_CV)[0]).toEqual(input)
+  })
 })
 
 describe("enforceGapEvidence", () => {
-  it("membiarkan gap penyajian yang kutipannya benar-benar ada di CV", () => {
+  it("membiarkan kutipan model yang benar-benar ada di CV saat tidak ada petunjuk", () => {
     const input = makeGap({
       skill: "OCR",
       type: "presentation",
       fixability: "fixable_by_editing",
       evidenceQuote: "document capture via PaddleOCR",
     })
-    expect(enforceGapEvidence([input], RAW_CV, [hint])[0]).toEqual(input)
+    expect(enforceGapEvidence([input], RAW_CV, [])[0]).toEqual(input)
   })
 
   it("mengganti kutipan karangan dengan bukti deterministik bila tersedia", () => {
@@ -89,6 +126,39 @@ describe("enforceGapEvidence", () => {
     expect(gap!.type).toBe("real")
     expect(gap!.fixability).toBe("requires_experience")
     expect(gap!.evidenceQuote).toBe("")
+  })
+
+  it("tidak memakai entri daftar skill saat ada kalimat pengalaman yang membuktikan hal sama", () => {
+    const input = makeGap({
+      skill: "Design System",
+      type: "presentation",
+      fixability: "fixable_by_editing",
+      evidenceQuote: SKILL_ENTRY,
+    })
+    const hints = [
+      {
+        skill: "Design System",
+        severity: "must" as const,
+        term: "reusable component",
+        quote: DESIGN_QUOTE,
+      },
+    ]
+    const [gap] = enforceGapEvidence([input], RAW_CV, hints)
+    expect(gap).toBeDefined()
+    expect(gap!.evidenceQuote).toBe(DESIGN_QUOTE)
+  })
+
+  it("kutipan model yang lebih kaya tetap menang atas petunjuk yang lemah", () => {
+    const input = makeGap({
+      skill: "Design System",
+      type: "presentation",
+      fixability: "fixable_by_editing",
+      evidenceQuote: DESIGN_QUOTE,
+    })
+    const hints = [
+      { skill: "Design System", severity: "must" as const, term: "shadcn", quote: SKILL_ENTRY },
+    ]
+    expect(enforceGapEvidence([input], RAW_CV, hints)[0]?.evidenceQuote).toBe(DESIGN_QUOTE)
   })
 })
 
