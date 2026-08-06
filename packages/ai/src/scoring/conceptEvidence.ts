@@ -1,4 +1,4 @@
-import { normalize } from "../guardrail/postCheck"
+import { distinctiveTokens, normalize } from "../guardrail/postCheck"
 
 /**
  * Peta KONSEP → IMPLEMENTASI.
@@ -28,58 +28,6 @@ export type ConceptEvidence = {
 
 /** Maksimum bukti per requirement — cukup meyakinkan, tidak membanjiri prompt. */
 const MAX_EVIDENCE_PER_SKILL = 2
-
-/**
- * Token yang terlalu umum untuk dipakai sebagai jangkar substring.
- *
- * Tanpa daftar ini, requirement "data visualization" akan cocok dengan kalimat
- * APA PUN yang memuat kata "data" — dan gap penyajian berubah jadi mesin
- * positif palsu, persis kebalikan dari masalah yang sedang kita perbaiki.
- */
-const GENERIC_TOKENS = new Set([
-  "data",
-  "system",
-  "systems",
-  "sistem",
-  "design",
-  "desain",
-  "web",
-  "api",
-  "apis",
-  "tool",
-  "tools",
-  "user",
-  "users",
-  "code",
-  "app",
-  "apps",
-  "team",
-  "tim",
-  "cloud",
-  "service",
-  "services",
-  "software",
-  "development",
-  "developer",
-  "management",
-  "modern",
-  "basic",
-  "dasar",
-  "pengalaman",
-  "kemampuan",
-  "menguasai",
-  "terbiasa",
-  "mampu",
-  "pernah",
-  "and",
-  "the",
-  "for",
-  "with",
-  "dan",
-  "atau",
-  "serta",
-  "yang",
-])
 
 /**
  * Daftar istilah SENGAJA dipilih yang tidak muncul sebagai substring kata lain.
@@ -214,14 +162,6 @@ const CONCEPT_MAP: Array<{ concepts: string[]; terms: string[] }> = [
     terms: ["sitemap", "robots.txt", "json-ld", "structured data", "open graph", "meta tag"],
   },
 ]
-
-/** Bersihkan tanda baca tepi lalu buang token yang terlalu umum. */
-function distinctiveTokens(normalized: string): string[] {
-  return normalized
-    .split(" ")
-    .map((token) => token.replace(/^[.\-/]+|[.\-/]+$/g, ""))
-    .filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token))
-}
 
 /**
  * Cari bukti di CV bahwa sebuah requirement SEBENARNYA sudah dikerjakan, hanya
