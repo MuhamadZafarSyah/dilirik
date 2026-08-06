@@ -108,8 +108,23 @@ export const DEFAULT_REPORT_LANGUAGE: (typeof REPORT_LANGUAGES)[number] = "id"
  * — mengubah "...via PaddleOCR" jadi "...via PaddleOCR (OCR)" — yang secara
  * teknis lolos pemeriksaan pengantaran v3.2.3 tapi menghasilkan kalimat CV yang
  * canggung dan berbau keyword stuffing, persis yang dilarang aturan #4.
+ * v3.3.1: dua sisa celah yang sama-sama lahir dari pengawasan yang tidak merata.
+ * Pertama, "added_scope" adalah satu-satunya nilai whatChanged yang tidak pernah
+ * diverifikasi kode — "added_metric" wajib memunculkan angka baru, "added_tool"
+ * wajib memunculkan istilah lowongan, sementara "added_scope" cukup diklaim.
+ * Guardrail yang punya satu pintu belakang bukan guardrail: label itu jadi
+ * tempat teraman bagi model untuk menamai perubahan apa pun, termasuk yang cuma
+ * menambah kata sambung. Sekarang klaim itu wajib membawa angka baru atau
+ * minimal dua kata bermakna yang belum ada di `before`, diukur dengan daftar
+ * kata umum yang SAMA dengan yang dipakai pencarian bukti konsep — daftarnya
+ * disatukan di guardrail/postCheck supaya tidak jadi dua salinan yang
+ * pelan-pelan berbeda. Kedua, pemeriksaan frasa klise selama ini hanya menyentuh
+ * `after` sebuah saran, sehingga careerNote — satu-satunya teks bebas yang
+ * langsung dibaca pengguna — jadi jalan keluar terakhir bagi "strong
+ * background". Sekarang careerNote disaring per KALIMAT, bukan ditolak
+ * seluruhnya, supaya bagian yang jujur tetap sampai ke pengguna.
  */
-export const ENGINE_VERSION = "3.3.0"
+export const ENGINE_VERSION = "3.3.1"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
@@ -118,7 +133,7 @@ export const ENGINE_VERSION = "3.3.0"
  * prompt ekstraksi CV/lowongan, bukan cuma prompt analisis, karena hasilnya
  * sama-sama mengubah laporan yang dilihat pengguna.
  */
-export const PROMPT_VERSION = "p3.3.0-2026-08-06"
+export const PROMPT_VERSION = "p3.3.1-2026-08-06"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
