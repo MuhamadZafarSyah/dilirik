@@ -33,15 +33,46 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * dropImpliedGaps yang membuang gap untuk skill yang jelas sudah dikuasai,
  * keluaran baru keywordGaps ("kata kunci hilang", bukan "gap beneran"), dan
  * pemecahan alias yang lebih ketat (svelte ≠ sveltekit, .net ≠ c#, git ≠ github).
+ * v3.2.0: peta konsep ⟹ implementasi (OCR ← PaddleOCR, data visualization ←
+ * ApexCharts, enkripsi ← AES-256-GCM) sebagai bahan gap "presentation";
+ * instruksi diagnosis dipindahkan dari analysis/gaps.ts yang ternyata KODE MATI
+ * ke analysis/report.ts yang benar-benar dieksekusi; gap presentation wajib
+ * menyertakan evidenceQuote verbatim yang diverifikasi kode; promoteHintedGaps
+ * menaikkan real → presentation secara deterministik sehingga bisa melahirkan
+ * saran revisi; repairTemplateGaps menimpa kalimat cetakan "tidak ada
+ * pengalaman atau pengetahuan tentang X"; dan guardrail ketujuh memastikan saran
+ * benar-benar mengantarkan kata kunci gap yang diklaimnya.
+ * v3.2.1: seluruh pertanyaan "apakah kalimat ini ada di CV" dipusatkan ke
+ * guardrail/quoteLocator. Sebelumnya enforceGapEvidence dan postCheckAnchor
+ * punya aturan pencocokan sendiri-sendiri, sehingga satu bullet CV yang sama
+ * bisa LOLOS sebagai bukti gap tapi DITOLAK sebagai jangkar saran. Jangkar kini
+ * diluruskan ke teks CV asli (alignSuggestionAnchors) alih-alih dibuang, dan
+ * kutipan yang berasal dari presentationHints ikut diverifikasi ke rawText —
+ * sebelumnya dipakai mentah, sehingga sebuah gap bisa memajang kutipan yang
+ * tidak ada di dokumen aslinya.
+ * v3.2.2: ekstraksi lowongan tidak lagi boleh membuang requirement. parseJob
+ * dulu hanya dibekali satu kalimat instruksi, sehingga baris majemuk seperti
+ * "terbiasa dengan automated testing (Jest, Vitest)" menyusut jadi nama alatnya
+ * saja dan konsepnya lenyap. Yang hilang bukan sekadar satu gap: mustHaveSkills
+ * adalah PENYEBUT skor kecocokan, jadi requirement yang lolos dari ekstraksi
+ * menaikkan matchScore diam-diam sekaligus menghapus gap-nya dari laporan.
+ * Sekarang cara meminta dan syarat penerimaannya tinggal berdampingan di
+ * prompts/jobExtraction.ts, hasil parse disaring strictJobParsedSchema (satu
+ * entri satu skill, tanpa kembar, bukan kalimat utuh), dan pesan penolakannya
+ * ditulis sebagai instruksi sehingga repair loop generateStructured yang sudah
+ * ada langsung memakainya tanpa mesin tambahan. parseJob juga turun ke
+ * temperature 0 karena tugasnya menyalin, bukan mengarang.
  */
-export const ENGINE_VERSION = "3.1.0"
+export const ENGINE_VERSION = "3.2.2"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
  * bisa menginvalidasi cache TANPA mengklaim perubahan arsitektur mesin.
- * WAJIB dinaikkan setiap kali isi prompt analisis diubah, sekecil apa pun.
+ * WAJIB dinaikkan setiap kali isi prompt diubah, sekecil apa pun — termasuk
+ * prompt ekstraksi CV/lowongan, bukan cuma prompt analisis, karena hasilnya
+ * sama-sama mengubah laporan yang dilihat pengguna.
  */
-export const PROMPT_VERSION = "p3.1.0-2026-08-05"
+export const PROMPT_VERSION = "p3.2.2-2026-08-06"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10

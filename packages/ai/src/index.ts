@@ -6,12 +6,14 @@ export {
   postCheckUsefulness,
   postCheckAnchor,
   postCheckBannedPhrases,
+  postCheckGapPhrases,
   dedupeSuggestions,
   collectCvFacts,
   collectJobTerms,
   normalize,
   squashWhitespace,
   BANNED_PHRASE_PATTERNS,
+  BANNED_GAP_PHRASE_PATTERNS,
   type PostCheckResult,
 } from "./guardrail/postCheck"
 export {
@@ -20,9 +22,11 @@ export {
   collectImplicationSources,
   IMPLIED_WEIGHT_FACTOR,
   type ImpliedRequirement,
+  type PresentationHint,
   type RequirementCoverage,
   type RuleBasedResult,
 } from "./scoring/ruleBased"
+export { findConceptEvidence, type ConceptEvidence } from "./scoring/conceptEvidence"
 export {
   expandSkill,
   isShortToken,
@@ -39,8 +43,14 @@ export {
   type SkillSource,
 } from "./scoring/skillImplications"
 export { semanticScore, blendScores } from "./scoring/semantic"
-export { generateAnalysisReport, pickSuggestionMode, dropImpliedGaps } from "./analysis/report"
-export { analyzeGaps } from "./analysis/gaps"
+export {
+  generateAnalysisReport,
+  pickSuggestionMode,
+  dropImpliedGaps,
+  enforceGapEvidence,
+  promoteHintedGaps,
+  repairTemplateGaps,
+} from "./analysis/report"
 export { parseCv } from "./prompts/parseCv"
 export { parseJob } from "./prompts/parseJob"
 export { analyze } from "./pipeline/analyze"

@@ -1,4 +1,5 @@
-import type { CvStructured, JobParsed, Suggestion } from "@dilirik/shared"
+import type { CvStructured, Gap, JobParsed, Suggestion } from "@dilirik/shared"
+import { locateQuote } from "./quoteLocator"
 
 /** Normalisasi string untuk pencocokan fakta yang toleran. */
 export function normalize(text: string): string {
@@ -63,16 +64,21 @@ export type PostCheckResult =
  * bisa ditempelkan otomatis di langkah revisi — user melihat saran yang "gagal
  * diterapkan" tanpa penjelasan.
  *
- * Toleransi hanya sampai perbedaan whitespace (PDF sering menyisipkan newline
- * di tengah kalimat). Lebih longgar dari itu = auto-replace pasti meleset.
+ * Engine v3.2a: aturan pencocokannya dipindah seluruhnya ke `quoteLocator`.
+ * Sebelumnya fungsi ini punya dua lapis pencocokan sendiri, dan aturannya
+ * berbeda dari yang dipakai enforceGapEvidence — satu kalimat CV yang sama bisa
+ * lolos di satu pemeriksaan dan gagal di pemeriksaan lain.
+ *
+ * Catatan: pemanggil sebaiknya menjalankan alignSuggestionAnchors lebih dulu,
+ * supaya jangkar yang cuma beda tanda baca diperbaiki, bukan ditolak. Yang
+ * sampai ke sini seharusnya tinggal jangkar yang memang bukan teks CV.
  */
 export function postCheckAnchor(suggestion: Suggestion, rawText: string): PostCheckResult {
   const before = suggestion.before ?? ""
   if (!before.trim()) {
     return { ok: false, reason: "Kutipan `before` kosong — saran tidak punya jangkar di CV" }
   }
-  if (rawText.includes(before)) return { ok: true }
-  if (squashWhitespace(rawText).includes(squashWhitespace(before))) return { ok: true }
+  if (locateQuote(before, rawText)) return { ok: true }
   return {
     ok: false,
     reason: `Kutipan "${before.slice(0, 60)}" tidak ada verbatim di teks CV — saran tidak bisa diterapkan otomatis`,
@@ -111,6 +117,12 @@ export function postCheckSuggestion(
 /**
  * Frasa terlarang — dilarang di prompt SEKALIGUS divalidasi di kode.
  * Larangan yang cuma hidup di prompt akan bocor cepat atau lambat.
+ *
+ * Engine v3.2: pola bahasa Inggris diperbanyak. Sebelumnya 13 pola mayoritas
+ * berbahasa Indonesia, sementara CV yang dianalisis sering berbahasa Inggris —
+ * jadi guardrail ini praktis buta pada kasus paling umum. "seamless" masuk
+ * daftar karena itu kata pengisi yang paling sering dipakai model untuk membuat
+ * kalimat terasa lebih panjang tanpa menambah satu pun informasi baru.
  */
 export const BANNED_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bhighly\s+skilled\b/i, label: "highly skilled" },
@@ -121,6 +133,13 @@ export const BANNED_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> =
   { pattern: /\bresults[-\s]driven\b/i, label: "results-driven" },
   { pattern: /\bteam\s+player\b/i, label: "team player" },
   { pattern: /\bpassionate\s+about\b/i, label: "passionate about" },
+  { pattern: /\bseamless(ly)?\b/i, label: "seamless" },
+  { pattern: /\bcutting[-\s]edge\b/i, label: "cutting-edge" },
+  { pattern: /\bstate[-\s]of[-\s]the[-\s]art\b/i, label: "state-of-the-art" },
+  { pattern: /\bdetail[-\s]oriented\b/i, label: "detail-oriented" },
+  { pattern: /\bself[-\s]motivated\b/i, label: "self-motivated" },
+  { pattern: /\bfast\s+learner\b/i, label: "fast learner" },
+  { pattern: /\bexcellent\s+(communication|interpersonal)\b/i, label: "excellent communication" },
   { pattern: /\bsangat\s+(ahli|mahir|berpengalaman|kompeten)\b/i, label: "sangat ahli" },
   { pattern: /\bberpengalaman\s+luas\b/i, label: "berpengalaman luas" },
   { pattern: /\bpekerja\s+keras\b/i, label: "pekerja keras" },
@@ -135,6 +154,64 @@ export function postCheckBannedPhrases(suggestion: Suggestion): PostCheckResult 
       return {
         ok: false,
         reason: `Mengandung frasa klise yang dilarang: "${label}" — recruiter mengabaikannya dan ATS tidak menilainya`,
+      }
+    }
+  }
+  return { ok: true }
+}
+
+/**
+ * Template ISI-BLANKO pada teks GAP (engine v3.2).
+ *
+ * Uji gold set #02 menghasilkan lima gap dengan kalimat yang identik polanya:
+ * "Tidak ada pengalaman atau pengetahuan tentang X di CV" / "Perlu menambahkan
+ * pengalaman atau pengetahuan tentang X". Kalimat semacam itu bisa ditulis TANPA
+ * MEMBACA CV sama sekali — cukup menyalin nama skill ke dalam cetakan. Itulah
+ * tanda paling jelas bahwa model tidak benar-benar menyisir CV, dan justru
+ * kalimat inilah yang melahirkan vonis palsu "tidak ada pengalaman OCR" pada CV
+ * yang memakai PaddleOCR.
+ *
+ * Dipisah dari BANNED_PHRASE_PATTERNS karena sasarannya beda: yang itu memeriksa
+ * `after` sebuah saran, yang ini memeriksa explanation & advice sebuah gap.
+ */
+export const BANNED_GAP_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
+  {
+    pattern: /tidak\s+ada\s+(bukti\s+)?(pengalaman|pengetahuan)/i,
+    label: "tidak ada pengalaman atau pengetahuan tentang ...",
+  },
+  {
+    pattern: /perlu\s+menambahkan\s+(pengalaman|pengetahuan)/i,
+    label: "perlu menambahkan pengalaman atau pengetahuan tentang ...",
+  },
+  {
+    pattern: /tidak\s+ditemukan\s+(bukti\s+)?(pengalaman|pengetahuan)/i,
+    label: "tidak ditemukan bukti pengalaman ...",
+  },
+  {
+    pattern: /\bno\s+(evidence|experience|mention)\s+(of|with|in|about)\b/i,
+    label: "no evidence of ...",
+  },
+  {
+    pattern: /\b(is\s+)?not\s+(mentioned|present|listed)\s+in\s+the\s+cv\b/i,
+    label: "not mentioned in the CV",
+  },
+]
+
+/**
+ * Guardrail titik-6b: deteksi teks gap yang cuma hasil mengisi cetakan.
+ *
+ * Sengaja TIDAK membuang gap-nya — skill yang memang tidak ada tetap harus
+ * dilaporkan. Yang salah bukan keberadaan gap-nya, melainkan kalimatnya. Karena
+ * itu hasil pemeriksaan ini dipakai `repairTemplateGaps` untuk MENIMPA teksnya
+ * dengan kalimat yang menyebut istilah apa saja yang benar-benar dicari.
+ */
+export function postCheckGapPhrases(gap: Gap): PostCheckResult {
+  const haystack = `${gap.explanation ?? ""} ${gap.advice ?? ""}`
+  for (const { pattern, label } of BANNED_GAP_PHRASE_PATTERNS) {
+    if (pattern.test(haystack)) {
+      return {
+        ok: false,
+        reason: `Teks gap memakai template isi-blanko: "${label}" — kalimat ini bisa ditulis tanpa membaca CV`,
       }
     }
   }
