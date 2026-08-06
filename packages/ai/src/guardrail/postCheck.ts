@@ -15,74 +15,6 @@ export function squashWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim()
 }
 
-/**
- * Token yang terlalu umum untuk dijadikan bukti apa pun.
- *
- * Dipakai dua guardrail yang sekilas tak berhubungan: pencarian bukti konsep di
- * `conceptEvidence` (supaya requirement "data visualization" tidak cocok dengan
- * setiap kalimat yang memuat kata "data") dan verifikasi klaim `added_scope` di
- * bawah (supaya menambah kata "dan sistem tim" tidak dihitung sebagai
- * memperluas cakupan). Keduanya menanyakan hal yang sama — "apakah kata ini
- * membawa informasi?" — jadi daftarnya harus satu, bukan dua salinan yang
- * pelan-pelan berbeda.
- *
- * Tinggal di sini, bukan di `conceptEvidence`, karena `conceptEvidence` sudah
- * mengimpor `normalize` dari berkas ini. Arah sebaliknya akan membuat impor
- * melingkar.
- */
-const GENERIC_TOKENS = new Set([
-  "data",
-  "system",
-  "systems",
-  "sistem",
-  "design",
-  "desain",
-  "web",
-  "api",
-  "apis",
-  "tool",
-  "tools",
-  "user",
-  "users",
-  "code",
-  "app",
-  "apps",
-  "team",
-  "tim",
-  "cloud",
-  "service",
-  "services",
-  "software",
-  "development",
-  "developer",
-  "management",
-  "modern",
-  "basic",
-  "dasar",
-  "pengalaman",
-  "kemampuan",
-  "menguasai",
-  "terbiasa",
-  "mampu",
-  "pernah",
-  "and",
-  "the",
-  "for",
-  "with",
-  "dan",
-  "atau",
-  "serta",
-  "yang",
-])
-
-/** Bersihkan tanda baca tepi lalu buang token yang terlalu umum. */
-export function distinctiveTokens(normalized: string): string[] {
-  return normalized
-    .split(" ")
-    .map((token) => token.replace(/^[.\-/]+|[.\-/]+$/g, ""))
-    .filter((token) => token.length >= 3 && !GENERIC_TOKENS.has(token))
-}
-
 /** Kumpulkan seluruh fakta tekstual dari structuredJson CV (termasuk about & section dinamis). */
 export function collectCvFacts(cv: CvStructured): string[] {
   const facts: string[] = [...cv.skills, ...cv.achievements]
@@ -215,45 +147,17 @@ export const BANNED_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> =
   { pattern: /\bmampu\s+bekerja\s+(dalam\s+tim|di\s+bawah\s+tekanan)\b/i, label: "mampu bekerja dalam tim" },
 ]
 
-/**
- * Cari frasa klise pertama di sebuah teks; `null` kalau bersih.
- *
- * Sengaja dipisah dari `postCheckBannedPhrases` supaya daftar polanya bisa
- * dipakai pada teks yang BUKAN saran — `careerNote` misalnya, yang sebelumnya
- * lolos sepenuhnya dari pemeriksaan ini dan jadi satu-satunya tempat frasa
- * seperti "strong background" masih bisa sampai ke pengguna.
- */
-export function findBannedPhrase(text: string): string | null {
-  for (const { pattern, label } of BANNED_PHRASE_PATTERNS) {
-    if (pattern.test(text)) return label
-  }
-  return null
-}
-
 /** Guardrail titik-3b: tolak kata sifat memuji diri yang tidak bisa diverifikasi. */
 export function postCheckBannedPhrases(suggestion: Suggestion): PostCheckResult {
-  const label = findBannedPhrase(suggestion.after)
-  if (!label) return { ok: true }
-  return {
-    ok: false,
-    reason: `Mengandung frasa klise yang dilarang: "${label}" — recruiter mengabaikannya dan ATS tidak menilainya`,
+  for (const { pattern, label } of BANNED_PHRASE_PATTERNS) {
+    if (pattern.test(suggestion.after)) {
+      return {
+        ok: false,
+        reason: `Mengandung frasa klise yang dilarang: "${label}" — recruiter mengabaikannya dan ATS tidak menilainya`,
+      }
+    }
   }
-}
-
-/**
- * Buang KALIMAT yang memuat frasa klise, bukan seluruh teksnya (engine v3.3.1).
- *
- * Dipakai untuk `careerNote`. Saran punya jalur penolakan — kalau ditolak,
- * saran lain menggantikannya. `careerNote` tidak: cuma ada satu, dan membuang
- * seluruhnya karena satu kalimat berarti membuang paragraf yang bagian lainnya
- * masih berguna. Membuang per kalimat menahan kerusakan sekecil mungkin.
- */
-export function stripBannedSentences(text: string): string {
-  if (!text.trim()) return text
-  const sentences = text.split(/(?<=[.!?])\s+/)
-  const kept = sentences.filter((sentence) => !findBannedPhrase(sentence))
-  if (kept.length === sentences.length) return text
-  return squashWhitespace(kept.join(" "))
+  return { ok: true }
 }
 
 /** Semua isi kurung, termasuk kurungnya. */
@@ -363,14 +267,6 @@ export function postCheckGapPhrases(gap: Gap): PostCheckResult {
 }
 
 /**
- * Minimum token bermakna yang harus bertambah sebelum klaim `added_scope`
- * dianggap terbukti. Satu kata bisa saja cuma sinonim atau kata sambung;
- * dua kata bermakna baru sudah sulit terjadi tanpa informasi yang benar-benar
- * bertambah.
- */
-const MIN_SCOPE_TOKENS = 2
-
-/**
  * Guardrail KEBERGUNAAN (engine v3).
  *
  * Perubahan penting dari v2: aturan "anti-kosmetik" lama mewajibkan setiap kata
@@ -379,11 +275,6 @@ const MIN_SCOPE_TOKENS = 2
  * adalah KLAIM saran itu sendiri (`whatChanged`), yang bisa diverifikasi kode:
  * mengaku menambah angka → harus ada angka baru, mengaku menambah tools → harus
  * ada istilah lowongan yang benar-benar bertambah.
- *
- * Engine v3.3.1: `added_scope` ikut diverifikasi. Sebelumnya ia satu-satunya
- * klaim yang lolos tanpa diperiksa, dan karena itu jadi pilihan teraman bagi
- * model — klaim apa pun yang tidak yakin bisa lolos cukup dengan melabelinya
- * `added_scope`. Guardrail yang punya satu pintu belakang bukan guardrail.
  */
 export function postCheckUsefulness(
   suggestion: Suggestion,
@@ -427,9 +318,8 @@ export function postCheckUsefulness(
   const addedTokens = [...afterTokens].filter((tok) => tok.length >= 3 && !beforeTokens.has(tok))
   const digitsBefore = (suggestion.before.match(/\d/g) ?? []).length
   const digitsAfter = (suggestion.after.match(/\d/g) ?? []).length
-  const hasNewNumber = digitsAfter > digitsBefore
 
-  if (changes.includes("added_metric") && !hasNewNumber) {
+  if (changes.includes("added_metric") && digitsAfter <= digitsBefore) {
     return {
       ok: false,
       reason: "Mengaku menambah angka/metrik, tapi tidak ada angka baru di `after`",
@@ -439,15 +329,6 @@ export function postCheckUsefulness(
     return {
       ok: false,
       reason: "Mengaku menambah tools yang diminta lowongan, tapi tidak ada istilah lowongan yang bertambah",
-    }
-  }
-  if (changes.includes("added_scope")) {
-    const meaningful = addedTokens.filter((tok) => !GENERIC_TOKENS.has(tok))
-    if (!hasNewNumber && meaningful.length < MIN_SCOPE_TOKENS) {
-      return {
-        ok: false,
-        reason: "Mengaku memperluas cakupan, tapi `after` tidak menambah informasi baru — hanya kata sambung atau istilah umum",
-      }
     }
   }
   if (changes.length === 1 && changes[0] === "reordered_for_relevance") {
