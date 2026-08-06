@@ -1,11 +1,13 @@
 import { prisma } from "@dilirik/db"
 import { analyze } from "@dilirik/ai"
 import {
+  DEFAULT_REPORT_LANGUAGE,
   ENGINE_VERSION,
   PROMPT_VERSION,
   cvStructuredSchema,
   jobParsedSchema,
   type AnalysisResult,
+  type ReportLanguage,
 } from "@dilirik/shared"
 import { notFound } from "../middleware/errorHandler"
 import { analysisCacheKey, getCachedAnalysis, setCachedAnalysis } from "./analysisCache"
@@ -39,8 +41,21 @@ async function refundQuota(userId: string) {
  * (kolom JSON yang sama — tidak butuh migrasi Prisma).
  * Engine v3: cacheKey ikut memperhitungkan PROMPT_VERSION, supaya eksperimen
  * prompt tidak diam-diam menyajikan hasil dari prompt lama.
+ * Engine v3.3.0: cacheKey ikut memperhitungkan bahasa laporan. Tanpa ini, orang
+ * pertama yang menganalisis sebuah pasangan CV+lowongan akan mengunci bahasa
+ * laporannya untuk semua orang berikutnya — termasuk dirinya sendiri setelah
+ * mengganti bahasa di antarmuka. `reportLanguage` disimpan di dalam
+ * suggestionsJson, pola yang sama dengan promptVersion, jadi tetap tanpa
+ * migrasi Prisma.
  */
-export async function runAnalysis(args: { userId: string; cvId: string; jobPostingId: string }) {
+export async function runAnalysis(args: {
+  userId: string
+  cvId: string
+  jobPostingId: string
+  reportLanguage?: ReportLanguage
+}) {
+  const reportLanguage = args.reportLanguage ?? DEFAULT_REPORT_LANGUAGE
+
   const [cv, job] = await Promise.all([
     getCv(args.userId, args.cvId),
     getJob(args.userId, args.jobPostingId),
@@ -49,7 +64,7 @@ export async function runAnalysis(args: { userId: string; cvId: string; jobPosti
   const cacheKey = analysisCacheKey(
     cv.rawText,
     job.rawText,
-    `${ENGINE_VERSION}+${PROMPT_VERSION}`,
+    `${ENGINE_VERSION}+${PROMPT_VERSION}+${reportLanguage}`,
   )
 
   // Cache DB (hasil identik sudah pernah dianalisis user ini)
@@ -72,6 +87,7 @@ export async function runAnalysis(args: { userId: string; cvId: string; jobPosti
         job: jobParsedSchema.parse(job.parsedJson),
         rawText: cv.rawText,
         language: cv.language,
+        reportLanguage,
       })
     } catch (error) {
       await refundQuota(args.userId)
@@ -96,7 +112,10 @@ export async function runAnalysis(args: { userId: string; cvId: string; jobPosti
         careerNote: result.careerNote,
         mode: result.mode,
         promptVersion: result.promptVersion ?? PROMPT_VERSION,
+        reportLanguage: result.reportLanguage ?? reportLanguage,
       },
+      // Kolom `language` tetap merekam bahasa DOKUMEN, bukan bahasa laporan —
+      // dua hal berbeda yang sengaja tidak digabung.
       language: result.language,
       engineVersion: result.engineVersion,
     },

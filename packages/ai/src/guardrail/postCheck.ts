@@ -160,6 +160,54 @@ export function postCheckBannedPhrases(suggestion: Suggestion): PostCheckResult 
   return { ok: true }
 }
 
+/** Semua isi kurung, termasuk kurungnya. */
+function parentheticals(text: string): string[] {
+  return text.match(/\([^()]*\)/g) ?? []
+}
+
+/** Buang semua kurung agar sisa kalimatnya bisa dibandingkan. */
+function stripParentheticals(text: string): string {
+  return text.replace(/\s*\([^()]*\)/g, " ")
+}
+
+/**
+ * Guardrail titik-9 / KEALAMIAN KALIMAT (engine v3.3).
+ *
+ * Guardrail pengantaran v3.2.3 mewajibkan kata kunci gap benar-benar muncul di
+ * `after`. Model menemukan jalan termurah untuk mematuhinya: menempelkan
+ * istilahnya dalam kurung. "...document capture via PaddleOCR" jadi
+ * "...document capture via PaddleOCR (OCR)". Secara teknis lolos — kata "OCR"
+ * memang muncul — tapi hasilnya kalimat CV yang canggung dan berbau keyword
+ * stuffing, persis yang dilarang aturan #4 HONESTY_SYSTEM_PROMPT.
+ *
+ * Yang ditolak hanya kasus paling telanjang: SELURUH perubahan cuma berupa
+ * sisipan dalam kurung. Kalau kalimatnya juga ditulis ulang, kurungnya bukan
+ * masalah.
+ *
+ * Pengecualian angka disengaja. Kurung yang memuat angka ("(3 posting/minggu)",
+ * "(21 halaman)") membawa informasi yang benar-benar baru bagi pembaca, dan itu
+ * justru gaya penulisan CV yang baik — beda sifatnya dengan menempelkan ulang
+ * istilah yang sudah ada di kalimat itu juga.
+ */
+export function postCheckNaturalPhrasing(suggestion: Suggestion): PostCheckResult {
+  const existing = parentheticals(suggestion.before)
+  const added = parentheticals(suggestion.after).filter(
+    (group) => !existing.includes(group),
+  )
+  if (added.length === 0) return { ok: true }
+  if (added.some((group) => /\d/.test(group))) return { ok: true }
+
+  const rewritten =
+    normalize(stripParentheticals(suggestion.after)) !==
+    normalize(stripParentheticals(suggestion.before))
+  if (rewritten) return { ok: true }
+
+  return {
+    ok: false,
+    reason: `Satu-satunya perubahan adalah menempelkan ${added.join(" ")} dalam kurung — istilahnya memang muncul, tapi kalimatnya tidak jadi lebih baik dan terbaca sebagai keyword stuffing. Tulis ulang kalimatnya supaya istilah itu mengalir natural.`,
+  }
+}
+
 /**
  * Template ISI-BLANKO pada teks GAP (engine v3.2).
  *

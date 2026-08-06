@@ -1,5 +1,5 @@
 import type { SuggestionMode } from "@dilirik/shared"
-import { HONESTY_SYSTEM_PROMPT, languageInstruction } from "../guardrail/systemPrompt"
+import { HONESTY_SYSTEM_PROMPT, reportLanguageInstruction } from "../guardrail/systemPrompt"
 
 /**
  * SELURUH teks yang diminta ke model untuk laporan analisis.
@@ -99,6 +99,12 @@ const AFTER_RULES = `LANGKAH WAJIB SEBELUM MENULIS SETIAP \`after\`:
  * ditebak: menulis "OCR, Enkripsi Data" sebagai satu teks, lalu lolos karena
  * pemeriksa hanya menemukan kata "OCR" di dalamnya. Satu klaim terbukti, satu
  * klaim menumpang gratis.
+ *
+ * v3.3.0: ditambah larangan menempelkan istilah dalam kurung. Begitu
+ * pengantaran kata kunci diwajibkan, model menemukan jalan termurah untuk
+ * mematuhinya — "...via PaddleOCR (OCR)" — yang lolos pemeriksaan tapi
+ * menghasilkan kalimat CV yang canggung. Setiap guardrail baru melahirkan jalan
+ * pintas baru; yang ini menutupnya di prompt sekaligus di kode.
  */
 const SUGGESTION_RULES = `ATURAN SUGGESTIONS:
 - before = KUTIPAN VERBATIM dari "Teks CV asli" — persis karakter demi karakter (tanda baca & kapitalisasi). Sistem MENOLAK otomatis saran yang \`before\`-nya tidak ditemukan verbatim.
@@ -106,6 +112,7 @@ const SUGGESTION_RULES = `ATURAN SUGGESTIONS:
 - targetRequirement = kutip requirement lowongan yang dijawab saran ini. Saran tanpa target akan DIBUANG.
 - addressesGap = ARRAY nama gap. Setiap elemen harus SAMA PERSIS dengan \`skill\` salah satu gap yang kamu tulis sendiri di atas. SATU ELEMEN SATU GAP — dilarang menggabungkan dua nama dalam satu teks dipisah koma seperti "OCR, Enkripsi Data"; tulis ["OCR", "Enkripsi Data"].
 - Kata kunci SETIAP elemen addressesGap WAJIB benar-benar muncul di \`after\`. Sistem memeriksanya satu per satu: SATU elemen yang tidak terantar membatalkan SELURUH saran. Kalau kamu hanya yakin bisa mengantar satu gap, cantumkan satu saja — daftar yang panjang tidak menambah nilai, hanya menambah risiko.
+- Cara mengantarkannya harus NATURAL, menyatu dengan kalimatnya. DILARANG menempelkan istilah dalam kurung sebagai satu-satunya perubahan, mis. mengubah "document capture via PaddleOCR" jadi "document capture via PaddleOCR (OCR)". Yang benar: tulis ulang jadi "OCR-based document capture via PaddleOCR". Sistem menolak saran yang SELURUH perubahannya cuma sisipan dalam kurung. Kurung yang memuat ANGKA tetap boleh (mis. "(3 posting/minggu)") — itu menambah informasi, bukan menempelkan kata kunci.
 - whatChanged = klaim perubahan yang bisa DIBUKTIKAN dari teksmu sendiri. Sistem memverifikasi: "added_metric" wajib memunculkan angka baru di \`after\`; "added_tool" wajib memunculkan istilah lowongan yang benar-benar bertambah. Klaim palsu = saran DIBUANG.
 - rationale = 1 kalimat: kenapa perubahan ini menaikkan peluang untuk lowongan INI.
 - impact = "high" hanya untuk saran yang menjawab requirement WAJIB yang sedang lemah.
@@ -179,7 +186,13 @@ SALAH: mengaku menjawab gap OCR, tapi kata "OCR" tetap tidak muncul di hasil akh
 
 ### CONTOH BURUK 6 — KLAIM GAP BORONGAN
 "addressesGap": ["OCR, Enkripsi Data"]
-SALAH BENTUK: itu SATU elemen berisi dua nama gap. Sistem memperlakukannya sebagai satu nama gap yang tidak dikenal. Tulis ["OCR", "Enkripsi Data"], dan pastikan KEDUANYA benar-benar muncul di \`after\` — kalau tidak, seluruh saran dibuang.`
+SALAH BENTUK: itu SATU elemen berisi dua nama gap. Sistem memperlakukannya sebagai satu nama gap yang tidak dikenal. Tulis ["OCR", "Enkripsi Data"], dan pastikan KEDUANYA benar-benar muncul di \`after\` — kalau tidak, seluruh saran dibuang.
+
+### CONTOH BURUK 7 — MENEMPELKAN KATA KUNCI DALAM KURUNG
+"addressesGap": ["OCR"]
+"before": "... hardware and camera document capture via PaddleOCR ..."
+"after": "... hardware and camera document capture via PaddleOCR (OCR) ..."
+SALAH: kata "OCR" memang jadi muncul, tapi kalimatnya tidak jadi lebih baik — terbaca seperti menyogok filter ATS, dan itu keyword stuffing yang dilarang aturan #4. Yang benar: "... hardware and camera OCR document capture via PaddleOCR ...". Sistem menolak saran yang seluruh perubahannya cuma sisipan dalam kurung.`
 
 /**
  * Rakit system prompt laporan.
@@ -187,14 +200,22 @@ SALAH BENTUK: itu SATU elemen berisi dua nama gap. Sistem memperlakukannya sebag
  * Urutannya disengaja: kejujuran → bahasa → bingkai keluaran → aturan diagnosis
  * → aturan resep → mode → contoh. Contoh diletakkan PALING AKHIR supaya ia
  * membaca sebagai penerapan dari aturan di atasnya, bukan sebagai aturan baru.
+ *
+ * v3.3.0: bahasa laporan dan bahasa CV masuk terpisah. Keduanya dulu satu
+ * parameter, sehingga CV berbahasa Inggris otomatis menghasilkan laporan
+ * berbahasa Inggris untuk pengguna Indonesia.
  */
 export function buildReportSystemPrompt(args: {
-  language: string
+  reportLanguage: string
+  cvLanguage: string
   mode: SuggestionMode
 }): string {
   return [
     HONESTY_SYSTEM_PROMPT,
-    languageInstruction(args.language),
+    reportLanguageInstruction({
+      reportLanguage: args.reportLanguage,
+      cvLanguage: args.cvLanguage,
+    }),
     FRAME,
     GAP_RULES,
     EVIDENCE_FIRST_RULES,
