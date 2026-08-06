@@ -13,6 +13,7 @@ import {
   postCheckAnchor,
   postCheckBannedPhrases,
   postCheckGapPhrases,
+  postCheckNaturalPhrasing,
   postCheckSuggestion,
   postCheckUsefulness,
   squashWhitespace,
@@ -352,6 +353,11 @@ export function enforceGapEvidence(
  * diluruskan dulu ke dokumen asli sehingga gap hasil kenaikan tidak pernah
  * memajang kutipan yang tak bisa disorot. Bila tidak (pengujian unit), petunjuk
  * dipakai apa adanya.
+ *
+ * Catatan bahasa (v3.3.0): explanation & advice di sini ditulis kode, bukan
+ * model, jadi keduanya SELALU berbahasa Indonesia. Ini konsisten dengan default
+ * bahasa laporan; kalau nanti bahasa laporan bisa lebih dari dua, kalimat ini
+ * ikut perlu dilokalkan.
  */
 export function promoteHintedGaps(
   gaps: Gap[],
@@ -450,12 +456,21 @@ export function alignSuggestionAnchors(
  * Engine v3.2.3: teks prompt pindah ke `reportPrompt.ts` supaya berkas ini murni
  * berisi pemeriksaan; kutipan bukti dipilih berdasarkan kekuatan, bukan urutan;
  * dan setiap elemen `addressesGap` diverifikasi satu per satu.
+ *
+ * Engine v3.3.0: `language` (bahasa CV) dan `reportLanguage` (bahasa penjelasan
+ * yang dibaca pengguna) jadi dua parameter terpisah. Keduanya dulu satu nilai,
+ * sehingga CV berbahasa Inggris memaksa seluruh laporan berbahasa Inggris
+ * walaupun antarmukanya berbahasa Indonesia. Ditambah guardrail kesembilan yang
+ * menolak saran yang seluruh perubahannya cuma menempelkan istilah dalam kurung.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
   job: JobParsed
   rawText: string
+  /** Bahasa CV — menentukan bahasa `before`, `after`, dan seluruh kutipan. */
   language: string
+  /** Bahasa penjelasan. Default ke bahasa CV agar pemanggil lama tidak berubah perilaku. */
+  reportLanguage?: string
   mode: SuggestionMode
   rule: {
     matchedMust: string[]
@@ -467,12 +482,13 @@ export async function generateAnalysisReport(args: {
   }
 }): Promise<ReportOutcome> {
   const { cv, job, rawText, language, mode, rule } = args
+  const reportLanguage = args.reportLanguage ?? language
   const implied = [...(rule.impliedMust ?? []), ...(rule.impliedNice ?? [])]
   const hints = rule.presentationHints ?? []
 
   const result = await generateStructured({
     schema: analysisReportSchema,
-    system: buildReportSystemPrompt({ language, mode }),
+    system: buildReportSystemPrompt({ reportLanguage, cvLanguage: language, mode }),
     // Sedikit lebih tinggi dari default: menulis ulang kalimat butuh variasi,
     // sementara seluruh kebenarannya sudah dikunci schema + guardrail.
     temperature: 0.35,
@@ -497,7 +513,7 @@ export async function generateAnalysisReport(args: {
       hints.length > 0
         ? [
             "## KEMUNGKINAN HANYA SOAL PENYAJIAN (sistem sudah menemukan buktinya di CV)",
-            "Ini bukan kekurangan kemampuan. Requirement di bawah TIDAK cocok secara kata harfiah, tapi kode sudah menemukan fakta terkait di CV. Klasifikasikan sebagai type \"presentation\" dan pakai kutipan di bawah sebagai evidenceQuote.",
+            "Ini bukan kekurangan kemampuan. Requirement di bawah TIDAK cocok secara kata harfiah, tapi kode sudah menemukan fakta terkait di CV. Klasifikasikan sebagai type \\"presentation\\" dan pakai kutipan di bawah sebagai evidenceQuote.",
             JSON.stringify(
               hints.map((hint) => ({
                 requirement: hint.skill,
@@ -536,6 +552,7 @@ export async function generateAnalysisReport(args: {
       postCheckAnchor(suggestion, rawText),
       postCheckSuggestion(suggestion, cv),
       postCheckBannedPhrases(suggestion),
+      postCheckNaturalPhrasing(suggestion),
       postCheckUsefulness(suggestion, job),
       checkGapLink(suggestion, gaps),
       checkGapDelivered(suggestion, gaps),
