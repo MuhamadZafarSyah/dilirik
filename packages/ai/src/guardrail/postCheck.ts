@@ -1,4 +1,5 @@
 import type { CvStructured, Gap, JobParsed, Suggestion } from "@dilirik/shared"
+import { locateQuote } from "./quoteLocator"
 
 /** Normalisasi string untuk pencocokan fakta yang toleran. */
 export function normalize(text: string): string {
@@ -63,16 +64,21 @@ export type PostCheckResult =
  * bisa ditempelkan otomatis di langkah revisi — user melihat saran yang "gagal
  * diterapkan" tanpa penjelasan.
  *
- * Toleransi hanya sampai perbedaan whitespace (PDF sering menyisipkan newline
- * di tengah kalimat). Lebih longgar dari itu = auto-replace pasti meleset.
+ * Engine v3.2a: aturan pencocokannya dipindah seluruhnya ke `quoteLocator`.
+ * Sebelumnya fungsi ini punya dua lapis pencocokan sendiri, dan aturannya
+ * berbeda dari yang dipakai enforceGapEvidence — satu kalimat CV yang sama bisa
+ * lolos di satu pemeriksaan dan gagal di pemeriksaan lain.
+ *
+ * Catatan: pemanggil sebaiknya menjalankan alignSuggestionAnchors lebih dulu,
+ * supaya jangkar yang cuma beda tanda baca diperbaiki, bukan ditolak. Yang
+ * sampai ke sini seharusnya tinggal jangkar yang memang bukan teks CV.
  */
 export function postCheckAnchor(suggestion: Suggestion, rawText: string): PostCheckResult {
   const before = suggestion.before ?? ""
   if (!before.trim()) {
     return { ok: false, reason: "Kutipan `before` kosong — saran tidak punya jangkar di CV" }
   }
-  if (rawText.includes(before)) return { ok: true }
-  if (squashWhitespace(rawText).includes(squashWhitespace(before))) return { ok: true }
+  if (locateQuote(before, rawText)) return { ok: true }
   return {
     ok: false,
     reason: `Kutipan "${before.slice(0, 60)}" tidak ada verbatim di teks CV — saran tidak bisa diterapkan otomatis`,
