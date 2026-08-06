@@ -37,7 +37,7 @@ describe("findConceptEvidence — konsep lowongan vs implementasi di CV", () => 
 
   it("mengembalikan kutipan yang memuat istilahnya, bukan kalimat lain", () => {
     const [evidence] = findConceptEvidence("OCR", ["Menulis dokumentasi API internal", TNI_BULLET])
-    expect(evidence.quote).toContain("PaddleOCR")
+    expect(evidence?.quote).toContain("PaddleOCR")
   })
 
   // Kontrol negatif — bagian terpenting dari berkas ini.
@@ -76,12 +76,15 @@ const cv: CvStructured = {
   about: "",
   skills: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
   achievements: [],
-  experiences: [{ title: "Frontend Developer", company: "PT Uji", highlights: [TNI_BULLET] }],
-  education: [{ institution: "Universitas Uji", degree: "S1 Informatika" }],
+  experiences: [{ title: "Frontend Developer", company: "PT Uji", period: "2024", highlights: [TNI_BULLET] }],
+  education: [{ institution: "Universitas Uji", degree: "S1 Informatika", period: "2020-2024" }],
+  sections: [],
 }
 
 const job: JobParsed = {
+  company: "PT Uji",
   jobTitle: "Frontend Developer",
+  level: "Mid",
   mustHaveSkills: ["React", "OCR", "Automated Testing"],
   niceToHaveSkills: [],
   requirements: [],
@@ -93,8 +96,8 @@ describe("ruleBasedScore — presentationHints", () => {
 
   it("menandai OCR sebagai kemungkinan soal penyajian", () => {
     expect(result.presentationHints.map((hint) => hint.skill)).toEqual(["OCR"])
-    expect(result.presentationHints[0].quote).toContain("PaddleOCR")
-    expect(result.presentationHints[0].severity).toBe("must")
+    expect(result.presentationHints[0]?.quote).toContain("PaddleOCR")
+    expect(result.presentationHints[0]?.severity).toBe("must")
   })
 
   it("tidak menandai automated testing — itu memang gap beneran", () => {

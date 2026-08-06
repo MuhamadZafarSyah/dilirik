@@ -54,11 +54,12 @@ function makeGap(evidenceQuote: string): Gap {
 describe("alignSuggestionAnchors", () => {
   it("menyelamatkan jangkar yang di CV terpecah jadi beberapa baris", () => {
     const original = makeSuggestion(HALO_ONE_LINE)
-    expect(postCheckAnchor(original, RAW_CV).ok).toBe(false)
+    expect(RAW_CV.includes(original.before)).toBe(false)
 
     const [aligned] = alignSuggestionAnchors([original], RAW_CV)
-    expect(postCheckAnchor(aligned, RAW_CV).ok).toBe(true)
-    expect(RAW_CV).toContain(aligned.before)
+    expect(aligned).toBeDefined()
+    expect(postCheckAnchor(aligned!, RAW_CV).ok).toBe(true)
+    expect(RAW_CV).toContain(aligned!.before)
   })
 
   it("membiarkan jangkar yang sudah persis", () => {
@@ -69,8 +70,9 @@ describe("alignSuggestionAnchors", () => {
   it("tidak menyentuh jangkar parafrase — penolakan tetap tugas postCheckAnchor", () => {
     const original = makeSuggestion("Developed the HaloMasjid dashboard")
     const [aligned] = alignSuggestionAnchors([original], RAW_CV)
-    expect(aligned.before).toBe(original.before)
-    expect(postCheckAnchor(aligned, RAW_CV).ok).toBe(false)
+    expect(aligned).toBeDefined()
+    expect(aligned!.before).toBe(original.before)
+    expect(postCheckAnchor(aligned!, RAW_CV).ok).toBe(false)
   })
 
   it("meluruskan dash non-ASCII", () => {
@@ -78,13 +80,15 @@ describe("alignSuggestionAnchors", () => {
       [makeSuggestion("Frontend Developer - PT Contoh")],
       RAW_CV,
     )
-    expect(aligned.before).toBe("Frontend Developer \u2013 PT Contoh")
+    expect(aligned).toBeDefined()
+    expect(aligned!.before).toBe("Frontend Developer \u2013 PT Contoh")
   })
 
   it("tidak memutasi saran aslinya", () => {
     const input = [makeSuggestion(HALO_ONE_LINE)]
     alignSuggestionAnchors(input, RAW_CV)
-    expect(input[0].before).toBe(HALO_ONE_LINE)
+    expect(input[0]).toBeDefined()
+    expect(input[0]!.before).toBe(HALO_ONE_LINE)
   })
 })
 
@@ -93,16 +97,17 @@ describe("konsistensi antar guardrail (regresi Bug 1)", () => {
     const [gap] = enforceGapEvidence([makeGap(HALO_ONE_LINE)], RAW_CV, [])
     const [aligned] = alignSuggestionAnchors([makeSuggestion(HALO_ONE_LINE)], RAW_CV)
 
-    // Inilah yang gagal di gold set #02: kalimat ini lolos sebagai bukti gap
-    // tapi ditolak sebagai jangkar saran.
-    expect(gap.type).toBe("presentation")
-    expect(postCheckAnchor(aligned, RAW_CV).ok).toBe(true)
-    expect(gap.evidenceQuote).toBe(aligned.before)
+    expect(gap).toBeDefined()
+    expect(aligned).toBeDefined()
+    expect(gap!.type).toBe("presentation")
+    expect(postCheckAnchor(aligned!, RAW_CV).ok).toBe(true)
+    expect(gap!.evidenceQuote).toBe(aligned!.before)
   })
 
   it("kutipan bukti selalu bisa disorot di CV asli", () => {
     const [gap] = enforceGapEvidence([makeGap(HALO_ONE_LINE)], RAW_CV, [])
-    expect(RAW_CV).toContain(gap.evidenceQuote)
+    expect(gap).toBeDefined()
+    expect(RAW_CV).toContain(gap!.evidenceQuote)
   })
 
   it("kutipan dari hints ikut diluruskan ke teks PDF, bukan dipakai mentah", () => {
@@ -119,8 +124,9 @@ describe("konsistensi antar guardrail (regresi Bug 1)", () => {
       RAW_CV,
       hints,
     )
-    expect(gap.type).toBe("presentation")
-    expect(gap.evidenceQuote).not.toBe(HALO_ONE_LINE)
-    expect(RAW_CV).toContain(gap.evidenceQuote)
+    expect(gap).toBeDefined()
+    expect(gap!.type).toBe("presentation")
+    expect(gap!.evidenceQuote).not.toBe(HALO_ONE_LINE)
+    expect(RAW_CV).toContain(gap!.evidenceQuote)
   })
 })

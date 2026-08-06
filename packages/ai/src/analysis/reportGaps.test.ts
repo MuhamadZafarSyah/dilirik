@@ -26,9 +26,10 @@ function makeGap(partial: Partial<Gap> & { skill: string }): Gap {
 describe("promoteHintedGaps", () => {
   it("menaikkan gap beneran menjadi gap penyajian saat kode sudah menemukan buktinya", () => {
     const [gap] = promoteHintedGaps([makeGap({ skill: "OCR" })], [hint])
-    expect(gap.type).toBe("presentation")
-    expect(gap.fixability).toBe("fixable_by_editing")
-    expect(gap.evidenceQuote).toBe(QUOTE)
+    expect(gap).toBeDefined()
+    expect(gap!.type).toBe("presentation")
+    expect(gap!.fixability).toBe("fixable_by_editing")
+    expect(gap!.evidenceQuote).toBe(QUOTE)
   })
 
   it("menulis ulang kalimatnya agar tidak lagi menuduh kandidat tidak punya pengalaman", () => {
@@ -38,9 +39,10 @@ describe("promoteHintedGaps", () => {
       advice: "Perlu menambahkan pengalaman atau pengetahuan tentang OCR di CV.",
     })
     const [gap] = promoteHintedGaps([input], [hint])
-    expect(gap.explanation).toContain("PaddleOCR")
-    expect(gap.advice).toContain("paddleocr")
-    expect(postCheckGapPhrases(gap).ok).toBe(true)
+    expect(gap).toBeDefined()
+    expect(gap!.explanation).toContain("PaddleOCR")
+    expect(gap!.advice).toContain("paddleocr")
+    expect(postCheckGapPhrases(gap!).ok).toBe(true)
   })
 
   it("tidak menyentuh gap yang tidak punya petunjuk", () => {
@@ -50,7 +52,7 @@ describe("promoteHintedGaps", () => {
 
   it("tidak menurunkan gap yang sudah bertipe penyajian", () => {
     const input = makeGap({ skill: "OCR", type: "presentation", evidenceQuote: QUOTE })
-    expect(promoteHintedGaps([input], [hint])[0].evidenceQuote).toBe(QUOTE)
+    expect(promoteHintedGaps([input], [hint])[0]?.evidenceQuote).toBe(QUOTE)
   })
 })
 
@@ -72,7 +74,7 @@ describe("enforceGapEvidence", () => {
       fixability: "fixable_by_editing",
       evidenceQuote: "membangun pipeline OCR skala besar di AWS Textract",
     })
-    expect(enforceGapEvidence([input], RAW_CV, [hint])[0].evidenceQuote).toBe(QUOTE)
+    expect(enforceGapEvidence([input], RAW_CV, [hint])[0]?.evidenceQuote).toBe(QUOTE)
   })
 
   it("menurunkan gap ke 'real' saat kutipannya karangan dan tidak ada bukti apa pun", () => {
@@ -83,9 +85,10 @@ describe("enforceGapEvidence", () => {
       evidenceQuote: "mengelola cluster Kubernetes produksi",
     })
     const [gap] = enforceGapEvidence([input], RAW_CV, [hint])
-    expect(gap.type).toBe("real")
-    expect(gap.fixability).toBe("requires_experience")
-    expect(gap.evidenceQuote).toBe("")
+    expect(gap).toBeDefined()
+    expect(gap!.type).toBe("real")
+    expect(gap!.fixability).toBe("requires_experience")
+    expect(gap!.evidenceQuote).toBe("")
   })
 })
 
@@ -98,9 +101,10 @@ describe("repairTemplateGaps", () => {
       searchedFor: ["Jest", "Vitest", "Playwright", "Cypress"],
     })
     const [gap] = repairTemplateGaps([input])
-    expect(gap.explanation).toContain("Jest")
-    expect(gap.explanation).toContain("syarat wajib")
-    expect(postCheckGapPhrases(gap).ok).toBe(true)
+    expect(gap).toBeDefined()
+    expect(gap!.explanation).toContain("Jest")
+    expect(gap!.explanation).toContain("syarat wajib")
+    expect(postCheckGapPhrases(gap!).ok).toBe(true)
   })
 
   it("tidak menyentuh gap yang kalimatnya sudah spesifik", () => {
@@ -121,8 +125,8 @@ describe("repairTemplateGaps", () => {
     })
     const result = repairTemplateGaps([input])
     expect(result).toHaveLength(1)
-    expect(result[0].skill).toBe("Automated Testing")
-    expect(result[0].type).toBe("real")
+    expect(result[0]?.skill).toBe("Automated Testing")
+    expect(result[0]?.type).toBe("real")
   })
 })
 
@@ -135,6 +139,6 @@ describe("urutan pipeline gap", () => {
     const implied = [{ skill: "HTML", confidence: "certain" as const, evidence: ["SvelteKit"] }]
     const after = promoteHintedGaps(dropImpliedGaps(gaps, implied), [hint])
     expect(after.map((gap) => gap.skill)).toEqual(["OCR"])
-    expect(after[0].type).toBe("presentation")
+    expect(after[0]?.type).toBe("presentation")
   })
 })

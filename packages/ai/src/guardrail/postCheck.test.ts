@@ -25,6 +25,10 @@ const suggestion = (facts: string[]): Suggestion => ({
   before: "Asisten lab",
   after: "Membimbing 30 mahasiswa dalam praktikum JavaScript dasar",
   targetRequirement: "",
+  addressesGap: "JavaScript",
+  whatChanged: ["added_metric"],
+  rationale: "Menjelaskan hasil",
+  impact: "high",
   basedOnFacts: facts,
 })
 
