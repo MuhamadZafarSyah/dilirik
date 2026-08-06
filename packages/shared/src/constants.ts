@@ -42,8 +42,16 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
  * saran revisi; repairTemplateGaps menimpa kalimat cetakan "tidak ada
  * pengalaman atau pengetahuan tentang X"; dan guardrail ketujuh memastikan saran
  * benar-benar mengantarkan kata kunci gap yang diklaimnya.
+ * v3.2.1: seluruh pertanyaan "apakah kalimat ini ada di CV" dipusatkan ke
+ * guardrail/quoteLocator. Sebelumnya enforceGapEvidence dan postCheckAnchor
+ * punya aturan pencocokan sendiri-sendiri, sehingga satu bullet CV yang sama
+ * bisa LOLOS sebagai bukti gap tapi DITOLAK sebagai jangkar saran. Jangkar kini
+ * diluruskan ke teks CV asli (alignSuggestionAnchors) alih-alih dibuang, dan
+ * kutipan yang berasal dari presentationHints ikut diverifikasi ke rawText —
+ * sebelumnya dipakai mentah, sehingga sebuah gap bisa memajang kutipan yang
+ * tidak ada di dokumen aslinya.
  */
-export const ENGINE_VERSION = "3.2.0"
+export const ENGINE_VERSION = "3.2.1"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
