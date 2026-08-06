@@ -112,6 +112,32 @@ export const SUGGESTION_IMPACTS = ["high", "medium", "low"] as const
 export type SuggestionImpact = (typeof SUGGESTION_IMPACTS)[number]
 
 /**
+ * Gap yang diklaim dijawab oleh sebuah saran (engine v3.2.3).
+ *
+ * Dulu bertipe string bebas, dan itu melahirkan lubang yang halus. Model menulis
+ * "OCR, Enkripsi Data" sebagai SATU string, lalu guardrail pengantaran
+ * memeriksanya dengan pencocokan longgar — cukup kata "OCR" yang cocok dan
+ * seluruh klaim dianggap sah. Klaim keduanya tidak pernah benar-benar diuji.
+ * Bentuk array memaksa setiap klaim berdiri sendiri dan diperiksa satu per satu.
+ *
+ * Preprocess tetap menerima string demi dua alasan nyata: analisis lama yang
+ * tersimpan di DB/Redis masih berbentuk string, dan model sesekali tetap
+ * mengirim string walaupun diminta array. Memecah pada koma aman karena sejak
+ * v3.2.2 nama skill hasil ekstraksi lowongan dijamin tidak mengandung koma —
+ * `strictJobParsedSchema` menolaknya di hulu.
+ */
+export const addressesGapSchema = z.preprocess(
+  (value) =>
+    typeof value === "string"
+      ? value
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean)
+      : value,
+  z.array(z.string().min(1)).default([]),
+)
+
+/**
  * Saran tulis ulang (v3) — schema MENGIKAT apa yang prompt cuma bisa memohon:
  * - basedOnFacts: fakta CV yang dirujuk (guardrail kejujuran).
  * - targetRequirement: requirement lowongan yang dijawab (guardrail relevansi).
@@ -128,7 +154,7 @@ export const suggestionSchema = z.object({
   after: z.string(),
   basedOnFacts: z.array(z.string()).min(1),
   targetRequirement: z.string().default(""),
-  addressesGap: z.string().default(""),
+  addressesGap: addressesGapSchema,
   whatChanged: z.array(z.enum(SUGGESTION_CHANGE_KINDS)).default([]),
   rationale: z.string().default(""),
   impact: z.enum(SUGGESTION_IMPACTS).default("medium"),
