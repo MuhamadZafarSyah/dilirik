@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { REPORT_LANGUAGES } from "../constants"
 
 /** Skor semantic dari AI (digabung dengan rule-based). */
 export const semanticScoreSchema = z.object({
@@ -12,6 +13,23 @@ export const semanticScoreSchema = z.object({
 /** Mode strategi saran — dipilih DETERMINISTIK di kode dari coverage must-have (bukan oleh LLM). */
 export const SUGGESTION_MODES = ["optimize", "reframe", "honest_pivot"] as const
 export type SuggestionMode = (typeof SUGGESTION_MODES)[number]
+
+/**
+ * Bahasa LAPORAN — sengaja dipisah dari bahasa CV (engine v3.3).
+ *
+ * Sebelumnya keduanya satu variabel: `analyze({ language: cv.language })`. Untuk
+ * pengguna Indonesia yang CV-nya berbahasa Inggris (praktis semua pelamar
+ * teknologi), akibatnya seluruh penjelasan gap, saran, dan careerNote ikut
+ * berbahasa Inggris — padahal antarmukanya berbahasa Indonesia dan yang membaca
+ * penjelasan itu manusia, bukan ATS.
+ *
+ * Yang TIDAK ikut berubah: `before`, `after`, `basedOnFacts`, dan
+ * `evidenceQuote`. Empat field itu adalah kutipan verbatim atau teks yang akan
+ * ditempelkan kembali ke CV, jadi menerjemahkannya akan merusak dokumen dan
+ * membuat jangkar revisi gagal dicocokkan.
+ */
+export const reportLanguageSchema = z.enum(REPORT_LANGUAGES)
+export type ReportLanguage = z.infer<typeof reportLanguageSchema>
 
 /**
  * Gap — taksonomi penuh (engine v3.2):
@@ -44,6 +62,9 @@ export const gapSchema = z.object({
    * output isi-blanko: kalimat template seperti "tidak ada pengalaman tentang X"
    * bisa dikarang tanpa membaca CV, tapi kutipan verbatim tidak — dan kutipan
    * palsu bisa dideteksi kode.
+   *
+   * Tetap dalam bahasa CV walaupun laporannya berbahasa lain — ini kutipan
+   * dokumen, bukan kalimat penjelasan.
    */
   evidenceQuote: z.string().default(""),
   /**
@@ -147,6 +168,11 @@ export const addressesGapSchema = z.preprocess(
  *
  * Catatan kompatibilitas: field baru memakai default supaya analisis lama yang
  * tersimpan di DB/Redis tetap bisa di-parse.
+ *
+ * Catatan bahasa: `before`, `after`, dan `basedOnFacts` SELALU mengikuti bahasa
+ * CV, bukan bahasa laporan. Ketiganya kutipan atau calon isi dokumen —
+ * menerjemahkannya akan merusak CV pengguna sekaligus membuat jangkar revisi
+ * gagal dicocokkan ke teks asli.
  */
 export const suggestionSchema = z.object({
   section: z.enum(SUGGESTION_SECTIONS).catch("other"),
@@ -189,7 +215,13 @@ export type AnalysisResult = {
   suggestions: Suggestion[]
   rejectedSuggestions: Array<{ suggestion: Suggestion; reason: string }>
   careerNote: string
+  /** Bahasa CV — menentukan bahasa `before`/`after`/kutipan. */
   language: string
+  /**
+   * Bahasa penjelasan yang dibaca pengguna.
+   * OPSIONAL karena analisis lama yang tersimpan tidak punya field ini.
+   */
+  reportLanguage?: ReportLanguage
   engineVersion: string
   /** Versi prompt yang menghasilkan laporan ini — bahan utama evaluasi A/B. */
   promptVersion: string
@@ -202,7 +234,14 @@ export type AnalysisResult = {
   keywordGaps?: KeywordGap[]
 }
 
+/**
+ * Body request analisis.
+ *
+ * `reportLanguage` opsional: klien yang belum dikirimi pembaruan tidak pecah,
+ * dan API akan jatuh ke header `Accept-Language` lalu ke default "id".
+ */
 export const runAnalysisSchema = z.object({
   cvId: z.string().min(1),
   jobPostingId: z.string().min(1),
+  reportLanguage: reportLanguageSchema.optional(),
 })
