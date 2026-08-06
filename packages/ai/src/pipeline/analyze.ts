@@ -69,19 +69,30 @@ function buildKeywordGaps(
  * rawText dipakai agar `before` pada saran berupa kutipan verbatim teks CV
  * (bisa diganti otomatis di step revisi).
  * Fungsi ini murni terhadap DB — caching & kuota diurus layer API.
+ *
+ * Engine v3.3.0: `language` dan `reportLanguage` dipisah. Yang pertama adalah
+ * FAKTA tentang dokumen (menentukan bahasa setiap kutipan verbatim), yang kedua
+ * adalah PILIHAN pengguna (menentukan bahasa penjelasan yang dia baca).
+ * Mencampurnya membuat pelamar Indonesia yang menulis CV berbahasa Inggris
+ * untuk ATS ikut menerima laporan berbahasa Inggris.
  */
 export async function analyze(args: {
   cv: CvStructured
   job: JobParsed
   rawText: string
   language: string
+  /** Default ke bahasa CV supaya pemanggil lama tidak berubah perilakunya. */
+  reportLanguage?: string
 }): Promise<AnalysisResult> {
   const { cv, job, rawText, language } = args
+  const reportLanguage = args.reportLanguage ?? language
 
   // 1) Rule-based: deterministik, selalu tersedia (sanity check + fallback)
   const rule = ruleBasedScore(cv, job)
 
   // 2) Semantic: bila gagal validasi → fallback ke rule-based (PRD §12 Reliabilitas)
+  //    Sengaja tetap memakai bahasa CV: keluarannya cuma angka, tidak pernah
+  //    dibaca pengguna, jadi bahasa laporan tidak relevan di sini.
   let semantic: number | null = null
   try {
     const s = await semanticScore(cv, job, language)
@@ -100,6 +111,7 @@ export async function analyze(args: {
     job,
     rawText,
     language,
+    reportLanguage,
     mode,
     rule: {
       matchedMust: rule.matchedMust,
@@ -124,6 +136,7 @@ export async function analyze(args: {
     careerNote: report.careerNote,
     keywordGaps: buildKeywordGaps(rule.impliedMust, rule.impliedNice),
     language,
+    reportLanguage,
     engineVersion: ENGINE_VERSION,
     promptVersion: PROMPT_VERSION,
   }
