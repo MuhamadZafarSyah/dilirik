@@ -157,70 +157,153 @@ export function findBannedPhrase(text: string): string | null {
   return null
 }
 
-/** Buang kalimat-kalimat yang memuat frasa terlarang. */
-export function stripBannedSentences(text: string): string {
-  if (!text.trim()) return ""
+/**
+ * Pisahkan teks menjadi kalimat yang bersih dan kalimat yang dibuang
+ * (engine v3.3.2).
+ *
+ * Versi v3.3.1 hanya mengembalikan teks bersihnya. Itu membuat penyaringan
+ * careerNote sepenuhnya senyap: kalau seluruh kalimatnya terbuang, pengguna
+ * menerima catatan kosong tanpa penjelasan dan kita tidak punya cara apa pun
+ * untuk mengetahui seberapa sering hal itu terjadi. Guardrail yang tidak bisa
+ * diukur tidak bisa diperbaiki — kalimat yang dibuang justru sinyal paling
+ * berharga untuk menilai apakah prompt careerNote perlu diperketat.
+ */
+export function partitionBannedSentences(text: string): {
+  kept: string
+  dropped: string[]
+} {
+  if (!text.trim()) return { kept: "", dropped: [] }
   const sentences = text
     .split(/(?<=[.!?])\s+|\n+/)
     .map((s) => s.trim())
     .filter(Boolean)
 
-  const clean = sentences.filter((sentence) => !findBannedPhrase(sentence))
-  return clean.join(" ").trim()
+  const kept: string[] = []
+  const dropped: string[] = []
+  for (const sentence of sentences) {
+    if (findBannedPhrase(sentence)) dropped.push(sentence)
+    else kept.push(sentence)
+  }
+  return { kept: kept.join(" ").trim(), dropped }
 }
 
+/** Buang kalimat-kalimat yang memuat frasa terlarang. */
+export function stripBannedSentences(text: string): string {
+  return partitionBannedSentences(text).kept
+}
+
+/**
+ * Kata yang terlalu umum untuk dipakai sebagai JANGKAR HARFIAH bukti.
+ *
+ * Dipakai `distinctiveTokens`, yang dipakai `findConceptEvidence` untuk mencari
+ * istilah requirement di dalam teks CV. Di konteks itu setiap kata yang lolos
+ * daftar ini berubah jadi klaim: "CV memuat kata ini, berarti requirement-nya
+ * terbukti". Karena itu daftarnya harus MURAH HATI — satu kata umum yang lolos
+ * langsung melahirkan bukti palsu.
+ *
+ * Contoh yang menjadi alasan daftar ini dipulihkan di v3.3.2: tanpa "software",
+ * requirement apa pun yang memuat kata itu akan menemukan "bukti" di headline
+ * CV yang berbunyi "Software Engineer" — gap beneran naik jadi gap penyajian,
+ * dan pengguna disuruh "cukup menamai" sesuatu yang tidak pernah dikerjakan.
+ * Itu persis kebalikan dari tujuan peta konsep.
+ */
 export const GENERIC_WORDS = new Set([
   "data",
   "system",
+  "systems",
   "sistem",
-  "management",
-  "manajemen",
   "design",
   "desain",
+  "web",
+  "api",
+  "apis",
+  "tool",
+  "tools",
+  "user",
+  "users",
+  "code",
+  "app",
+  "apps",
+  "team",
+  "tim",
+  "cloud",
+  "service",
+  "services",
+  "software",
   "development",
+  "developer",
   "pengembangan",
   "pembuatan",
   "application",
   "aplikasi",
+  "management",
+  "manajemen",
+  "engineering",
+  "rekayasa",
   "testing",
   "pengujian",
   "automated",
   "otomatis",
   "security",
   "keamanan",
-  "engineering",
-  "rekayasa",
+  "modern",
+  "basic",
+  "dasar",
+  "pengalaman",
+  "kemampuan",
+  "menguasai",
+  "terbiasa",
+  "mampu",
+  "pernah",
+  "and",
+  "the",
+  "for",
+  "with",
   "dan",
-  "dengan",
   "atau",
-  "untuk",
+  "serta",
   "yang",
+])
+
+/**
+ * Stop-word untuk verifikasi klaim `added_scope` — SUPERSET dari GENERIC_WORDS.
+ *
+ * Dua daftar, bukan satu, dan itu disengaja. v3.3.1 memakai satu daftar bersama
+ * atas nama DRY, padahal kedua pemakainya punya kebutuhan BERLAWANAN:
+ *
+ * - `distinctiveTokens` (bukti): kata yang lolos jadi klaim bukti. Daftar yang
+ *   terlalu pendek melahirkan positif palsu.
+ * - `postCheckUsefulness` (cakupan): kata yang lolos jadi izin bagi model untuk
+ *   mengaku menambah cakupan. Daftar yang terlalu pendek meloloskan saran kosong.
+ *
+ * Menyatukannya memaksa satu daftar melayani dua arah kesalahan sekaligus, dan
+ * setiap penyetelan untuk satu sisi diam-diam merusak sisi lain. DRY berlaku
+ * untuk PENGETAHUAN yang sama, bukan daftar yang kebetulan mirip — keduanya
+ * punya alasan berubah yang berbeda. Relasi supersetnya tetap dijaga di kode,
+ * jadi tidak ada dua salinan yang bisa pelan-pelan berbeda.
+ */
+const SCOPE_STOP_WORDS = new Set<string>([
+  ...GENERIC_WORDS,
+  "dengan",
+  "untuk",
+  "pada",
+  "dalam",
+  "dari",
+  "oleh",
   "ini",
   "itu",
-  "pada",
   "sebagai",
   "adalah",
-  "di",
-  "ke",
-  "dari",
   "secara",
-  "dalam",
-  "tim",
   "akun",
   "profesional",
   "kerja",
+  "work",
   "hasil",
   "proses",
   "banyak",
   "berbagai",
-  "serta",
   "lewat",
-  "and",
-  "with",
-  "for",
-  "the",
-  "team",
-  "work",
 ])
 
 /** Ekstrak token unik berkarakter khas (panjang >= 3, bukan kata generik) dari teks. */
@@ -349,6 +432,14 @@ export function postCheckGapPhrases(gap: Gap): PostCheckResult {
   return { ok: true }
 }
 
+/** Angka utuh yang muncul di sebuah teks, mis. ["100", "21"]. */
+function numbersIn(text: string): string[] {
+  return text.match(/\d+(?:[.,]\d+)?/g) ?? []
+}
+
+/** Minimum kata bermakna baru agar klaim penambahan cakupan bisa dipercaya. */
+const MIN_SCOPE_TOKENS = 2
+
 /**
  * Guardrail KEBERGUNAAN (engine v3).
  *
@@ -358,6 +449,13 @@ export function postCheckGapPhrases(gap: Gap): PostCheckResult {
  * adalah KLAIM saran itu sendiri (`whatChanged`), yang bisa diverifikasi kode:
  * mengaku menambah angka → harus ada angka baru, mengaku menambah tools → harus
  * ada istilah lowongan yang benar-benar bertambah.
+ *
+ * Engine v3.3.2: "angka baru" tidak lagi diukur dengan MENGHITUNG digit.
+ * Perbaikan yang paling sering ditulis model adalah mempertajam angka yang sudah
+ * ada — "melayani 30 klien" jadi "melayani 12 klien korporat" — dan jumlah
+ * digitnya tidak berubah, sehingga klaim yang benar-benar sah ikut ditolak.
+ * Sebaliknya "3" jadi "5" juga tidak terbaca sebagai perubahan. Yang dibandingkan
+ * sekarang angkanya sendiri, bukan banyaknya.
  */
 export function postCheckUsefulness(
   suggestion: Suggestion,
@@ -399,10 +497,12 @@ export function postCheckUsefulness(
   const beforeTokens = new Set(before.split(" "))
   const afterTokens = new Set(after.split(" "))
   const addedTokens = [...afterTokens].filter((tok) => tok.length >= 3 && !beforeTokens.has(tok))
-  const digitsBefore = (suggestion.before.match(/\d/g) ?? []).length
-  const digitsAfter = (suggestion.after.match(/\d/g) ?? []).length
+  const numbersBefore = numbersIn(suggestion.before)
+  const hasNewNumber = numbersIn(suggestion.after).some(
+    (value) => !numbersBefore.includes(value),
+  )
 
-  if (changes.includes("added_metric") && digitsAfter <= digitsBefore) {
+  if (changes.includes("added_metric") && !hasNewNumber) {
     return {
       ok: false,
       reason: "Mengaku menambah angka/metrik, tapi tidak ada angka baru di `after`",
@@ -414,9 +514,9 @@ export function postCheckUsefulness(
       reason: "Mengaku menambah tools yang diminta lowongan, tapi tidak ada istilah lowongan yang bertambah",
     }
   }
-  if (changes.includes("added_scope") && digitsAfter <= digitsBefore) {
-    const meaningfulNewTokens = addedTokens.filter((tok) => !GENERIC_WORDS.has(tok))
-    if (meaningfulNewTokens.length < 2) {
+  if (changes.includes("added_scope") && !hasNewNumber) {
+    const meaningfulNewTokens = addedTokens.filter((tok) => !SCOPE_STOP_WORDS.has(tok))
+    if (meaningfulNewTokens.length < MIN_SCOPE_TOKENS) {
       return {
         ok: false,
         reason: "Mengaku menambah cakupan kerja (added_scope), tetapi tidak ada penambahan detail atau informasi baru yang signifikan",
