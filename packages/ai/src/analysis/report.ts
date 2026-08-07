@@ -10,6 +10,7 @@ import { generateStructured } from "../generateStructured"
 import {
   dedupeSuggestions,
   normalize,
+  partitionBannedSentences,
   postCheckAnchor,
   postCheckBannedPhrases,
   postCheckGapPhrases,
@@ -17,7 +18,6 @@ import {
   postCheckSuggestion,
   postCheckUsefulness,
   squashWhitespace,
-  stripBannedSentences,
   type PostCheckResult,
 } from "../guardrail/postCheck"
 import { alignQuote } from "../guardrail/quoteLocator"
@@ -30,6 +30,14 @@ export type ReportOutcome = {
   suggestions: Suggestion[]
   rejected: Array<{ suggestion: Suggestion; reason: string }>
   careerNote: string
+  /**
+   * Kalimat careerNote yang dibuang karena memuat frasa klise (engine v3.3.2).
+   *
+   * Sejajar dengan `rejected` untuk saran: apa pun yang disaring guardrail harus
+   * bisa dihitung. Tanpa ini, careerNote yang terhapus seluruhnya tidak bisa
+   * dibedakan dari model yang memang memilih diam.
+   */
+  careerNoteDropped: string[]
 }
 
 /** Bentuk minimal yang dibutuhkan dari hasil rule-based (dijaga longgar agar mudah diuji). */
@@ -468,6 +476,11 @@ export function alignSuggestionAnchors(
  * pemeriksaan itu hanya menyentuh `after` sebuah saran, sehingga careerNote jadi
  * satu-satunya celah yang tersisa — dan memang dari sanalah "strong background"
  * masih sampai ke pengguna.
+ *
+ * Engine v3.3.2: kalimat careerNote yang dibuang ikut dilaporkan lewat
+ * `careerNoteDropped`, sejajar dengan `rejected` untuk saran. Penyaringan yang
+ * tidak meninggalkan jejak tidak bisa dievaluasi, dan careerNote kosong tanpa
+ * keterangan tidak bisa dibedakan dari model yang memang memilih diam.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
@@ -584,10 +597,13 @@ export async function generateAnalysisReport(args: {
     })
   }
 
+  const careerNote = partitionBannedSentences(result.careerNote.trim())
+
   return {
     gaps,
     suggestions: kept.slice(0, limit),
     rejected,
-    careerNote: stripBannedSentences(result.careerNote.trim()),
+    careerNote: careerNote.kept,
+    careerNoteDropped: careerNote.dropped,
   }
 }
