@@ -105,6 +105,10 @@ const AFTER_RULES = `LANGKAH WAJIB SEBELUM MENULIS SETIAP \`after\`:
  * mematuhinya — "...via PaddleOCR (OCR)" — yang lolos pemeriksaan tapi
  * menghasilkan kalimat CV yang canggung. Setiap guardrail baru melahirkan jalan
  * pintas baru; yang ini menutupnya di prompt sekaligus di kode.
+ *
+ * v3.3.1: klaim "added_scope" kini ikut diverifikasi kode. Sebelumnya ia
+ * satu-satunya nilai whatChanged yang lolos tanpa diperiksa, sehingga jadi
+ * label teraman untuk perubahan apa pun — termasuk yang tidak menambah apa-apa.
  */
 const SUGGESTION_RULES = `ATURAN SUGGESTIONS:
 - before = KUTIPAN VERBATIM dari "Teks CV asli" — persis karakter demi karakter (tanda baca & kapitalisasi). Sistem MENOLAK otomatis saran yang \`before\`-nya tidak ditemukan verbatim.
@@ -113,7 +117,7 @@ const SUGGESTION_RULES = `ATURAN SUGGESTIONS:
 - addressesGap = ARRAY nama gap. Setiap elemen harus SAMA PERSIS dengan \`skill\` salah satu gap yang kamu tulis sendiri di atas. SATU ELEMEN SATU GAP — dilarang menggabungkan dua nama dalam satu teks dipisah koma seperti "OCR, Enkripsi Data"; tulis ["OCR", "Enkripsi Data"].
 - Kata kunci SETIAP elemen addressesGap WAJIB benar-benar muncul di \`after\`. Sistem memeriksanya satu per satu: SATU elemen yang tidak terantar membatalkan SELURUH saran. Kalau kamu hanya yakin bisa mengantar satu gap, cantumkan satu saja — daftar yang panjang tidak menambah nilai, hanya menambah risiko.
 - Cara mengantarkannya harus NATURAL, menyatu dengan kalimatnya. DILARANG menempelkan istilah dalam kurung sebagai satu-satunya perubahan, mis. mengubah "document capture via PaddleOCR" jadi "document capture via PaddleOCR (OCR)". Yang benar: tulis ulang jadi "OCR-based document capture via PaddleOCR". Sistem menolak saran yang SELURUH perubahannya cuma sisipan dalam kurung. Kurung yang memuat ANGKA tetap boleh (mis. "(3 posting/minggu)") — itu menambah informasi, bukan menempelkan kata kunci.
-- whatChanged = klaim perubahan yang bisa DIBUKTIKAN dari teksmu sendiri. Sistem memverifikasi: "added_metric" wajib memunculkan angka baru di \`after\`; "added_tool" wajib memunculkan istilah lowongan yang benar-benar bertambah. Klaim palsu = saran DIBUANG.
+- whatChanged = klaim perubahan yang bisa DIBUKTIKAN dari teksmu sendiri. Sistem memverifikasi: "added_metric" wajib memunculkan angka baru di \`after\`; "added_tool" wajib memunculkan istilah lowongan yang benar-benar bertambah; "added_scope" wajib menambah informasi yang benar-benar baru — angka baru, atau minimal dua kata bermakna yang belum ada di \`before\`. Menambah kata sambung dan istilah umum saja TIDAK dihitung. Klaim palsu = saran DIBUANG.
 - rationale = 1 kalimat: kenapa perubahan ini menaikkan peluang untuk lowongan INI.
 - impact = "high" hanya untuk saran yang menjawab requirement WAJIB yang sedang lemah.
 - DILARANG kata sifat memuji diri: "highly skilled", "expert in", "strong background", "showcasing expertise", "pekerja keras", "sangat ahli", dsb — divalidasi otomatis dan langsung ditolak. Termasuk kata pengisi seperti "seamless", "cutting-edge", "state-of-the-art".
@@ -121,7 +125,18 @@ const SUGGESTION_RULES = `ATURAN SUGGESTIONS:
 - Dua saran DILARANG memakai potongan \`before\` yang sama atau saling tumpang tindih.
 - Kualitas > kuantitas: suggestions [] adalah output valid jika tidak ada saran yang jujur DAN relevan.`
 
-const CAREER_NOTE_RULES = `ATURAN CAREERNOTE: 1-3 kalimat, nada teman yang peduli dan jujur. Wajib terisi di mode reframe/honest_pivot (jelaskan posisi kandidat terhadap lowongan ini apa adanya). Boleh string kosong "" di mode optimize jika tidak ada catatan penting.`
+/**
+ * v3.3.1: larangan frasa klise akhirnya berlaku di careerNote juga.
+ *
+ * Selama ini larangan itu cuma tertulis di ATURAN SUGGESTIONS, dan
+ * pemeriksaannya di kode pun hanya menyentuh `after`. Hasilnya persis seperti
+ * yang bisa ditebak dari setiap guardrail bercelah: model patuh di tempat yang
+ * diawasi, lalu menulis "strong background" di careerNote — satu-satunya teks
+ * bebas yang tidak pernah diperiksa siapa pun.
+ */
+const CAREER_NOTE_RULES = `ATURAN CAREERNOTE: 1-3 kalimat, nada teman yang peduli dan jujur. Wajib terisi di mode reframe/honest_pivot (jelaskan posisi kandidat terhadap lowongan ini apa adanya). Boleh string kosong "" di mode optimize jika tidak ada catatan penting.
+- Larangan kata sifat memuji diri BERLAKU DI SINI JUGA: "strong background", "highly skilled", "proven track record", "passionate about", "pekerja keras", "sangat ahli", dan sejenisnya. Sistem MENGHAPUS kalimat yang memuatnya, jadi kalimat terbaikmu bisa hilang utuh gara-gara satu frasa.
+- Ganti pujian dengan fakta yang bisa dicek. Bukan "kandidat punya strong background di frontend", tapi "kandidat sudah membangun 170+ komponen di dua platform produksi".`
 
 /**
  * Few-shot — contoh benar + mode gagal yang paling sering muncul.
@@ -170,7 +185,7 @@ SALAH: menempelkan istilah lowongan yang TIDAK ADA buktinya di CV. Ini berbohong
 
 ### CONTOH BURUK 3 — MEMUJI DIRI
 "after": "Highly skilled content creator dengan strong background di digital marketing"
-SALAH: kata sifat memuji diri tidak bisa diverifikasi, tidak dibaca ATS, dan otomatis DITOLAK sistem.
+SALAH: kata sifat memuji diri tidak bisa diverifikasi, tidak dibaca ATS, dan otomatis DITOLAK sistem. Berlaku sama untuk careerNote — kalimatnya akan dihapus.
 
 ### CONTOH BURUK 4 — GAP YANG SEBENARNYA SUDAH TERCAKUP
 CV: "Membangun frontend platform back-office dengan Nuxt 3, Vue 3, dan TypeScript (13 modul, 170+ komponen)"
@@ -192,7 +207,13 @@ SALAH BENTUK: itu SATU elemen berisi dua nama gap. Sistem memperlakukannya sebag
 "addressesGap": ["OCR"]
 "before": "... hardware and camera document capture via PaddleOCR ..."
 "after": "... hardware and camera document capture via PaddleOCR (OCR) ..."
-SALAH: kata "OCR" memang jadi muncul, tapi kalimatnya tidak jadi lebih baik — terbaca seperti menyogok filter ATS, dan itu keyword stuffing yang dilarang aturan #4. Yang benar: "... hardware and camera OCR document capture via PaddleOCR ...". Sistem menolak saran yang seluruh perubahannya cuma sisipan dalam kurung.`
+SALAH: kata "OCR" memang jadi muncul, tapi kalimatnya tidak jadi lebih baik — terbaca seperti menyogok filter ATS, dan itu keyword stuffing yang dilarang aturan #4. Yang benar: "... hardware and camera OCR document capture via PaddleOCR ...". Sistem menolak saran yang seluruh perubahannya cuma sisipan dalam kurung.
+
+### CONTOH BURUK 8 — CAKUPAN PALSU
+"before": "Mengelola akun Instagram organisasi kampus"
+"after": "Mengelola akun dan sistem Instagram organisasi kampus dengan tim"
+"whatChanged": ["added_scope"]
+SALAH: yang bertambah cuma "dan", "sistem", "dengan", "tim" — kata umum yang tidak memberi tahu recruiter apa pun yang baru. Klaim memperluas cakupan wajib membawa fakta konkret: berapa banyak, untuk siapa, seberapa sering, atau dengan alat apa. Sistem menolaknya otomatis.`
 
 /**
  * Rakit system prompt laporan.
