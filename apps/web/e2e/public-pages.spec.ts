@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test"
 /** E2E halaman publik (M4): landing, pricing, login, register, legal. */
 test("landing menampilkan tagline dan CTA daftar", async ({ page }) => {
   await page.goto("/")
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("dilirik")
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/dilirik/i)
   await expect(page.getByRole("link", { name: /daftar gratis/i }).first()).toBeVisible()
 })
 

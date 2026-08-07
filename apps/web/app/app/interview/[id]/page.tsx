@@ -133,7 +133,7 @@ export default function InterviewResultPage({ params }: { params: Promise<{ id: 
       {/* Unfinished Session State */}
       {(session.status === "CREATED" || session.status === "LIVE") && (
         <Card tape="yellow" pin className="p-6 text-center space-y-4">
-          <div className="inline-block bg-yellow text-ink p-3 rounded-full animate-bounce">
+          <div className="inline-block bg-yellow text-ink p-3 rounded-full ">
             <FiMic className="h-8 w-8" />
           </div>
           <h2 className="hand text-3xl font-bold">

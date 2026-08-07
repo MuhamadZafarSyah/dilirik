@@ -20,12 +20,155 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, { id: string; 
 }
 
 /**
+ * Bahasa yang didukung untuk LAPORAN analisis.
+ *
+ * Sengaja daftar tertutup dan sengaja sama dengan bahasa antarmuka di
+ * apps/web/lib/i18n.ts. Bahasa CV tidak dibatasi daftar ini — CV boleh berbahasa
+ * apa saja; yang dibatasi hanyalah bahasa penjelasan yang kita tulis sendiri.
+ */
+export const REPORT_LANGUAGES = ["id", "en"] as const
+
+/**
+ * Default bahasa laporan.
+ *
+ * "id", bukan bahasa CV dan bukan bahasa browser. Mayoritas pengguna Dilirik
+ * orang Indonesia yang melamar dengan CV berbahasa Inggris; menjadikan bahasa CV
+ * sebagai default persis itulah yang melahirkan laporan berbahasa Inggris untuk
+ * pengguna yang antarmukanya berbahasa Indonesia.
+ */
+export const DEFAULT_REPORT_LANGUAGE: (typeof REPORT_LANGUAGES)[number] = "id"
+
+/**
  * Versi mesin analisis — naikkan saat prompt/pipeline berubah agar cache invalid.
  * v2.0.0: gaps+suggestions+careerNote digabung jadi SATU panggilan LLM (satu
  * rantai pemikiran), mode adaptif (optimize/reframe/honest_pivot) dari coverage
  * must-have, taksonomi gap, dan guardrail relevansi/anti-kosmetik.
+ * v3.0.0: pencocokan skill berbasis token + peta alias (bukan substring dua
+ * arah), schema saran v3 (addressesGap/whatChanged/rationale/impact), guardrail
+ * 5 titik (anchor verbatim, kejujuran, frasa terlarang, kebergunaan, dedup),
+ * repair loop pada output terstruktur, dan refund kuota saat pipeline gagal.
+ * v3.1.0: graf implikasi skill (Next.js ⟹ React ⟹ JavaScript ⟹ HTML) dengan
+ * confidence certain/likely + kedalaman maksimum 4, guardrail keenam
+ * dropImpliedGaps yang membuang gap untuk skill yang jelas sudah dikuasai,
+ * keluaran baru keywordGaps ("kata kunci hilang", bukan "gap beneran"), dan
+ * pemecahan alias yang lebih ketat (svelte ≠ sveltekit, .net ≠ c#, git ≠ github).
+ * v3.2.0: peta konsep ⟹ implementasi (OCR ← PaddleOCR, data visualization ←
+ * ApexCharts, enkripsi ← AES-256-GCM) sebagai bahan gap "presentation";
+ * instruksi diagnosis dipindahkan dari analysis/gaps.ts yang ternyata KODE MATI
+ * ke analysis/report.ts yang benar-benar dieksekusi; gap presentation wajib
+ * menyertakan evidenceQuote verbatim yang diverifikasi kode; promoteHintedGaps
+ * menaikkan real → presentation secara deterministik sehingga bisa melahirkan
+ * saran revisi; repairTemplateGaps menimpa kalimat cetakan "tidak ada
+ * pengalaman atau pengetahuan tentang X"; dan guardrail ketujuh memastikan saran
+ * benar-benar mengantarkan kata kunci gap yang diklaimnya.
+ * v3.2.1: seluruh pertanyaan "apakah kalimat ini ada di CV" dipusatkan ke
+ * guardrail/quoteLocator. Sebelumnya enforceGapEvidence dan postCheckAnchor
+ * punya aturan pencocokan sendiri-sendiri, sehingga satu bullet CV yang sama
+ * bisa LOLOS sebagai bukti gap tapi DITOLAK sebagai jangkar saran. Jangkar kini
+ * diluruskan ke teks CV asli (alignSuggestionAnchors) alih-alih dibuang, dan
+ * kutipan yang berasal dari presentationHints ikut diverifikasi ke rawText —
+ * sebelumnya dipakai mentah, sehingga sebuah gap bisa memajang kutipan yang
+ * tidak ada di dokumen aslinya.
+ * v3.2.2: ekstraksi lowongan tidak lagi boleh membuang requirement. parseJob
+ * dulu hanya dibekali satu kalimat instruksi, sehingga baris majemuk seperti
+ * "terbiasa dengan automated testing (Jest, Vitest)" menyusut jadi nama alatnya
+ * saja dan konsepnya lenyap. Yang hilang bukan sekadar satu gap: mustHaveSkills
+ * adalah PENYEBUT skor kecocokan, jadi requirement yang lolos dari ekstraksi
+ * menaikkan matchScore diam-diam sekaligus menghapus gap-nya dari laporan.
+ * Sekarang cara meminta dan syarat penerimaannya tinggal berdampingan di
+ * prompts/jobExtraction.ts, hasil parse disaring strictJobParsedSchema (satu
+ * entri satu skill, tanpa kembar, bukan kalimat utuh), dan pesan penolakannya
+ * ditulis sebagai instruksi sehingga repair loop generateStructured yang sudah
+ * ada langsung memakainya tanpa mesin tambahan. parseJob juga turun ke
+ * temperature 0 karena tugasnya menyalin, bukan mengarang.
+ * v3.2.3: dua celah guardrail yang sama-sama lolos karena diukur dengan cara
+ * yang salah. Pertama, addressesGap dulu string bebas: model menulis "OCR,
+ * Enkripsi Data" sebagai satu teks, pemeriksa pengantaran mencarinya dengan
+ * pencocokan longgar, menemukan kata "OCR" di dalamnya, lalu meloloskan seluruh
+ * saran — klaim keduanya tidak pernah diuji. Sekarang bentuknya array dan
+ * SETIAP elemen diperiksa sendiri; satu elemen yang tidak terantar membatalkan
+ * seluruh saran, karena saran setengah benar lebih berbahaya daripada tidak ada
+ * saran (pengguna menerapkannya utuh). Kedua, kutipan bukti dipilih berdasarkan
+ * URUTAN, bukan kualitas: gap "Design System" memajang "Shadcn/ui" — sembilan
+ * karakter, lolos ambang delapan dengan selisih satu — padahal ada kalimat
+ * pengalaman "maintain 100+ reusable components" yang jauh lebih membuktikan.
+ * Kekuatan kutipan kini diukur dalam jumlah kata, semua kandidat diadu, dan
+ * petunjuk hasil kode menang saat seri. Teks prompt laporan juga dipindahkan ke
+ * analysis/reportPrompt.ts supaya analysis/report.ts murni berisi pemeriksaan.
+ * v3.3.0: bahasa laporan dilepas dari bahasa CV. Sebelumnya keduanya satu
+ * variabel (analyze({ language: cv.language })), sehingga pengguna Indonesia
+ * yang CV-nya berbahasa Inggris — praktis semua pelamar teknologi — menerima
+ * seluruh penjelasan gap, saran, dan careerNote dalam bahasa Inggris di
+ * antarmuka berbahasa Indonesia. Yang membaca penjelasan itu manusia, bukan ATS.
+ * Sekarang reportLanguage berdiri sendiri (body request → header Accept-Language
+ * → default "id") dan ikut masuk cacheKey, sementara before/after/basedOnFacts/
+ * evidenceQuote tetap mengikuti bahasa CV karena keempatnya kutipan atau calon
+ * isi dokumen. Ditambah guardrail kesembilan postCheckNaturalPhrasing: model
+ * gemar "mengantarkan" kata kunci gap dengan menempelkan istilah dalam kurung
+ * — mengubah "...via PaddleOCR" jadi "...via PaddleOCR (OCR)" — yang secara
+ * teknis lolos pemeriksaan pengantaran v3.2.3 tapi menghasilkan kalimat CV yang
+ * canggung dan berbau keyword stuffing, persis yang dilarang aturan #4.
+ * v3.3.1: dua sisa celah yang sama-sama lahir dari pengawasan yang tidak merata.
+ * Pertama, "added_scope" adalah satu-satunya nilai whatChanged yang tidak pernah
+ * diverifikasi kode — "added_metric" wajib memunculkan angka baru, "added_tool"
+ * wajib memunculkan istilah lowongan, sementara "added_scope" cukup diklaim.
+ * Guardrail yang punya satu pintu belakang bukan guardrail: label itu jadi
+ * tempat teraman bagi model untuk menamai perubahan apa pun, termasuk yang cuma
+ * menambah kata sambung. Sekarang klaim itu wajib membawa angka baru atau
+ * minimal dua kata bermakna yang belum ada di `before`. Kedua, pemeriksaan frasa
+ * klise selama ini hanya menyentuh `after` sebuah saran, sehingga careerNote —
+ * satu-satunya teks bebas yang langsung dibaca pengguna — jadi jalan keluar
+ * terakhir bagi "strong background". Sekarang careerNote disaring per KALIMAT,
+ * bukan ditolak seluruhnya, supaya bagian yang jujur tetap sampai ke pengguna.
+ * v3.3.2: memperbaiki akibat samping v3.3.1. Demi DRY, daftar kata umum dipakai
+ * bersama oleh dua pemeriksaan yang kebutuhannya BERLAWANAN: distinctiveTokens
+ * (dipakai findConceptEvidence) memakainya untuk memutuskan kata mana yang boleh
+ * jadi JANGKAR BUKTI, sedangkan postCheckUsefulness memakainya untuk memutuskan
+ * kata mana yang TIDAK dihitung sebagai penambahan cakupan. Daftar hasil
+ * penggabungan itu kehilangan kata-kata paling berbahaya bagi sisi bukti —
+ * "software", "web", "api", "user", "service", "cloud" — sehingga requirement
+ * apa pun yang memuat kata itu bisa menemukan "bukti" di kalimat CV yang sama
+ * sekali tidak relevan; headline "Software Engineer" saja cukup untuk menaikkan
+ * gap beneran menjadi gap penyajian, lalu pengguna disuruh "cukup menamai"
+ * sesuatu yang tidak pernah dikerjakan. Sekarang keduanya dipisah:
+ * GENERIC_WORDS (murah hati, untuk bukti) dan SCOPE_STOP_WORDS (agresif, untuk
+ * cakupan) yang dibangun sebagai superset GENERIC_WORDS — satu sumber
+ * kebenaran, dua kebijakan. Ditambah dua perbaikan kecil: "angka baru" tidak
+ * lagi diukur dengan MENGHITUNG digit (sehingga "30 klien" → "12 klien" tidak
+ * lagi dianggap tanpa perubahan, dan "3" → "5" terbaca sebagai angka baru),
+ * dan kalimat careerNote yang dibuang guardrail kini dilaporkan lewat
+ * careerNoteDropped supaya penyaringan yang selama ini senyap bisa diukur.
+ * v3.3.3: tiga guardrail yang masing-masing benar, tapi salah saat bekerja
+ * bersama. Yang terbesar: v3.3.0 melarang model menempelkan istilah dalam
+ * kurung, model MEMATUHINYA dengan menulis bentuk paling wajar — "OCR-based"
+ * — dan pemeriksa pengantaran v3.2.3 justru membuang saran itu, karena
+ * normalize() sengaja mempertahankan tanda hubung (demi "aes-256-gcm" dan
+ * "next.js") sehingga "ocr-based" jadi SATU token dan token "ocr" tidak pernah
+ * ketemu. Jalur cadangannya ikut buntu: istilah "ocr" yang benar-benar baru
+ * dianggap sudah ada di `before` semata karena tersubstring di "paddleocr".
+ * Hasilnya laporan dengan lima gap yang bisa diperbaiki tapi NOL saran — mesin
+ * yang jujur tapi tidak berguna, dan makin patuh modelnya makin besar
+ * peluang sarannya dibuang. Sekarang token majemuk dipecah saat dibaca (bentuk
+ * utuhnya tetap disimpan) dan keberadaan istilah diuji dengan batas
+ * huruf/angka, bukan substring. Kedua, jalur PENURUNAN di enforceGapEvidence
+ * cuma mengganti type → real dan fixability → requires_experience tanpa
+ * menyentuh kalimat tulisan model, sehingga satu kartu gap bisa berkata
+ * "butuh pengalaman baru" sambil menyarankan "cukup sebutkan saja"; kalimat
+ * baku untuk gap tanpa bukti kini satu sumber, dipakai jalur penurunan maupun
+ * repairTemplateGaps. Ketiga, penyaringan careerNote per kalimat meninggalkan
+ * kata sambung menggantung — pengguna membaca catatan karier yang diawali
+ * "However" tanpa ada apa pun yang dipertentangkan.
  */
-export const ENGINE_VERSION = "2.0.0"
+export const ENGINE_VERSION = "3.3.3"
+
+/**
+ * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
+ * bisa menginvalidasi cache TANPA mengklaim perubahan arsitektur mesin.
+ * WAJIB dinaikkan setiap kali isi prompt diubah, sekecil apa pun — termasuk
+ * prompt ekstraksi CV/lowongan, bukan cuma prompt analisis, karena hasilnya
+ * sama-sama mengubah laporan yang dilihat pengguna.
+ */
+export const PROMPT_VERSION = "p3.3.1-2026-08-06"
 
 /** Kuota analisis default per bulan (null = unlimited). PRD §14. */
 export const DEFAULT_ANALYSIS_QUOTA = 10
@@ -126,4 +269,3 @@ export const COVER_LETTER_TEMPLATE_LABELS: Record<
     },
   },
 }
-

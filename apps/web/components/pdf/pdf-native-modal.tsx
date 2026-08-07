@@ -10,6 +10,7 @@ import {
   FiFileText,
   FiGrid,
   FiLayers,
+  FiLoader,
   FiMaximize2,
   FiRotateCw,
   FiZoomIn,
@@ -106,7 +107,9 @@ export function PdfNativeModal({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isOpen, currentPage, numPages, zoomScale, isFitWidth])
 
-  // Responsive width measuring via ResizeObserver
+  // Responsive width measuring via ResizeObserver (debounced to avoid flicker during dialog transitions)
+  const resizeTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
     if (!node) return
     scrollContainerRef.current = node
@@ -115,17 +118,29 @@ export function PdfNativeModal({
       if (node.clientWidth > 0) {
         const padding = window.innerWidth < 640 ? 16 : 36
         const calculated = Math.max(260, node.clientWidth - padding)
-        setContainerWidth((prev) => (prev === 0 || Math.abs(prev - calculated) > 6 ? calculated : prev))
+
+        if (resizeTimerRef.current) {
+          clearTimeout(resizeTimerRef.current)
+        }
+
+        resizeTimerRef.current = setTimeout(() => {
+          setContainerWidth((prev) => (prev === 0 || Math.abs(prev - calculated) > 8 ? calculated : prev))
+        }, 120)
       }
     }
 
-    updateWidth()
-    const timer = setTimeout(updateWidth, 100)
+    // Direct initial calculation if zero
+    if (node.clientWidth > 0) {
+      const padding = window.innerWidth < 640 ? 16 : 36
+      const calculated = Math.max(260, node.clientWidth - padding)
+      setContainerWidth((prev) => (prev === 0 ? calculated : prev))
+    }
+
     const ro = new ResizeObserver(updateWidth)
     ro.observe(node)
 
     return () => {
-      clearTimeout(timer)
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
       ro.disconnect()
     }
   }, [])
@@ -361,16 +376,16 @@ export function PdfNativeModal({
           onScroll={handleScroll}
           className="flex-1 w-full bg-paper/70 rounded-xl border-2 border-line overflow-auto p-2 sm:p-4 shadow-inner custom-scrollbar relative min-h-0"
         >
-          {objectUrl ? (
+          {file ? (
             <Document
-              file={objectUrl}
+              file={file}
               onLoadSuccess={({ numPages: n }) => {
                 setNumPages(n)
                 if (currentPage > n) setCurrentPage(1)
               }}
               loading={
                 <div className="flex flex-col items-center justify-center h-64 space-y-3">
-                  <div className="bg-line/30 h-48 w-64 animate-pulse rounded-xl" />
+                  <FiLoader className="h-8 w-8  animate-spin shrink-0" />
                   <p className="scrawl text-muted text-sm">Menyiapkan preview PDF ultra-tajam…</p>
                 </div>
               }
@@ -381,8 +396,12 @@ export function PdfNativeModal({
                 <div className="min-w-full w-max flex flex-col items-center justify-center py-2 mx-auto min-h-full">
                   <div
                     id={`pdf-page-${currentPage}`}
-                    className="border-2 border-line/80 shadow-lift rounded-lg overflow-hidden bg-white my-auto transition-transform duration-150 relative shrink-0"
-                    style={{ width: renderWidth }}
+                    className="border-2 border-line/80 shadow-lift rounded-lg overflow-hidden bg-white my-auto relative shrink-0 transition-all duration-150"
+                    style={{
+                      width: renderWidth,
+                      minHeight: Math.round(renderWidth * 1.414),
+                      aspectRatio: "210 / 297",
+                    }}
                   >
                     <Page
                       pageNumber={currentPage}
@@ -390,12 +409,16 @@ export function PdfNativeModal({
                       rotate={rotation}
                       devicePixelRatio={
                         typeof window !== "undefined"
-                          ? Math.max(window.devicePixelRatio || 1, 2.5)
-                          : 2.5
+                          ? Math.min(window.devicePixelRatio || 1, 2)
+                          : 1.5
                       }
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
-                      loading={null}
+                      loading={
+                        <div className="w-full h-full flex items-center justify-center min-h-[400px] bg-paper/30">
+                          <FiLoader className="h-7 w-7 text-blue/70 animate-spin" />
+                        </div>
+                      }
                     />
                   </div>
                 </div>
@@ -406,8 +429,12 @@ export function PdfNativeModal({
                     <div
                       key={i}
                       id={`pdf-page-${i + 1}`}
-                      className="border-2 border-line/80 shadow-lift rounded-lg overflow-hidden bg-white transition-transform duration-150 relative group shrink-0"
-                      style={{ width: renderWidth }}
+                      className="border-2 border-line/80 shadow-lift rounded-lg overflow-hidden bg-white relative group shrink-0 transition-all duration-150"
+                      style={{
+                        width: renderWidth,
+                        minHeight: Math.round(renderWidth * 1.414),
+                        aspectRatio: "210 / 297",
+                      }}
                     >
                       <Page
                         pageNumber={i + 1}
@@ -415,15 +442,19 @@ export function PdfNativeModal({
                         rotate={rotation}
                         devicePixelRatio={
                           typeof window !== "undefined"
-                            ? Math.max(window.devicePixelRatio || 1, 2.5)
-                            : 2.5
+                            ? Math.min(window.devicePixelRatio || 1, 2)
+                            : 1.5
                         }
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
-                        loading={null}
+                        loading={
+                          <div className="w-full h-full flex items-center justify-center min-h-[400px] bg-paper/30">
+                            <FiLoader className="h-7 w-7 text-blue/70 animate-spin" />
+                          </div>
+                        }
                       />
                       {numPages > 1 && (
-                        <div className="absolute top-2.5 right-2.5 bg-ink/80 backdrop-blur text-paper text-[10px] font-mono font-bold px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity shadow-xs">
+                        <div className="absolute top-2.5 right-2.5 bg-ink/80 backdrop-blur text-paper text-[10px] font-mono font-bold px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity shadow-xs z-10">
                           {i + 1} / {numPages}
                         </div>
                       )}
@@ -433,8 +464,8 @@ export function PdfNativeModal({
               )}
             </Document>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center space-y-2 p-8 text-center">
-              <div className="bg-line/30 h-20 w-20 animate-pulse rounded-full" />
+            <div className="h-full flex flex-col items-center justify-center space-y-3 p-8 text-center">
+              <FiLoader className="h-8 w-8 text-blue animate-spin shrink-0" />
               <p className="scrawl text-muted text-base">Menyiapkan preview PDF…</p>
             </div>
           )}

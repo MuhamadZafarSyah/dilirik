@@ -40,20 +40,6 @@ export function PdfViewer({
   const [numPages, setNumPages] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Memoisasi Object URL agar referensi file ke react-pdf/pdf.js stabil & tidak re-parse terus menerus
-  const fileUrl = useMemo(() => {
-    if (!file) return null
-    return URL.createObjectURL(file)
-  }, [file])
-
-  useEffect(() => {
-    return () => {
-      if (fileUrl) {
-        URL.revokeObjectURL(fileUrl)
-      }
-    }
-  }, [fileUrl])
-
   // Lebar halaman mengikuti lebar kontainer dengan toleransi ambang batas (mencegah feedback loop resize akibat scrollbar)
   useEffect(() => {
     const el = containerRef.current
@@ -71,7 +57,7 @@ export function PdfViewer({
   return (
     <div className="space-y-2">
       {/* Top Action Header: Button to open Modal with Native PDF Embed */}
-      {fileUrl && !isLoading && !error && (
+      {file && !isLoading && !error && (
         <div className="flex items-center justify-between px-1">
           <span className="label text-[11px] text-muted font-bold uppercase">
             {numPages > 0 ? `${numPages} Halaman` : "Preview PDF"}
@@ -94,14 +80,14 @@ export function PdfViewer({
       >
         {error ? (
           <p className="text-red text-xs font-semibold p-4">{error}</p>
-        ) : isLoading || (!fileUrl && !error) ? (
+        ) : isLoading || (!file && !error) ? (
           <div className="space-y-3 p-2" aria-label="Memuat preview PDF">
             <div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />
             <p className="scrawl text-muted text-center text-sm">Menyiapkan preview…</p>
           </div>
         ) : (
           <Document
-            file={fileUrl}
+            file={file}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
             loading={<div className="bg-line/30 h-64 w-full animate-pulse rounded-lg" />}
             error={<p className="text-red text-xs font-semibold p-4">Gagal membaca file PDF</p>}

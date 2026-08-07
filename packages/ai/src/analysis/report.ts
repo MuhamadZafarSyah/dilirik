@@ -7,85 +7,612 @@ import {
   type SuggestionMode,
 } from "@dilirik/shared"
 import { generateStructured } from "../generateStructured"
-import { HONESTY_SYSTEM_PROMPT, languageInstruction } from "../guardrail/systemPrompt"
-import { postCheckSuggestion, postCheckUsefulness } from "../guardrail/postCheck"
+import {
+  dedupeSuggestions,
+  normalize,
+  partitionBannedSentences,
+  postCheckAnchor,
+  postCheckBannedPhrases,
+  postCheckGapPhrases,
+  postCheckNaturalPhrasing,
+  postCheckSuggestion,
+  postCheckUsefulness,
+  squashWhitespace,
+  type PostCheckResult,
+} from "../guardrail/postCheck"
+import { alignQuote } from "../guardrail/quoteLocator"
+import { findConceptEvidence } from "../scoring/conceptEvidence"
+import { expandSkill } from "../scoring/skillAliases"
+import { buildReportSystemPrompt } from "./reportPrompt"
 
 export type ReportOutcome = {
   gaps: Gap[]
   suggestions: Suggestion[]
   rejected: Array<{ suggestion: Suggestion; reason: string }>
   careerNote: string
+  /**
+   * Kalimat careerNote yang dibuang karena memuat frasa klise (engine v3.3.2).
+   *
+   * Sejajar dengan `rejected` untuk saran: apa pun yang disaring guardrail harus
+   * bisa dihitung. Tanpa ini, careerNote yang terhapus seluruhnya tidak bisa
+   * dibedakan dari model yang memang memilih diam.
+   */
+  careerNoteDropped: string[]
 }
+
+/** Bentuk minimal yang dibutuhkan dari hasil rule-based (dijaga longgar agar mudah diuji). */
+type ImpliedInput = {
+  skill: string
+  confidence: "certain" | "likely"
+  evidence: string[]
+}
+
+/**
+ * Petunjuk bahwa sebuah requirement kemungkinan hanya soal PENYAJIAN.
+ * Bentuknya dijaga longgar (sama alasannya dengan ImpliedInput): fungsi ini
+ * harus bisa diuji tanpa menjalankan seluruh pipeline scoring.
+ */
+type PresentationHintInput = {
+  skill: string
+  term: string
+  quote: string
+  severity?: "must" | "nice"
+}
+
+/**
+ * Bobot implikasi saat menghitung coverage mode.
+ * Harus konsisten dengan IMPLIED_WEIGHT_FACTOR di scoring/ruleBased.ts.
+ */
+const IMPLIED_COVERAGE_WEIGHT: Record<"certain" | "likely", number> = {
+  certain: 1,
+  likely: 0.6,
+}
+
+/**
+ * Panjang minimum sebuah kutipan bukti agar dianggap meyakinkan.
+ * Kutipan sependek satu kata bisa cocok secara kebetulan di CV mana pun.
+ */
+const MIN_EVIDENCE_CHARS = 8
 
 /**
  * Pilih mode strategi saran secara DETERMINISTIK dari coverage must-have
  * (bukan skor blended — dua profil beda bisa punya blended sama; bukan LLM —
  * tidak bisa "dirayu" dan hasilnya testable & konsisten dengan cache).
+ *
+ * Engine v3.1: skill yang tercakup lewat implikasi IKUT dihitung. Tanpa ini,
+ * CV frontend yang tidak pernah menulis kata "HTML" bisa terlempar dari
+ * "optimize" ke "reframe" — seluruh nada laporan berubah jadi "kamu kurang
+ * cocok" untuk kandidat yang sebenarnya sangat cocok.
  */
 export function pickSuggestionMode(rule: {
   score: number
   matchedMust: string[]
   missingMust: string[]
+  impliedMust?: Array<{ confidence: "certain" | "likely" }>
 }): SuggestionMode {
-  const totalMust = rule.matchedMust.length + rule.missingMust.length
+  const implied = rule.impliedMust ?? []
+  const impliedCredit = implied.reduce(
+    (sum, item) => sum + IMPLIED_COVERAGE_WEIGHT[item.confidence],
+    0,
+  )
+  const totalMust = rule.matchedMust.length + rule.missingMust.length + implied.length
   // Lowongan tanpa must-have terdeteksi → pakai skor rule sebagai proxy coverage
-  const coverage = totalMust === 0 ? rule.score / 100 : rule.matchedMust.length / totalMust
+  const coverage =
+    totalMust === 0 ? rule.score / 100 : (rule.matchedMust.length + impliedCredit) / totalMust
   if (coverage >= 0.6) return "optimize"
   if (coverage >= 0.25) return "reframe"
   return "honest_pivot"
 }
 
-const MODE_INSTRUCTIONS: Record<SuggestionMode, string> = {
-  optimize: `MODE SARAN: OPTIMIZE — CV sudah satu bidang dengan lowongan.
-Perkuat bullet yang paling relevan: pakai istilah dari lowongan yang MEMANG didukung fakta CV, action verb, dan angka dampak yang SUDAH ada di CV. Maksimal 6 saran, urutkan dari yang paling berdampak.`,
-  reframe: `MODE SARAN: REFRAME — CV cocok sebagian.
-Prioritas: reposisi. Tulis ulang PROFILE/summary agar mengarah ke target lowongan, tonjolkan transferable skills yang menjawab requirement. JANGAN memoles bullet yang tidak relevan dengan lowongan ini. Maksimal 5 saran.`,
-  honest_pivot: `MODE SARAN: HONEST PIVOT — bidang CV BERBEDA dengan bidang lowongan.
-JANGAN memoles bullet yang tidak relevan — itu membuang waktu user dan menyesatkan. HANYA buat saran "jembatan": revisi yang menghubungkan fakta yang SUNGGUH ada di CV dengan requirement lowongan (mis. tools/AI/bahasa/lokasi yang kebetulan diminta), dan akui di kalimatnya bahwa jembatan itu parsial. Maksimal 3 saran. Jika tidak ada jembatan jujur, kembalikan suggestions: [] — ARRAY KOSONG ADALAH JAWABAN YANG BENAR. WAJIB isi careerNote dengan penjelasan jujur apa yang sebenarnya dibutuhkan lowongan ini (mis. portofolio karya, pengalaman nyata) — bukan basa-basi.`,
+/** Batas jumlah saran per mode — ditegakkan di KODE, bukan sekadar diminta di prompt. */
+const MODE_MAX_SUGGESTIONS: Record<SuggestionMode, number> = {
+  optimize: 6,
+  reframe: 5,
+  honest_pivot: 3,
+}
+
+const IMPACT_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
+
+/** Potong kutipan panjang agar kalimat gap tetap enak dibaca. */
+function trimQuote(quote: string, max = 150): string {
+  const squashed = squashWhitespace(quote)
+  return squashed.length <= max ? squashed : `${squashed.slice(0, max).trimEnd()}...`
+}
+
+/** Cocokkan sebuah skill ke daftar (toleran: sama, memuat, atau dimuat). */
+function looseMatch(a: string, b: string): boolean {
+  if (!a || !b) return false
+  return a === b || a.includes(b) || b.includes(a)
+}
+
+/**
+ * SEMUA petunjuk yang cocok untuk satu gap — bukan yang pertama ditemukan.
+ *
+ * Versi lama mengembalikan satu petunjuk saja, dan itu menentukan kutipan bukti
+ * berdasarkan URUTAN, bukan kualitas. Gap "Design System" di uji gold set punya
+ * dua petunjuk: entri daftar skill "Shadcn/ui" dan kalimat pengalaman yang
+ * menyebut "100+ reusable components". Yang terpilih kebetulan yang pertama.
+ */
+function matchHints<T extends { skill: string }>(gapSkill: string, hints: T[]): T[] {
+  const skill = normalize(gapSkill)
+  if (!skill) return []
+  return hints.filter((hint) => looseMatch(normalize(hint.skill), skill))
+}
+
+/**
+ * Seberapa meyakinkan sebuah kutipan sebagai bukti, diukur dalam JUMLAH KATA.
+ *
+ * Panjang karakter saja tidak cukup: "Shadcn/ui" lolos ambang 8 karakter dengan
+ * selisih satu karakter, padahal ia cuma satu entri di daftar skill dan tidak
+ * membuktikan apa pun tentang cara kandidat memakainya. Kalimat pengalaman yang
+ * memuat istilah yang sama jauh lebih berguna, baik untuk meyakinkan pengguna
+ * maupun sebagai jangkar revisi.
+ */
+function quoteStrength(quote: string): number {
+  const squashed = squashWhitespace(quote)
+  if (squashed.length < MIN_EVIDENCE_CHARS) return 0
+  return squashed.split(" ").filter(Boolean).length
+}
+
+/**
+ * Bentuk final sebuah kutipan.
+ *
+ * Bila `rawText` diberikan, kutipan diluruskan ke teks CV asli sehingga hasilnya
+ * dijamin bisa disorot di dokumen — dan kutipan yang tidak ditemukan otomatis
+ * gugur. Tanpa `rawText`, kutipan dipakai apa adanya; ini dipakai pengujian unit
+ * yang tidak membawa dokumen sumber.
+ */
+function resolveQuote(quote: string, rawText?: string): string | null {
+  if (!quote.trim()) return null
+  return rawText === undefined ? squashWhitespace(quote) : alignQuote(quote, rawText)
+}
+
+/**
+ * Pilih kutipan TERKUAT dari beberapa kandidat.
+ *
+ * Perbandingan memakai `>` sehingga saat kekuatannya seri, kandidat yang lebih
+ * dulu disebut yang menang. Pemanggil memanfaatkan itu: petunjuk hasil kode
+ * diletakkan sebelum kutipan tulisan model, karena petunjuk dihasilkan dari
+ * korpus CV dan tidak mungkin halusinasi.
+ */
+function strongestQuote(quotes: string[], rawText?: string): string | null {
+  let best: string | null = null
+  let bestStrength = 0
+  for (const quote of quotes) {
+    const resolved = resolveQuote(quote, rawText)
+    if (!resolved) continue
+    const strength = quoteStrength(resolved)
+    if (strength > bestStrength) {
+      bestStrength = strength
+      best = resolved
+    }
+  }
+  return best
+}
+
+/** Varian `strongestQuote` yang ikut mengembalikan petunjuk asalnya. */
+function strongestHint<T extends PresentationHintInput>(
+  hints: T[],
+  rawText?: string,
+): { hint: T; quote: string } | null {
+  let best: { hint: T; quote: string } | null = null
+  let bestStrength = 0
+  for (const hint of hints) {
+    const resolved = resolveQuote(hint.quote, rawText)
+    if (!resolved) continue
+    const strength = quoteStrength(resolved)
+    if (strength > bestStrength) {
+      bestStrength = strength
+      best = { hint, quote: resolved }
+    }
+  }
+  return best
+}
+
+/** Nama gap yang diklaim sebuah saran, sudah dibersihkan dari entri kosong. */
+function claimedGaps(suggestion: Suggestion): string[] {
+  return (suggestion.addressesGap ?? []).map((claim) => claim.trim()).filter(Boolean)
+}
+
+function findGap(gaps: Gap[], claim: string): Gap | undefined {
+  const needle = normalize(claim)
+  if (!needle) return undefined
+  return gaps.find((gap) => looseMatch(normalize(gap.skill), needle))
+}
+
+/** Saran tidak boleh menyebut gap yang tidak ada di diagnosisnya sendiri. */
+function checkGapLink(suggestion: Suggestion, gaps: Gap[]): PostCheckResult {
+  for (const claim of claimedGaps(suggestion)) {
+    if (findGap(gaps, claim)) continue
+    return {
+      ok: false,
+      reason: `addressesGap "${claim}" tidak ada di daftar gap hasil diagnosis — saran dan diagnosis tidak nyambung`,
+    }
+  }
+  return { ok: true }
+}
+
+/**
+ * Pecahan sebuah token majemuk, DENGAN bentuk utuhnya.
+ *
+ * `normalize` sengaja mempertahankan "-", "/", dan "." supaya "aes-256-gcm",
+ * "ci/cd", dan "next.js" tidak hancur jadi potongan tak bermakna. Efek
+ * sampingnya: "ocr-based" ikut jadi satu token utuh, sehingga pencarian token
+ * "ocr" meleset. Bentuk utuhnya tetap disertakan supaya istilah yang memang
+ * mengandung tanda hubung tidak kehilangan identitasnya.
+ */
+function expandCompound(token: string): string[] {
+  const parts = token.split(/[-/.]+/).filter(Boolean)
+  return parts.length > 1 ? [token, ...parts] : [token]
+}
+
+/** Seluruh token sebuah teks, termasuk pecahan kata majemuknya. */
+function tokenSet(text: string): Set<string> {
+  const tokens = new Set<string>()
+  for (const token of normalize(text).split(" ")) {
+    if (!token) continue
+    for (const part of expandCompound(token)) tokens.add(part)
+  }
+  return tokens
+}
+
+/**
+ * Apakah `term` muncul sebagai satuan utuh di `text`?
+ *
+ * Bukan `includes` biasa: "ocr" tersubstring di dalam "paddleocr", dan itu
+ * persis yang membuat istilah yang benar-benar BARU di `after` dikira sudah ada
+ * di `before`. Batasnya diuji ke karakter huruf/angka saja — bukan ke spasi —
+ * supaya "aes-256" tetap terbaca sebagai bagian utuh dari "aes-256-gcm".
+ */
+function containsTerm(text: string, term: string): boolean {
+  const needle = normalize(term)
+  if (!needle) return false
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "u").test(text)
+}
+
+/**
+ * Apakah `after` benar-benar memunculkan gap ini?
+ *
+ * Dua jalan diterima, supaya saran lintas bahasa tidak ikut tertolak:
+ * a) salah satu token nama gap muncul sebagai token di `after`, atau
+ * b) `after` memunculkan istilah implementasi dari konsep gap itu yang BELUM
+ *    ada di `before` (mis. gap "enkripsi data" dijawab dengan "encryption").
+ *
+ * Engine v3.3.3: kedua jalan itu tadinya buta pada kata majemuk, dan akibatnya
+ * dua guardrail kita saling meniadakan. Guardrail kealamian (v3.3.0) melarang
+ * model menempelkan "(OCR)", jadi model menulis bentuk yang paling wajar —
+ * "OCR-based" — dan justru itu yang tidak terbaca: token "ocr-based" bukan
+ * "ocr", sementara jalan (b) mengira "ocr" sudah ada di `before` karena
+ * tersubstring di "paddleocr". Semakin patuh modelnya, semakin besar peluang
+ * sarannya dibuang.
+ */
+function deliversGap(gap: Gap, suggestion: Suggestion): boolean {
+  const tokens = normalize(gap.skill)
+    .split(" ")
+    .filter((tok) => tok.length >= 3)
+  if (tokens.length === 0) return true
+
+  const afterTokens = tokenSet(suggestion.after)
+  if (tokens.some((tok) => afterTokens.has(tok))) return true
+
+  const beforeText = normalize(suggestion.before)
+  return findConceptEvidence(gap.skill, [suggestion.after]).some(
+    (evidence) => !containsTerm(beforeText, evidence.term),
+  )
+}
+
+/**
+ * Guardrail titik-7 / PENGANTARAN (engine v3.2, diperketat v3.2.3).
+ *
+ * Saran boleh mengaku menjawab gap tertentu, tapi harus benar-benar mengantarnya.
+ * Uji gold set #02 meloloskan saran yang mengaku menjawab gap OCR sementara yang
+ * ditambahkan justru ", integrating REST APIs for seamless data flow".
+ *
+ * v3.2.3 menutup lubang yang lebih halus. Ketika `addressesGap` masih berupa satu
+ * string bebas, model menulis "OCR, Enkripsi Data" dan pemeriksaan ini hanya
+ * mencari SATU gap yang cocok secara longgar — kata "OCR" tersubstring di
+ * dalamnya, gap ditemukan, klaim kedua lolos tanpa pernah diuji. Sekarang tiap
+ * elemen array diperiksa sendiri-sendiri, dan satu elemen yang tidak terantar
+ * membatalkan seluruh saran. Sengaja keras: saran yang setengah benar lebih
+ * berbahaya daripada saran yang tidak ada, karena pengguna menerapkannya utuh.
+ */
+function checkGapDelivered(suggestion: Suggestion, gaps: Gap[]): PostCheckResult {
+  for (const claim of claimedGaps(suggestion)) {
+    const gap = findGap(gaps, claim)
+    // Gap tak dikenal sudah ditangani checkGapLink — jangan menolak dua kali.
+    if (!gap) continue
+    if (deliversGap(gap, suggestion)) continue
+    return {
+      ok: false,
+      reason: `Mengaku menjawab gap "${gap.skill}", tapi istilahnya tidak muncul di \`after\` — gap-nya tidak benar-benar terjawab`,
+    }
+  }
+  return { ok: true }
+}
+
+/**
+ * Penjaga TERAKHIR untuk gap tersirat — deterministik, tidak bisa dirayu.
+ *
+ * Prompt sudah melarang keras, tapi larangan yang cuma hidup di prompt akan
+ * bocor cepat atau lambat (persis riwayat banned phrase). Apa pun yang ditulis
+ * model, skill yang ada di daftar implikasi tidak akan pernah sampai ke mata
+ * user sebagai kekurangan.
+ */
+export function dropImpliedGaps(gaps: Gap[], implied: ImpliedInput[]): Gap[] {
+  if (implied.length === 0) return gaps
+  const impliedSkills = implied.map((item) => normalize(item.skill)).filter(Boolean)
+  return gaps.filter((gap) => {
+    const skill = normalize(gap.skill)
+    if (!skill) return true
+    return !impliedSkills.some((candidate) => looseMatch(candidate, skill))
+  })
+}
+
+/**
+ * Kalimat baku untuk gap yang TIDAK punya bukti apa pun di CV.
+ *
+ * Satu sumber untuk dua jalur yang menghasilkan keadaan sama persis:
+ * `enforceGapEvidence` saat MENURUNKAN gap penyajian yang kutipannya tidak bisa
+ * dilacak, dan `repairTemplateGaps` saat menimpa kalimat cetakan. Sebelum
+ * v3.3.3 hanya jalur kedua yang menulis ulang teks, sehingga gap hasil
+ * penurunan membawa `fixability: "requires_experience"` sambil tetap memajang
+ * saran tulisan model yang berbunyi "cukup sebutkan saja" — dua kalimat yang
+ * saling membantah di kartu yang sama.
+ */
+function describeUnprovenGap(gap: Gap): { explanation: string; advice: string } {
+  const searched = gap.searchedFor.length > 0 ? gap.searchedFor : expandSkill(normalize(gap.skill))
+  const terms = [...new Set(searched.map((term) => term.trim()).filter(Boolean))].slice(0, 6)
+  const scope = gap.severity === "must" ? "syarat wajib" : "nilai tambah"
+  const searchedText =
+    terms.length > 0
+      ? ` Istilah yang dicari di CV: ${terms.join(", ")} — tidak satu pun muncul di daftar skill, kalimat pengalaman, maupun pencapaian.`
+      : " Setelah menyisir daftar skill, kalimat pengalaman, dan pencapaian, tidak ada jejaknya."
+
+  return {
+    explanation: `Lowongan menyebut ${gap.skill} sebagai ${scope}.${searchedText}`,
+    advice: `Ini tidak bisa ditambal dengan menyunting teks. Yang paling cepat membuktikannya: kerjakan satu bagian nyata yang memakai ${gap.skill}, lalu tulis hasilnya dengan angka di CV.`,
+  }
+}
+
+/**
+ * Verifikasi kutipan bukti pada gap "presentation" (engine v3.2).
+ *
+ * Klaim "faktanya sudah ada di CV" hanya bernilai kalau kutipannya benar. Kalau
+ * kutipannya tidak ada di teks CV, ada dua kemungkinan: model mengarang, atau
+ * model benar tapi salah mengutip. Karena itu gap tanpa bukti apa pun
+ * DITURUNKAN jadi "real", bukan dibuang — membuangnya berarti menyembunyikan
+ * requirement lowongan dari user.
+ *
+ * Engine v3.2a: pencocokannya diserahkan ke quoteLocator, dan yang DISIMPAN
+ * adalah potongan rawText hasil pelokalan, bukan tulisan model.
+ *
+ * Engine v3.2.3: pemilihan kutipan tidak lagi berdasarkan urutan. Dulu kutipan
+ * model dicoba lebih dulu dan petunjuk hasil kode hanya jadi cadangan; akibatnya
+ * gap "Design System" memajang kutipan "Shadcn/ui" — sembilan karakter, lolos
+ * ambang dengan selisih satu — padahal ada kalimat pengalaman yang menyebut
+ * "100+ reusable components" dan jauh lebih membuktikan. Sekarang semua kandidat
+ * diadu dan yang TERKUAT yang dipakai, dengan petunjuk kode menang saat seri.
+ *
+ * Engine v3.3.3: penurunan ikut menulis ulang explanation & advice. Mengubah
+ * `type` tanpa menyentuh kalimatnya menghasilkan gap yang membantah dirinya
+ * sendiri — ditandai "butuh pengalaman baru", tapi sarannya "cukup sebutkan".
+ */
+export function enforceGapEvidence(
+  gaps: Gap[],
+  rawText: string,
+  hints: PresentationHintInput[] = [],
+): Gap[] {
+  return gaps.map((gap) => {
+    if (gap.type !== "presentation") return gap
+
+    const candidates = [
+      ...matchHints(gap.skill, hints).map((hint) => hint.quote),
+      gap.evidenceQuote ?? "",
+    ]
+    const best = strongestQuote(candidates, rawText)
+    if (best) return { ...gap, evidenceQuote: best }
+
+    return {
+      ...gap,
+      type: "real" as const,
+      fixability: "requires_experience" as const,
+      evidenceQuote: "",
+      ...describeUnprovenGap(gap),
+    }
+  })
+}
+
+/**
+ * Naikkan gap "real" menjadi "presentation" bila kode SUDAH menemukan buktinya
+ * di CV (engine v3.2).
+ *
+ * Ini pasangan dari dropImpliedGaps, dan alasannya sama: larangan yang cuma
+ * hidup di prompt akan bocor. Uji gold set #02 membuktikannya — lima requirement
+ * yang faktanya jelas ada di CV (PaddleOCR, ApexCharts, MediaPipe, AES-256-GCM,
+ * 100+ komponen reusable) tetap keluar sebagai "tidak ada pengalaman".
+ *
+ * Efek sampingnya penting: gap yang naik jadi "presentation" otomatis berubah
+ * fixability menjadi "fixable_by_editing", sehingga BOLEH melahirkan saran
+ * revisi.
+ *
+ * `rawText` opsional dengan sengaja. Bila diberikan (jalur produksi), petunjuk
+ * diluruskan dulu ke dokumen asli sehingga gap hasil kenaikan tidak pernah
+ * memajang kutipan yang tak bisa disorot. Bila tidak (pengujian unit), petunjuk
+ * dipakai apa adanya.
+ *
+ * Catatan bahasa (v3.3.0): explanation & advice di sini ditulis kode, bukan
+ * model, jadi keduanya SELALU berbahasa Indonesia. Ini konsisten dengan default
+ * bahasa laporan; kalau nanti bahasa laporan bisa lebih dari dua, kalimat ini
+ * ikut perlu dilokalkan.
+ */
+export function promoteHintedGaps(
+  gaps: Gap[],
+  hints: PresentationHintInput[],
+  rawText?: string,
+): Gap[] {
+  if (hints.length === 0) return gaps
+  return gaps.map((gap) => {
+    if (gap.type !== "real") return gap
+    const best = strongestHint(matchHints(gap.skill, hints), rawText)
+    if (!best) return gap
+    return {
+      ...gap,
+      type: "presentation" as const,
+      fixability: "fixable_by_editing" as const,
+      evidenceQuote: best.quote,
+      explanation: `Lowongan memakai istilah "${gap.skill}", dan CV tidak pernah menuliskannya persis begitu. Tapi faktanya ADA: "${trimQuote(best.quote)}". Jadi ini bukan soal kemampuan, melainkan soal kata yang tidak pernah muncul — termasuk di mata filter ATS yang mencocokkan istilah secara harfiah.`,
+      advice: `Sebut "${gap.skill}" secara eksplisit di baris yang sudah ada itu, di samping ${best.hint.term}, dan tambahkan ke daftar skill. Tidak ada fakta baru yang perlu dikarang — hanya menamai yang sudah dikerjakan.`,
+    }
+  })
+}
+
+/**
+ * Timpa teks gap yang cuma hasil mengisi cetakan (engine v3.2).
+ *
+ * Gap-nya TIDAK dibuang — skill yang memang tidak ada tetap harus dilaporkan.
+ * Yang diganti hanya kalimatnya: dari cetakan yang bisa ditulis tanpa membaca CV
+ * menjadi kalimat yang menyebut istilah apa saja yang benar-benar dicari.
+ */
+export function repairTemplateGaps(gaps: Gap[]): Gap[] {
+  return gaps.map((gap) => {
+    if (postCheckGapPhrases(gap).ok) return gap
+
+    const { explanation, advice } = describeUnprovenGap(gap)
+
+    return {
+      ...gap,
+      explanation,
+      advice:
+        gap.fixability === "fixable_by_editing"
+          ? `Faktanya sudah ada di CV — sebut ${gap.skill} secara eksplisit di baris yang relevan agar terbaca manusia maupun ATS.`
+          : advice,
+    }
+  })
+}
+
+/**
+ * Luruskan jangkar `before` ke bentuk yang benar-benar ada di teks CV
+ * (engine v3.2a).
+ *
+ * Model mengutip dari structuredJson yang ikut dikirim ke prompt, sedangkan
+ * jangkar dipakai untuk auto-replace di teks asli. Dua sumber itu tidak selalu
+ * identik karakter demi karakter: ekstraksi PDF menyisipkan pergantian baris,
+ * dash non-ASCII, dan kutip melengkung.
+ *
+ * Memperbaiki lebih baik daripada menolak: posisi kutipannya sudah diketahui,
+ * jadi menolaknya tidak menyelamatkan siapa pun. Yang tidak bisa dilokalisasi
+ * dibiarkan apa adanya — itu memang tugas postCheckAnchor untuk menolak.
+ */
+export function alignSuggestionAnchors(
+  suggestions: Suggestion[],
+  rawText: string,
+): Suggestion[] {
+  return suggestions.map((suggestion) => {
+    const canonical = alignQuote(suggestion.before ?? "", rawText)
+    if (canonical === null || canonical === suggestion.before) return suggestion
+    return { ...suggestion, before: canonical }
+  })
+}
+
+/**
+ * Kata sambung pertentangan yang jadi menggantung saat kalimat sebelumnya
+ * dibuang guardrail.
+ */
+const DANGLING_CONNECTIVE =
+  /^(however|but|meanwhile|on the other hand|namun(\s+demikian|\s+begitu)?|akan tetapi|tetapi|meski(\s+demikian|\s+begitu)?|walaupun begitu|selain itu|di sisi lain)\s*,?\s+/i
+
+/**
+ * Rapikan kalimat pembuka careerNote yang jadi menggantung setelah penyaringan.
+ *
+ * careerNote disaring per KALIMAT, jadi membuang kalimat pertama bisa
+ * menyisakan kalimat kedua yang dibuka "However..." tanpa ada apa pun yang
+ * dipertentangkan. Isinya tetap benar, tapi terbaca seperti potongan tulisan
+ * yang rusak — dan pengguna tidak punya cara tahu bahwa ada kalimat yang memang
+ * sengaja dibuang.
+ */
+function stripLeadingConnective(text: string): string {
+  const trimmed = text.trimStart()
+  const stripped = trimmed.replace(DANGLING_CONNECTIVE, "")
+  if (!stripped || stripped === trimmed) return trimmed
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1)
 }
 
 /**
  * Laporan analisis GABUNGAN (engine v2): gaps + suggestions + careerNote dari
  * SATU panggilan LLM — satu rantai pemikiran (diagnosis → resep), tidak bisa
  * saling bertentangan, dan hemat token (CV+lowongan cukup dikirim sekali).
- * Setiap saran lalu melewati DUA guardrail: kejujuran (fakta CV) dan
- * kebergunaan (relevansi ke lowongan, anti no-op/kosmetik).
+ *
+ * Engine v3: setiap saran melewati guardrail berurutan — jangkar verbatim,
+ * kejujuran fakta, frasa terlarang, kebergunaan, dan keterhubungan ke gap —
+ * lalu didedup dan dibatasi sesuai mode.
+ *
+ * Engine v3.1: daftar gap dibersihkan dulu dari skill yang sudah tercakup lewat
+ * implikasi sebelum guardrail saran jalan.
+ *
+ * Engine v3.2: diagnosis melewati EMPAT tahap deterministik — buang gap
+ * tersirat, verifikasi kutipan bukti, naikkan gap yang buktinya sudah ditemukan
+ * kode, lalu timpa teks yang masih berupa cetakan.
+ *
+ * Engine v3.2a: jangkar saran diluruskan dulu ke teks CV asli, dan seluruh
+ * pencocokan kutipan memakai satu implementasi bersama (quoteLocator).
+ *
+ * Engine v3.2.3: teks prompt pindah ke `reportPrompt.ts` supaya berkas ini murni
+ * berisi pemeriksaan; kutipan bukti dipilih berdasarkan kekuatan, bukan urutan;
+ * dan setiap elemen `addressesGap` diverifikasi satu per satu.
+ *
+ * Engine v3.3.0: `language` (bahasa CV) dan `reportLanguage` (bahasa penjelasan
+ * yang dibaca pengguna) jadi dua parameter terpisah. Keduanya dulu satu nilai,
+ * sehingga CV berbahasa Inggris memaksa seluruh laporan berbahasa Inggris
+ * walaupun antarmukanya berbahasa Indonesia. Ditambah guardrail kesembilan yang
+ * menolak saran yang seluruh perubahannya cuma menempelkan istilah dalam kurung.
+ *
+ * Engine v3.3.1: `careerNote` akhirnya ikut disaring frasa klise. Selama ini
+ * pemeriksaan itu hanya menyentuh `after` sebuah saran, sehingga careerNote jadi
+ * satu-satunya celah yang tersisa — dan memang dari sanalah "strong background"
+ * masih sampai ke pengguna.
+ *
+ * Engine v3.3.2: kalimat careerNote yang dibuang ikut dilaporkan lewat
+ * `careerNoteDropped`, sejajar dengan `rejected` untuk saran. Penyaringan yang
+ * tidak meninggalkan jejak tidak bisa dievaluasi, dan careerNote kosong tanpa
+ * keterangan tidak bisa dibedakan dari model yang memang memilih diam.
+ *
+ * Engine v3.3.3: sisa kalimat careerNote dirapikan setelah penyaringan. Membuang
+ * kalimat pertama menyisakan kalimat kedua yang dibuka kata sambung
+ * pertentangan, dan pengguna melihat catatan karier yang diawali "However"
+ * tanpa ada yang dipertentangkan.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
   job: JobParsed
   rawText: string
+  /** Bahasa CV — menentukan bahasa `before`, `after`, dan seluruh kutipan. */
   language: string
+  /** Bahasa penjelasan. Default ke bahasa CV agar pemanggil lama tidak berubah perilaku. */
+  reportLanguage?: string
   mode: SuggestionMode
-  rule: { matchedMust: string[]; missingMust: string[]; missingNice: string[] }
+  rule: {
+    matchedMust: string[]
+    missingMust: string[]
+    missingNice: string[]
+    impliedMust?: ImpliedInput[]
+    impliedNice?: ImpliedInput[]
+    presentationHints?: PresentationHintInput[]
+  }
 }): Promise<ReportOutcome> {
   const { cv, job, rawText, language, mode, rule } = args
-
-  const system = [
-    HONESTY_SYSTEM_PROMPT,
-    languageInstruction(language),
-    `Kamu menghasilkan SATU laporan utuh { gaps, suggestions, careerNote } — semuanya harus SATU pemikiran dan tidak boleh saling bertentangan: saran hanya boleh lahir dari gap yang bisa dijawab dengan revisi teks.`,
-    `ATURAN GAPS:
-- severity: "must" jika dari requirement wajib lowongan, "nice" jika nice-to-have/plus point.
-- fixability: "fixable_by_editing" HANYA jika faktanya sudah ada di CV dan tinggal disajikan; "requires_experience" jika jujur butuh pengalaman/belajar nyata (JANGAN beri advice template "ikut kursus" berulang — beri langkah spesifik & realistis, atau akui tidak bisa ditambal tulisan); "fit_constraint" untuk faktor non-skill (atribut personal, identitas, lokasi) — tulis netral & sensitif, TANPA menyarankan mengubah diri.
-- HANYA gap ber-fixability "fixable_by_editing" yang boleh melahirkan suggestion.`,
-    `ATURAN SUGGESTIONS:
-- before = KUTIPAN VERBATIM dari "Teks CV asli" — persis karakter demi karakter (tanda baca & kapitalisasi) agar bisa diganti otomatis.
-- basedOnFacts = kutipan VERBATIM potongan teks CV (bukan parafrase seperti "team collaboration" — kutip "with the team").
-- targetRequirement = kutip requirement lowongan yang dijawab saran ini. Saran tanpa target akan DIBUANG.
-- after harus menambah relevansi nyata terhadap lowongan — bukan sinonim/parafrase.
-- DILARANG kata sifat memuji diri: "highly skilled", "expert", "strong background", "showcasing expertise", dsb — recruiter membencinya dan ATS tidak membacanya.
-- Pertahankan present tense untuk pekerjaan yang masih berjalan (mis. "May 2025 - Present").
-- Kualitas > kuantitas: suggestions [] adalah output valid jika tidak ada saran yang jujur DAN relevan.`,
-    `ATURAN CAREERNOTE: 1-3 kalimat, nada teman yang peduli dan jujur. Wajib terisi di mode reframe/honest_pivot (jelaskan posisi kandidat terhadap lowongan ini apa adanya). Boleh string kosong "" di mode optimize jika tidak ada catatan penting.`,
-    MODE_INSTRUCTIONS[mode],
-  ].join("\n\n")
+  const reportLanguage = args.reportLanguage ?? language
+  const implied = [...(rule.impliedMust ?? []), ...(rule.impliedNice ?? [])]
+  const hints = rule.presentationHints ?? []
 
   const result = await generateStructured({
     schema: analysisReportSchema,
-    system,
+    system: buildReportSystemPrompt({ reportLanguage, cvLanguage: language, mode }),
+    // Sedikit lebih tinggi dari default: menulis ulang kalimat butuh variasi,
+    // sementara seluruh kebenarannya sudah dikunci schema + guardrail.
+    temperature: 0.35,
     prompt: [
-      "## Teks CV asli (sumber kutipan `before` & `basedOnFacts` — verbatim)",
+      "## Teks CV asli (sumber kutipan `before`, `basedOnFacts` & `evidenceQuote` — verbatim)",
       rawText,
       "## CV (structured JSON)",
       JSON.stringify(cv),
@@ -94,29 +621,90 @@ export async function generateAnalysisReport(args: {
       "## Hasil rule-based (harus konsisten dengan ini)",
       JSON.stringify({
         matchedMust: rule.matchedMust,
+        impliedCovered: implied.map((item) => ({
+          skill: item.skill,
+          sudahDipastikanDariSkill: item.evidence,
+        })),
         missingMust: rule.missingMust,
         missingNice: rule.missingNice,
         modeSaran: mode,
       }),
+      hints.length > 0
+        ? [
+            "## KEMUNGKINAN HANYA SOAL PENYAJIAN (sistem sudah menemukan buktinya di CV)",
+            'Ini bukan kekurangan kemampuan. Requirement di bawah TIDAK cocok secara kata harfiah, tapi kode sudah menemukan fakta terkait di CV. Klasifikasikan sebagai type "presentation" dan pakai kutipan di bawah sebagai evidenceQuote.',
+            JSON.stringify(
+              hints.map((hint) => ({
+                requirement: hint.skill,
+                istilahYangDipakaiKandidat: hint.term,
+                buktiDiCv: hint.quote,
+              })),
+            ),
+          ].join("\n")
+        : "",
       "Hasilkan laporan { gaps, suggestions, careerNote } sesuai seluruh aturan di atas.",
-    ].join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
   })
 
-  const suggestions: Suggestion[] = []
+  // Bersihkan diagnosis SEBELUM guardrail saran jalan, supaya saran yang
+  // menggantung pada gap palsu ikut tersaring oleh checkGapLink.
+  // Urutannya penting: verifikasi kutipan model dulu, baru penimpaan
+  // deterministik, supaya hasil kode tidak dibatalkan oleh pemeriksaan kutipan.
+  let gaps = dropImpliedGaps(result.gaps, implied)
+  gaps = enforceGapEvidence(gaps, rawText, hints)
+  gaps = promoteHintedGaps(gaps, hints, rawText)
+  gaps = repairTemplateGaps(gaps)
+
   const rejected: ReportOutcome["rejected"] = []
-  for (const suggestion of result.suggestions) {
-    const honesty = postCheckSuggestion(suggestion, cv)
-    if (!honesty.ok) {
-      rejected.push({ suggestion, reason: (honesty as any).reason })
+  const passed: Suggestion[] = []
+
+  // Luruskan jangkar dulu, baru dinilai — supaya yang ditolak postCheckAnchor
+  // benar-benar jangkar yang tidak ada di CV, bukan sekadar beda tanda baca.
+  const ordered = alignSuggestionAnchors(result.suggestions, rawText).sort(
+    (a, b) => (IMPACT_ORDER[a.impact] ?? 1) - (IMPACT_ORDER[b.impact] ?? 1),
+  )
+
+  for (const suggestion of ordered) {
+    const checks: PostCheckResult[] = [
+      postCheckAnchor(suggestion, rawText),
+      postCheckSuggestion(suggestion, cv),
+      postCheckBannedPhrases(suggestion),
+      postCheckNaturalPhrasing(suggestion),
+      postCheckUsefulness(suggestion, job),
+      checkGapLink(suggestion, gaps),
+      checkGapDelivered(suggestion, gaps),
+    ]
+    const failed = checks.find(
+      (check): check is { ok: false; reason: string } => !check.ok,
+    )
+    if (failed) {
+      rejected.push({ suggestion, reason: failed.reason })
       continue
     }
-    const usefulness = postCheckUsefulness(suggestion, job)
-    if (!usefulness.ok) {
-      rejected.push({ suggestion, reason: (usefulness as any).reason })
-      continue
-    }
-    suggestions.push(suggestion)
+    passed.push(suggestion)
   }
 
-  return { gaps: result.gaps, suggestions, rejected, careerNote: result.careerNote.trim() }
+  const { kept, dropped } = dedupeSuggestions(passed)
+  rejected.push(...dropped)
+
+  const limit = MODE_MAX_SUGGESTIONS[mode]
+  for (const extra of kept.slice(limit)) {
+    rejected.push({
+      suggestion: extra,
+      reason: `Melebihi batas ${limit} saran untuk mode ${mode} — dibuang agar user fokus pada yang paling berdampak`,
+    })
+  }
+
+  const careerNote = partitionBannedSentences(result.careerNote.trim())
+
+  return {
+    gaps,
+    suggestions: kept.slice(0, limit),
+    rejected,
+    careerNote:
+      careerNote.dropped.length > 0 ? stripLeadingConnective(careerNote.kept) : careerNote.kept,
+    careerNoteDropped: careerNote.dropped,
+  }
 }

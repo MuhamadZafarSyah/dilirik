@@ -3,13 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { FiFileText, FiPlus, FiZap, FiSearch, FiArrowRight } from "react-icons/fi"
-import { useQuery } from "@tanstack/react-query"
-import { api } from "@/lib/api"
+import { FiFileText, FiPlus, FiZap, FiSearch, FiArrowRight, FiTrash2 } from "react-icons/fi"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { api, errorMessage } from "@/lib/api"
 import { Skeleton } from "boneyard-js/react"
 import { Polaroid } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
 
 type CvItem = {
@@ -33,7 +35,10 @@ const itemVariants = {
 
 export default function CvListPage() {
   const { t } = useI18n()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [cvToDelete, setCvToDelete] = useState<CvItem | null>(null)
 
   const cvsQuery = useQuery({
     queryKey: ["cvs"],
@@ -43,6 +48,17 @@ export default function CvListPage() {
     },
   })
   const cvs = cvsQuery.data ?? (cvsQuery.isError ? [] : null)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/cv/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cvs"] })
+      toast("Dokumen CV berhasil dihapus.", "success")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
 
   const roots = cvs?.filter((cv) => !cv.parentCvId) ?? []
   const versionsOf = (rootId: string) => cvs?.filter((cv) => cv.parentCvId === rootId) ?? []
@@ -105,49 +121,65 @@ export default function CvListPage() {
                     whileHover={{ scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 350, damping: 25 }}
                   >
-                    <Polaroid tape={tapeColor} pin rotate={i % 2 === 0 ? -1.5 : 1.5} className="group h-full">
-                      <Link href={`/app/cv/${cv.id}`} className="block">
-                        <div className="bg-paper/80 border-line flex h-36 items-center justify-center rounded-lg border-2 shadow-inner group-hover:bg-paper transition-colors relative overflow-hidden">
-                          <FiFileText className="h-14 w-14 text-ink/70 group-hover:scale-110 transition-transform" />
-                          <span className="label bg-ink text-paper absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] uppercase font-bold">
-                            {cv.language}
-                          </span>
-                        </div>
-
-                        <div className="mt-4">
-                          <h3 className="hand text-2xl font-bold text-ink group-hover:text-red transition-colors line-clamp-1">
-                            {cv.title}
-                          </h3>
-                          <p className="label text-muted text-xs uppercase tracking-wider mt-1">
-                            v{cv.version} Master · {new Date(cv.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                        </div>
-                      </Link>
-
-                      {versions.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-line/60">
-                          <p className="scrawl text-muted text-xs mb-1.5 font-bold">Riwayat Revisi:</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {versions.map((v) => (
-                              <Link
-                                key={v.id}
-                                href={`/app/cv/${v.id}`}
-                                className="label bg-yellow/30 border border-yellow/80 hover:bg-yellow text-ink rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors"
-                              >
-                                v{v.version} (Revisi)
-                              </Link>
-                            ))}
+                    <Polaroid tape={tapeColor} pin rotate={i % 2 === 0 ? -1.5 : 1.5} className="group h-full flex flex-col justify-between">
+                      <div>
+                        <Link href={`/app/cv/${cv.id}`} className="block">
+                          <div className="bg-paper/80 border-line flex h-36 items-center justify-center rounded-lg border-2 shadow-inner group-hover:bg-paper transition-colors relative overflow-hidden">
+                            <FiFileText className="h-14 w-14 text-ink/70 group-hover:scale-110 transition-transform" />
+                            <span className="label bg-ink text-paper absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] uppercase font-bold">
+                              {cv.language}
+                            </span>
                           </div>
-                        </div>
-                      )}
 
-                      <div className="mt-4 flex items-center justify-between text-xs font-bold pt-2">
+                          <div className="mt-4">
+                            <h3 className="hand text-2xl font-bold text-ink group-hover:text-red transition-colors line-clamp-1">
+                              {cv.title}
+                            </h3>
+                            <p className="label text-muted text-xs uppercase tracking-wider mt-1">
+                              v{cv.version} Master · {new Date(cv.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                        </Link>
+
+                        {versions.length > 0 && (
+                          <div className="mt-4 pt-3 border-t border-line/60">
+                            <p className="scrawl text-muted text-xs mb-1.5 font-bold">Riwayat Revisi:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {versions.map((v) => (
+                                <Link
+                                  key={v.id}
+                                  href={`/app/cv/${v.id}`}
+                                  className="label bg-yellow/30 border border-yellow/80 hover:bg-yellow text-ink rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors"
+                                >
+                                  v{v.version} (Revisi)
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-1 text-xs font-bold pt-3 border-t border-line/60">
                         <Link href={`/app/analyze?cvId=${cv.id}`} className="label text-red hover:underline flex items-center gap-1">
-                          <FiZap /> Analisis CV Ini
+                          <FiZap /> Analisis
                         </Link>
-                        <Link href={`/app/cv/${cv.id}`} className="label text-ink hover:underline flex items-center gap-1">
-                          Detail <FiArrowRight />
-                        </Link>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon={<FiTrash2 />}
+                            onClick={() => setCvToDelete(cv)}
+                            className="text-red hover:bg-red/10"
+                            title="Hapus Master CV"
+                          >
+                            Hapus
+                          </Button>
+                          <Link href={`/app/cv/${cv.id}`}>
+                            <Button size="sm" variant="outline" icon={<FiArrowRight />}>
+                              Detail
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </Polaroid>
                   </motion.div>
@@ -157,6 +189,24 @@ export default function CvListPage() {
           )
         ) : null}
       </Skeleton>
+
+      {/* Konfirmasi Hapus Master CV */}
+      <ConfirmDialog
+        open={cvToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setCvToDelete(null)
+        }}
+        title="Hapus master CV ini?"
+        description={
+          cvToDelete
+            ? `Master CV "${cvToDelete.title}" beserta seluruh versi revisinya akan dihapus permanen.`
+            : "Dokumen CV ini akan dihapus permanen."
+        }
+        confirmLabel="Ya, hapus CV"
+        onConfirm={async () => {
+          if (cvToDelete) await deleteMutation.mutateAsync(cvToDelete.id).catch(() => {})
+        }}
+      />
     </motion.div>
   )
 }

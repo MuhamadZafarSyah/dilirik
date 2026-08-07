@@ -1,4 +1,5 @@
-import type { CvStructured, JobParsed, Suggestion } from "@dilirik/shared"
+import type { CvStructured, Gap, JobParsed, Suggestion } from "@dilirik/shared"
+import { locateQuote } from "./quoteLocator"
 
 /** Normalisasi string untuk pencocokan fakta yang toleran. */
 export function normalize(text: string): string {
@@ -7,6 +8,11 @@ export function normalize(text: string): string {
     .replace(/[^\p{L}\p{N}\s+#./-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+/** Rapatkan whitespace tanpa mengubah karakter lain (untuk pencocokan verbatim). */
+export function squashWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim()
 }
 
 /** Kumpulkan seluruh fakta tekstual dari structuredJson CV (termasuk about & section dinamis). */
@@ -31,7 +37,7 @@ export function collectCvFacts(cv: CvStructured): string[] {
   return facts.map(normalize).filter(Boolean)
 }
 
-/** Kumpulkan seluruh istilah lowongan (untuk guardrail relevansi & anti-kosmetik). */
+/** Kumpulkan seluruh istilah lowongan (untuk guardrail relevansi). */
 export function collectJobTerms(job: JobParsed): string[] {
   return [
     job.jobTitle ?? "",
@@ -51,10 +57,37 @@ export type PostCheckResult =
   | { ok: false; reason: string }
 
 /**
+ * Guardrail titik-3a / JANGKAR (engine v3).
+ *
+ * `before` dijanjikan sebagai kutipan VERBATIM teks CV, tapi engine v2 tidak
+ * pernah memverifikasinya. Akibatnya saran yang jangkarnya diparafrase tidak
+ * bisa ditempelkan otomatis di langkah revisi — user melihat saran yang "gagal
+ * diterapkan" tanpa penjelasan.
+ *
+ * Engine v3.2a: aturan pencocokannya dipindah seluruhnya ke `quoteLocator`.
+ * Sebelumnya fungsi ini punya dua lapis pencocokan sendiri, dan aturannya
+ * berbeda dari yang dipakai enforceGapEvidence — satu kalimat CV yang sama bisa
+ * lolos di satu pemeriksaan dan gagal di pemeriksaan lain.
+ *
+ * Catatan: pemanggil sebaiknya menjalankan alignSuggestionAnchors lebih dulu,
+ * supaya jangkar yang cuma beda tanda baca diperbaiki, bukan ditolak. Yang
+ * sampai ke sini seharusnya tinggal jangkar yang memang bukan teks CV.
+ */
+export function postCheckAnchor(suggestion: Suggestion, rawText: string): PostCheckResult {
+  const before = suggestion.before ?? ""
+  if (!before.trim()) {
+    return { ok: false, reason: "Kutipan `before` kosong — saran tidak punya jangkar di CV" }
+  }
+  if (locateQuote(before, rawText)) return { ok: true }
+  return {
+    ok: false,
+    reason: `Kutipan "${before.slice(0, 60)}" tidak ada verbatim di teks CV — saran tidak bisa diterapkan otomatis`,
+  }
+}
+
+/**
  * Guardrail titik-3 / KEJUJURAN (PRD §8): setiap saran WAJIB merujuk fakta
  * yang benar-benar ada di structuredJson CV.
- * - Setiap entri `basedOnFacts` harus ditemukan (substring, ternormalisasi).
- * - Fakta yang tidak ada → TOLAK (transparan, masuk daftar rejected).
  */
 export function postCheckSuggestion(
   suggestion: Suggestion,
@@ -82,13 +115,347 @@ export function postCheckSuggestion(
 }
 
 /**
- * Guardrail KEBERGUNAAN (engine v2) — kejujuran saja tidak cukup; saran juga
- * harus RELEVAN terhadap lowongan. Menolak tiga penyakit yang lolos guardrail lama:
- * 1. No-op: `after` ≈ `before` (cuma tambah 2-3 kata kosong).
- * 2. Tanpa target: saran tidak menjawab requirement lowongan mana pun
- *    (membunuh fluff macam "Highly skilled engineer" untuk lowongan lain bidang).
- * 3. Kosmetik: kata-kata baru di `after` tidak menyentuh satu pun istilah
- *    lowongan → cuma parafrase/sinonim, tidak menambah relevansi.
+ * Frasa terlarang — dilarang di prompt SEKALIGUS divalidasi di kode.
+ * Larangan yang cuma hidup di prompt akan bocor cepat atau lambat.
+ *
+ * Engine v3.2: pola bahasa Inggris diperbanyak. Sebelumnya 13 pola mayoritas
+ * berbahasa Indonesia, sementara CV yang dianalisis sering berbahasa Inggris —
+ * jadi guardrail ini praktis buta pada kasus paling umum. "seamless" masuk
+ * daftar karena itu kata pengisi yang paling sering dipakai model untuk membuat
+ * kalimat terasa lebih panjang tanpa menambah satu pun informasi baru.
+ */
+export const BANNED_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /\bhighly\s+skilled\b/i, label: "highly skilled" },
+  { pattern: /\bexpert\s+(in|at|with)\b/i, label: "expert in" },
+  { pattern: /\bstrong\s+background\b/i, label: "strong background" },
+  { pattern: /\bshowcas(e|ing)\s+(expertise|skills)\b/i, label: "showcasing expertise" },
+  { pattern: /\bproven\s+track\s+record\b/i, label: "proven track record" },
+  { pattern: /\bresults[-\s]driven\b/i, label: "results-driven" },
+  { pattern: /\bteam\s+player\b/i, label: "team player" },
+  { pattern: /\bpassionate\s+about\b/i, label: "passionate about" },
+  { pattern: /\bseamless(ly)?\b/i, label: "seamless" },
+  { pattern: /\bcutting[-\s]edge\b/i, label: "cutting-edge" },
+  { pattern: /\bstate[-\s]of[-\s]the[-\s]art\b/i, label: "state-of-the-art" },
+  { pattern: /\bdetail[-\s]oriented\b/i, label: "detail-oriented" },
+  { pattern: /\bself[-\s]motivated\b/i, label: "self-motivated" },
+  { pattern: /\bfast\s+learner\b/i, label: "fast learner" },
+  { pattern: /\bexcellent\s+(communication|interpersonal)\b/i, label: "excellent communication" },
+  { pattern: /\bsangat\s+(ahli|mahir|berpengalaman|kompeten)\b/i, label: "sangat ahli" },
+  { pattern: /\bberpengalaman\s+luas\b/i, label: "berpengalaman luas" },
+  { pattern: /\bpekerja\s+keras\b/i, label: "pekerja keras" },
+  { pattern: /\bdedikasi\s+tinggi\b/i, label: "dedikasi tinggi" },
+  { pattern: /\bmampu\s+bekerja\s+(dalam\s+tim|di\s+bawah\s+tekanan)\b/i, label: "mampu bekerja dalam tim" },
+]
+
+/** Cari frasa terlarang di dalam teks, kembalikan label jika ada. */
+export function findBannedPhrase(text: string): string | null {
+  for (const { pattern, label } of BANNED_PHRASE_PATTERNS) {
+    if (pattern.test(text)) {
+      return label
+    }
+  }
+  return null
+}
+
+/**
+ * Pisahkan teks menjadi kalimat yang bersih dan kalimat yang dibuang
+ * (engine v3.3.2).
+ *
+ * Versi v3.3.1 hanya mengembalikan teks bersihnya. Itu membuat penyaringan
+ * careerNote sepenuhnya senyap: kalau seluruh kalimatnya terbuang, pengguna
+ * menerima catatan kosong tanpa penjelasan dan kita tidak punya cara apa pun
+ * untuk mengetahui seberapa sering hal itu terjadi. Guardrail yang tidak bisa
+ * diukur tidak bisa diperbaiki — kalimat yang dibuang justru sinyal paling
+ * berharga untuk menilai apakah prompt careerNote perlu diperketat.
+ */
+export function partitionBannedSentences(text: string): {
+  kept: string
+  dropped: string[]
+} {
+  if (!text.trim()) return { kept: "", dropped: [] }
+  const sentences = text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const kept: string[] = []
+  const dropped: string[] = []
+  for (const sentence of sentences) {
+    if (findBannedPhrase(sentence)) dropped.push(sentence)
+    else kept.push(sentence)
+  }
+  return { kept: kept.join(" ").trim(), dropped }
+}
+
+/** Buang kalimat-kalimat yang memuat frasa terlarang. */
+export function stripBannedSentences(text: string): string {
+  return partitionBannedSentences(text).kept
+}
+
+/**
+ * Kata yang terlalu umum untuk dipakai sebagai JANGKAR HARFIAH bukti.
+ *
+ * Dipakai `distinctiveTokens`, yang dipakai `findConceptEvidence` untuk mencari
+ * istilah requirement di dalam teks CV. Di konteks itu setiap kata yang lolos
+ * daftar ini berubah jadi klaim: "CV memuat kata ini, berarti requirement-nya
+ * terbukti". Karena itu daftarnya harus MURAH HATI — satu kata umum yang lolos
+ * langsung melahirkan bukti palsu.
+ *
+ * Contoh yang menjadi alasan daftar ini dipulihkan di v3.3.2: tanpa "software",
+ * requirement apa pun yang memuat kata itu akan menemukan "bukti" di headline
+ * CV yang berbunyi "Software Engineer" — gap beneran naik jadi gap penyajian,
+ * dan pengguna disuruh "cukup menamai" sesuatu yang tidak pernah dikerjakan.
+ * Itu persis kebalikan dari tujuan peta konsep.
+ */
+export const GENERIC_WORDS = new Set([
+  "data",
+  "system",
+  "systems",
+  "sistem",
+  "design",
+  "desain",
+  "web",
+  "api",
+  "apis",
+  "tool",
+  "tools",
+  "user",
+  "users",
+  "code",
+  "app",
+  "apps",
+  "team",
+  "tim",
+  "cloud",
+  "service",
+  "services",
+  "software",
+  "development",
+  "developer",
+  "pengembangan",
+  "pembuatan",
+  "application",
+  "aplikasi",
+  "management",
+  "manajemen",
+  "engineering",
+  "rekayasa",
+  "testing",
+  "pengujian",
+  "automated",
+  "otomatis",
+  "security",
+  "keamanan",
+  "modern",
+  "basic",
+  "dasar",
+  "pengalaman",
+  "kemampuan",
+  "menguasai",
+  "terbiasa",
+  "mampu",
+  "pernah",
+  "and",
+  "the",
+  "for",
+  "with",
+  "dan",
+  "atau",
+  "serta",
+  "yang",
+])
+
+/**
+ * Stop-word untuk verifikasi klaim `added_scope` — SUPERSET dari GENERIC_WORDS.
+ *
+ * Dua daftar, bukan satu, dan itu disengaja. v3.3.1 memakai satu daftar bersama
+ * atas nama DRY, padahal kedua pemakainya punya kebutuhan BERLAWANAN:
+ *
+ * - `distinctiveTokens` (bukti): kata yang lolos jadi klaim bukti. Daftar yang
+ *   terlalu pendek melahirkan positif palsu.
+ * - `postCheckUsefulness` (cakupan): kata yang lolos jadi izin bagi model untuk
+ *   mengaku menambah cakupan. Daftar yang terlalu pendek meloloskan saran kosong.
+ *
+ * Menyatukannya memaksa satu daftar melayani dua arah kesalahan sekaligus, dan
+ * setiap penyetelan untuk satu sisi diam-diam merusak sisi lain. DRY berlaku
+ * untuk PENGETAHUAN yang sama, bukan daftar yang kebetulan mirip — keduanya
+ * punya alasan berubah yang berbeda. Relasi supersetnya tetap dijaga di kode,
+ * jadi tidak ada dua salinan yang bisa pelan-pelan berbeda.
+ */
+const SCOPE_STOP_WORDS = new Set<string>([
+  ...GENERIC_WORDS,
+  "dengan",
+  "untuk",
+  "pada",
+  "dalam",
+  "dari",
+  "oleh",
+  "ini",
+  "itu",
+  "sebagai",
+  "adalah",
+  "secara",
+  "akun",
+  "profesional",
+  "kerja",
+  "work",
+  "hasil",
+  "proses",
+  "banyak",
+  "berbagai",
+  "lewat",
+])
+
+/** Ekstrak token unik berkarakter khas (panjang >= 3, bukan kata generik) dari teks. */
+export function distinctiveTokens(text: string): string[] {
+  return normalize(text)
+    .split(" ")
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3 && !GENERIC_WORDS.has(t))
+}
+
+/** Guardrail titik-3b: tolak kata sifat memuji diri yang tidak bisa diverifikasi. */
+export function postCheckBannedPhrases(suggestion: Suggestion): PostCheckResult {
+  const banned = findBannedPhrase(suggestion.after)
+  if (banned) {
+    return {
+      ok: false,
+      reason: `Mengandung frasa klise yang dilarang: "${banned}" — recruiter mengabaikannya dan ATS tidak menilainya`,
+    }
+  }
+  return { ok: true }
+}
+
+/** Semua isi kurung, termasuk kurungnya. */
+function parentheticals(text: string): string[] {
+  return text.match(/\([^()]*\)/g) ?? []
+}
+
+/** Buang semua kurung agar sisa kalimatnya bisa dibandingkan. */
+function stripParentheticals(text: string): string {
+  return text.replace(/\s*\([^()]*\)/g, " ")
+}
+
+/**
+ * Guardrail titik-9 / KEALAMIAN KALIMAT (engine v3.3).
+ *
+ * Guardrail pengantaran v3.2.3 mewajibkan kata kunci gap benar-benar muncul di
+ * `after`. Model menemukan jalan termurah untuk mematuhinya: menempelkan
+ * istilahnya dalam kurung. "...document capture via PaddleOCR" jadi
+ * "...document capture via PaddleOCR (OCR)". Secara teknis lolos — kata "OCR"
+ * memang muncul — tapi hasilnya kalimat CV yang canggung dan berbau keyword
+ * stuffing, persis yang dilarang aturan #4 HONESTY_SYSTEM_PROMPT.
+ *
+ * Yang ditolak hanya kasus paling telanjang: SELURUH perubahan cuma berupa
+ * sisipan dalam kurung. Kalau kalimatnya juga ditulis ulang, kurungnya bukan
+ * masalah.
+ *
+ * Pengecualian angka disengaja. Kurung yang memuat angka ("(3 posting/minggu)",
+ * "(21 halaman)") membawa informasi yang benar-benar baru bagi pembaca, dan itu
+ * justru gaya penulisan CV yang baik — beda sifatnya dengan menempelkan ulang
+ * istilah yang sudah ada di kalimat itu juga.
+ */
+export function postCheckNaturalPhrasing(suggestion: Suggestion): PostCheckResult {
+  const existing = parentheticals(suggestion.before)
+  const added = parentheticals(suggestion.after).filter(
+    (group) => !existing.includes(group),
+  )
+  if (added.length === 0) return { ok: true }
+  if (added.some((group) => /\d/.test(group))) return { ok: true }
+
+  const rewritten =
+    normalize(stripParentheticals(suggestion.after)) !==
+    normalize(stripParentheticals(suggestion.before))
+  if (rewritten) return { ok: true }
+
+  return {
+    ok: false,
+    reason: `Satu-satunya perubahan adalah menempelkan ${added.join(" ")} dalam kurung — istilahnya memang muncul, tapi kalimatnya tidak jadi lebih baik dan terbaca sebagai keyword stuffing. Tulis ulang kalimatnya supaya istilah itu mengalir natural.`,
+  }
+}
+
+/**
+ * Template ISI-BLANKO pada teks GAP (engine v3.2).
+ *
+ * Uji gold set #02 menghasilkan lima gap dengan kalimat yang identik polanya:
+ * "Tidak ada pengalaman atau pengetahuan tentang X di CV" / "Perlu menambahkan
+ * pengalaman atau pengetahuan tentang X". Kalimat semacam itu bisa ditulis TANPA
+ * MEMBACA CV sama sekali — cukup menyalin nama skill ke dalam cetakan. Itulah
+ * tanda paling jelas bahwa model tidak benar-benar menyisir CV, dan justru
+ * kalimat inilah yang melahirkan vonis palsu "tidak ada pengalaman OCR" pada CV
+ * yang memakai PaddleOCR.
+ *
+ * Dipisah dari BANNED_PHRASE_PATTERNS karena sasarannya beda: yang itu memeriksa
+ * `after` sebuah saran, yang ini memeriksa explanation & advice sebuah gap.
+ */
+export const BANNED_GAP_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
+  {
+    pattern: /tidak\s+ada\s+(bukti\s+)?(pengalaman|pengetahuan)/i,
+    label: "tidak ada pengalaman atau pengetahuan tentang ...",
+  },
+  {
+    pattern: /perlu\s+menambahkan\s+(pengalaman|pengetahuan)/i,
+    label: "perlu menambahkan pengalaman atau pengetahuan tentang ...",
+  },
+  {
+    pattern: /tidak\s+ditemukan\s+(bukti\s+)?(pengalaman|pengetahuan)/i,
+    label: "tidak ditemukan bukti pengalaman ...",
+  },
+  {
+    pattern: /\bno\s+(evidence|experience|mention)\s+(of|with|in|about)\b/i,
+    label: "no evidence of ...",
+  },
+  {
+    pattern: /\b(is\s+)?not\s+(mentioned|present|listed)\s+in\s+the\s+cv\b/i,
+    label: "not mentioned in the CV",
+  },
+]
+
+/**
+ * Guardrail titik-6b: deteksi teks gap yang cuma hasil mengisi cetakan.
+ *
+ * Sengaja TIDAK membuang gap-nya — skill yang memang tidak ada tetap harus
+ * dilaporkan. Yang salah bukan keberadaan gap-nya, melainkan kalimatnya. Karena
+ * itu hasil pemeriksaan ini dipakai `repairTemplateGaps` untuk MENIMPA teksnya
+ * dengan kalimat yang menyebut istilah apa saja yang benar-benar dicari.
+ */
+export function postCheckGapPhrases(gap: Gap): PostCheckResult {
+  const haystack = `${gap.explanation ?? ""} ${gap.advice ?? ""}`
+  for (const { pattern, label } of BANNED_GAP_PHRASE_PATTERNS) {
+    if (pattern.test(haystack)) {
+      return {
+        ok: false,
+        reason: `Teks gap memakai template isi-blanko: "${label}" — kalimat ini bisa ditulis tanpa membaca CV`,
+      }
+    }
+  }
+  return { ok: true }
+}
+
+/** Angka utuh yang muncul di sebuah teks, mis. ["100", "21"]. */
+function numbersIn(text: string): string[] {
+  return text.match(/\d+(?:[.,]\d+)?/g) ?? []
+}
+
+/** Minimum kata bermakna baru agar klaim penambahan cakupan bisa dipercaya. */
+const MIN_SCOPE_TOKENS = 2
+
+/**
+ * Guardrail KEBERGUNAAN (engine v3).
+ *
+ * Perubahan penting dari v2: aturan "anti-kosmetik" lama mewajibkan setiap kata
+ * baru menyentuh istilah lowongan. Aturan itu justru MENDORONG keyword stuffing
+ * — bertabrakan dengan aturan #4 di HONESTY_SYSTEM_PROMPT. Sekarang yang dicek
+ * adalah KLAIM saran itu sendiri (`whatChanged`), yang bisa diverifikasi kode:
+ * mengaku menambah angka → harus ada angka baru, mengaku menambah tools → harus
+ * ada istilah lowongan yang benar-benar bertambah.
+ *
+ * Engine v3.3.2: "angka baru" tidak lagi diukur dengan MENGHITUNG digit.
+ * Perbaikan yang paling sering ditulis model adalah mempertajam angka yang sudah
+ * ada — "melayani 30 klien" jadi "melayani 12 klien korporat" — dan jumlah
+ * digitnya tidak berubah, sehingga klaim yang benar-benar sah ikut ditolak.
+ * Sebaliknya "3" jadi "5" juga tidak terbaca sebagai perubahan. Yang dibandingkan
+ * sekarang angkanya sendiri, bukan banyaknya.
  */
 export function postCheckUsefulness(
   suggestion: Suggestion,
@@ -100,12 +467,14 @@ export function postCheckUsefulness(
     return { ok: false, reason: "No-op — hasil tulis ulang sama saja dengan teks asli" }
   }
 
-  const jobTerms = collectJobTerms(job)
-  const jobText = jobTerms.join(" | ")
+  const jobText = collectJobTerms(job).join(" | ")
 
   const target = normalize(suggestion.targetRequirement ?? "")
   if (!target) {
-    return { ok: false, reason: "Saran tidak menyebut requirement lowongan yang dijawab (targetRequirement kosong)" }
+    return {
+      ok: false,
+      reason: "Saran tidak menyebut requirement lowongan yang dijawab (targetRequirement kosong)",
+    }
   }
   const targetTokens = target.split(" ").filter((tok) => tok.length >= 3)
   const targetLinked =
@@ -117,14 +486,84 @@ export function postCheckUsefulness(
     }
   }
 
-  // Anti-kosmetik: kata baru yang ditambahkan harus menyentuh istilah lowongan.
-  const beforeTokens = new Set(before.split(" "))
-  const addedTokens = after.split(" ").filter((tok) => tok.length >= 3 && !beforeTokens.has(tok))
-  if (addedTokens.length > 0 && !addedTokens.some((tok) => jobText.includes(tok))) {
+  const changes = suggestion.whatChanged ?? []
+  if (changes.length === 0) {
     return {
       ok: false,
-      reason: "Perubahan kosmetik — tidak menambah satu pun istilah yang relevan dengan lowongan",
+      reason: "Saran tidak menyatakan apa yang berubah (whatChanged kosong) — tidak bisa diverifikasi",
+    }
+  }
+
+  const beforeTokens = new Set(before.split(" "))
+  const afterTokens = new Set(after.split(" "))
+  const addedTokens = [...afterTokens].filter((tok) => tok.length >= 3 && !beforeTokens.has(tok))
+  const numbersBefore = numbersIn(suggestion.before)
+  const hasNewNumber = numbersIn(suggestion.after).some(
+    (value) => !numbersBefore.includes(value),
+  )
+
+  if (changes.includes("added_metric") && !hasNewNumber) {
+    return {
+      ok: false,
+      reason: "Mengaku menambah angka/metrik, tapi tidak ada angka baru di `after`",
+    }
+  }
+  if (changes.includes("added_tool") && !addedTokens.some((tok) => jobText.includes(tok))) {
+    return {
+      ok: false,
+      reason: "Mengaku menambah tools yang diminta lowongan, tapi tidak ada istilah lowongan yang bertambah",
+    }
+  }
+  if (changes.includes("added_scope") && !hasNewNumber) {
+    const meaningfulNewTokens = addedTokens.filter((tok) => !SCOPE_STOP_WORDS.has(tok))
+    if (meaningfulNewTokens.length < MIN_SCOPE_TOKENS) {
+      return {
+        ok: false,
+        reason: "Mengaku menambah cakupan kerja (added_scope), tetapi tidak ada penambahan detail atau informasi baru yang signifikan",
+      }
+    }
+  }
+  if (changes.length === 1 && changes[0] === "reordered_for_relevance") {
+    const removed = [...beforeTokens].filter((tok) => tok.length >= 3 && !afterTokens.has(tok))
+    if (removed.length > 3) {
+      return {
+        ok: false,
+        reason: "Mengaku hanya menyusun ulang, tapi banyak informasi asli justru hilang",
+      }
     }
   }
   return { ok: true }
+}
+
+/**
+ * Buang saran kembar: dua saran yang jangkarnya (`before`) sama atau saling
+ * memuat akan bertabrakan saat diterapkan — yang kedua pasti gagal replace.
+ * Saran pertama (impact tertinggi, karena sudah diurutkan) yang dipertahankan.
+ */
+export function dedupeSuggestions(suggestions: Suggestion[]): {
+  kept: Suggestion[]
+  dropped: Array<{ suggestion: Suggestion; reason: string }>
+} {
+  const kept: Suggestion[] = []
+  const dropped: Array<{ suggestion: Suggestion; reason: string }> = []
+  const anchors: string[] = []
+  for (const suggestion of suggestions) {
+    const anchor = normalize(suggestion.before)
+    const clash = anchors.find(
+      (existing) =>
+        existing === anchor ||
+        (anchor.length >= 15 && existing.includes(anchor)) ||
+        (existing.length >= 15 && anchor.includes(existing)),
+    )
+    if (clash) {
+      dropped.push({
+        suggestion,
+        reason: "Jangkar `before` bertabrakan dengan saran lain yang lebih berdampak",
+      })
+      continue
+    }
+    anchors.push(anchor)
+    kept.push(suggestion)
+  }
+  return { kept, dropped }
 }

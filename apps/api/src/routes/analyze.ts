@@ -4,6 +4,7 @@ import { z } from "zod"
 import { requireAuth } from "../middleware/requireAuth"
 import { rateLimit } from "../middleware/rateLimit"
 import { HttpError } from "../middleware/errorHandler"
+import { resolveReportLanguage } from "../lib/language"
 import { getCvFile, storeCvFile } from "../lib/storage"
 import { reviseDocx } from "../services/docxRevise"
 import * as analysisService from "../services/analysisService"
@@ -27,7 +28,19 @@ analyzeRouter.get("/quota", async (req, res, next) => {
 analyzeRouter.post("/", rateLimit("analyze", 6, 60), async (req, res, next) => {
   try {
     const input = runAnalysisSchema.parse(req.body)
-    const { analysis, cached } = await analysisService.runAnalysis({ userId: req.userId!, ...input } as any)
+    // Bahasa laporan ditentukan di sini, bukan di service: inilah satu-satunya
+    // lapisan yang melihat HTTP header. Klien lama yang belum mengirim
+    // reportLanguage tetap dapat tebakan yang masuk akal dari Accept-Language.
+    const reportLanguage = resolveReportLanguage({
+      requested: input.reportLanguage,
+      acceptLanguage: req.headers["accept-language"],
+    })
+    const { analysis, cached } = await analysisService.runAnalysis({
+      userId: req.userId!,
+      cvId: input.cvId,
+      jobPostingId: input.jobPostingId,
+      reportLanguage,
+    })
     res.status(201).json({ analysis, cached })
   } catch (e) { next(e) }
 })

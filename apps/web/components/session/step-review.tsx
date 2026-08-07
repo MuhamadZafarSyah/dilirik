@@ -64,7 +64,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
   if (analysisQuery.isError && isQuotaExceeded(analysisQuery.error)) {
     return (
       <Sticky tone="red" className="space-y-3 py-6 text-center">
-        <FiAlertTriangle className="mx-auto h-10 w-10 text-red animate-bounce" />
+        <FiAlertTriangle className="mx-auto h-10 w-10 text-red " />
         <h3 className="hand text-3xl font-bold">{t("quotaExhausted")}</h3>
         <p className="text-sm text-muted">Draft sesi ini tersimpan aman. Kamu bisa melanjutkan lagi setelah kuota bulanan ter-reset.</p>
         <Link href="/pricing" className="inline-block mt-2">
@@ -98,7 +98,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
           <Card tape="red" pin className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
             <ScoreGauge score={analysis.matchScore} size={180} />
 
-            <div className="flex-1 text-center sm:text-left space-y-2">
+            <div className="flex-1 text-center sm:text-left space-y-3">
               <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase">
                 Hasil Analisis Match
               </span>
@@ -109,28 +109,37 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                 Ditemukan <strong className="text-red">{realGaps.length} Gap Beneran</strong> dan{" "}
                 <strong className="text-yellow">{presentationGaps.length} Gap Penyajian</strong> yang bisa langsung diperbaiki tanpa perlu memalsukan fakta.
               </p>
-              <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
+
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 {suggestions.length > 0 ? (
-                  <Button variant="danger" icon={<FiEdit3 />} onClick={() => patch({ step: "REVISE" })}>
+                  <Button
+                    variant="danger"
+                    size="lg"
+                    icon={<FiEdit3 />}
+                    onClick={() => patch({ step: "REVISE" })}
+                    className="font-bold text-sm shadow-md"
+                  >
                     ✏︎ Lanjut ke Revisi Teks CV →
                   </Button>
                 ) : (
-                  <Button variant="secondary" onClick={() => patch({ step: "REVISE" })}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => patch({ step: "REVISE" })}
+                    className="font-bold text-sm"
+                  >
                     ✏︎ Tetap Edit Teks Manual →
                   </Button>
                 )}
+
                 {session.cvId && session.jobPostingId && (
                   <Link href={`/app/cover-letters?cvId=${session.cvId}&jobId=${session.jobPostingId}`}>
-                    <Button variant="yellow" icon={<FiFileText />}>
-                      ✉️ Buat Surat Lamaran →
+                    <Button variant="outline" size="lg" icon={<FiFileText />} className="w-full sm:w-auto text-xs font-bold">
+                      ✉️ Buat Surat Lamaran
                     </Button>
                   </Link>
                 )}
-                <Button variant="secondary" onClick={() => patch({ step: "JOB", analysisId: null })}>
-                  ← Ganti Lowongan
-                </Button>
               </div>
-
             </div>
           </Card>
 

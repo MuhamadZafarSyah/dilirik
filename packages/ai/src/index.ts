@@ -4,13 +4,53 @@ export { HONESTY_SYSTEM_PROMPT, languageInstruction } from "./guardrail/systemPr
 export {
   postCheckSuggestion,
   postCheckUsefulness,
+  postCheckAnchor,
+  postCheckBannedPhrases,
+  postCheckGapPhrases,
+  dedupeSuggestions,
   collectCvFacts,
   collectJobTerms,
   normalize,
+  squashWhitespace,
+  BANNED_PHRASE_PATTERNS,
+  BANNED_GAP_PHRASE_PATTERNS,
+  type PostCheckResult,
 } from "./guardrail/postCheck"
-export { ruleBasedScore, skillCovered } from "./scoring/ruleBased"
+export {
+  ruleBasedScore,
+  skillCovered,
+  collectImplicationSources,
+  IMPLIED_WEIGHT_FACTOR,
+  type ImpliedRequirement,
+  type PresentationHint,
+  type RequirementCoverage,
+  type RuleBasedResult,
+} from "./scoring/ruleBased"
+export { findConceptEvidence, type ConceptEvidence } from "./scoring/conceptEvidence"
+export {
+  expandSkill,
+  isShortToken,
+  isKnownTerm,
+  stripVersionSuffix,
+  SKILL_ALIAS_GROUPS,
+} from "./scoring/skillAliases"
+export {
+  expandImplications,
+  displayNameFor,
+  IMPLICATION_ROOTS,
+  type ImplicationConfidence,
+  type ImplicationHit,
+  type SkillSource,
+} from "./scoring/skillImplications"
 export { semanticScore, blendScores } from "./scoring/semantic"
-export { generateAnalysisReport, pickSuggestionMode } from "./analysis/report"
+export {
+  generateAnalysisReport,
+  pickSuggestionMode,
+  dropImpliedGaps,
+  enforceGapEvidence,
+  promoteHintedGaps,
+  repairTemplateGaps,
+} from "./analysis/report"
 export { parseCv } from "./prompts/parseCv"
 export { parseJob } from "./prompts/parseJob"
 export { analyze } from "./pipeline/analyze"
@@ -25,5 +65,3 @@ export {
   countWords,
   type GenerateCoverLetterParams,
 } from "./coverLetter/generateCoverLetter.js"
-
-

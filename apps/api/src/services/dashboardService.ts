@@ -4,7 +4,7 @@ import { checkEntitlement } from "./quota"
 
 /** Ringkasan dashboard (PRD §7.6). */
 export async function getDashboard(userId: string) {
-  const [byStatus, avgScore, recentAnalyses, cvCount, jobCount, entitlement] = await Promise.all([
+  const [byStatus, avgScore, recentAnalyses, cvCount, jobCount, entitlement, latestInterview, totalInterviews] = await Promise.all([
     prisma.application.groupBy({ by: ["status"], where: { userId }, _count: { _all: true } }),
     prisma.analysis.aggregate({ where: { userId }, _avg: { matchScore: true } }),
     prisma.analysis.findMany({
@@ -16,6 +16,20 @@ export async function getDashboard(userId: string) {
     prisma.cv.count({ where: { userId } }),
     prisma.jobPosting.count({ where: { userId } }),
     checkEntitlement(userId),
+    prisma.interviewSession.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        persona: true,
+        durationSec: true,
+        feedbackJson: true,
+        createdAt: true,
+      },
+    }),
+    prisma.interviewSession.count({ where: { userId } }),
   ])
 
   const pipeline = Object.fromEntries(APPLICATION_STATUSES.map((s) => [s, 0])) as Record<
@@ -55,5 +69,18 @@ export async function getDashboard(userId: string) {
       cvTitle: a.cv.title,
       createdAt: a.createdAt.toISOString(),
     })),
+    latestInterview: latestInterview
+      ? {
+          id: latestInterview.id,
+          title: latestInterview.title,
+          status: latestInterview.status,
+          persona: latestInterview.persona,
+          durationSec: latestInterview.durationSec,
+          createdAt: latestInterview.createdAt.toISOString(),
+          overallScore: (latestInterview.feedbackJson as { overallScore?: number } | null)?.overallScore ?? null,
+          summary: (latestInterview.feedbackJson as { summary?: string } | null)?.summary ?? null,
+        }
+      : null,
+    totalInterviews,
   }
 }
