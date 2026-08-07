@@ -115,16 +115,31 @@ export const DEFAULT_REPORT_LANGUAGE: (typeof REPORT_LANGUAGES)[number] = "id"
  * Guardrail yang punya satu pintu belakang bukan guardrail: label itu jadi
  * tempat teraman bagi model untuk menamai perubahan apa pun, termasuk yang cuma
  * menambah kata sambung. Sekarang klaim itu wajib membawa angka baru atau
- * minimal dua kata bermakna yang belum ada di `before`, diukur dengan daftar
- * kata umum yang SAMA dengan yang dipakai pencarian bukti konsep — daftarnya
- * disatukan di guardrail/postCheck supaya tidak jadi dua salinan yang
- * pelan-pelan berbeda. Kedua, pemeriksaan frasa klise selama ini hanya menyentuh
- * `after` sebuah saran, sehingga careerNote — satu-satunya teks bebas yang
- * langsung dibaca pengguna — jadi jalan keluar terakhir bagi "strong
- * background". Sekarang careerNote disaring per KALIMAT, bukan ditolak
- * seluruhnya, supaya bagian yang jujur tetap sampai ke pengguna.
+ * minimal dua kata bermakna yang belum ada di `before`. Kedua, pemeriksaan frasa
+ * klise selama ini hanya menyentuh `after` sebuah saran, sehingga careerNote —
+ * satu-satunya teks bebas yang langsung dibaca pengguna — jadi jalan keluar
+ * terakhir bagi "strong background". Sekarang careerNote disaring per KALIMAT,
+ * bukan ditolak seluruhnya, supaya bagian yang jujur tetap sampai ke pengguna.
+ * v3.3.2: memperbaiki akibat samping v3.3.1. Demi DRY, daftar kata umum dipakai
+ * bersama oleh dua pemeriksaan yang kebutuhannya BERLAWANAN: distinctiveTokens
+ * (dipakai findConceptEvidence) memakainya untuk memutuskan kata mana yang boleh
+ * jadi JANGKAR BUKTI, sedangkan postCheckUsefulness memakainya untuk memutuskan
+ * kata mana yang TIDAK dihitung sebagai penambahan cakupan. Daftar hasil
+ * penggabungan itu kehilangan kata-kata paling berbahaya bagi sisi bukti —
+ * "software", "web", "api", "user", "service", "cloud" — sehingga requirement
+ * apa pun yang memuat kata itu bisa menemukan "bukti" di kalimat CV yang sama
+ * sekali tidak relevan; headline "Software Engineer" saja cukup untuk menaikkan
+ * gap beneran menjadi gap penyajian, lalu pengguna disuruh "cukup menamai"
+ * sesuatu yang tidak pernah dikerjakan. Sekarang keduanya dipisah:
+ * GENERIC_WORDS (murah hati, untuk bukti) dan SCOPE_STOP_WORDS (agresif, untuk
+ * cakupan) yang dibangun sebagai superset GENERIC_WORDS — satu sumber
+ * kebenaran, dua kebijakan. Ditambah dua perbaikan kecil: "angka baru" tidak
+ * lagi diukur dengan MENGHITUNG digit (sehingga "30 klien" → "12 klien" tidak
+ * lagi dianggap tanpa perubahan, dan "3" → "5" terbaca sebagai angka baru),
+ * dan kalimat careerNote yang dibuang guardrail kini dilaporkan lewat
+ * careerNoteDropped supaya penyaringan yang selama ini senyap bisa diukur.
  */
-export const ENGINE_VERSION = "3.3.1"
+export const ENGINE_VERSION = "3.3.2"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
@@ -177,19 +192,19 @@ export const INTERVIEW_PERSONA_LABELS: Record<
   { id: string; en: string; hint: { id: string; en: string }; emoji: string }
 > = {
   SANTAI: {
-    id: "Santai", en: "Casual", emoji: "😄",
+    id: "Santai", en: "Casual", emoji: "\ud83d\ude04",
     hint: { id: "Ngobrol hangat — cocok buat pemanasan", en: "Warm chat — good for warming up" },
   },
   NETRAL: {
-    id: "Netral", en: "Neutral", emoji: "🙂",
+    id: "Netral", en: "Neutral", emoji: "\ud83d\ude42",
     hint: { id: "HR profesional pada umumnya", en: "Typical professional HR" },
   },
   TEGAS: {
-    id: "Tegas", en: "Strict", emoji: "🧐",
+    id: "Tegas", en: "Strict", emoji: "\ud83e\uddd0",
     hint: { id: "To the point, menggali detail jawaban", en: "To the point, digs into details" },
   },
   MENEKAN: {
-    id: "Menekan", en: "Pressure", emoji: "🔥",
+    id: "Menekan", en: "Pressure", emoji: "\ud83d\udd25",
     hint: { id: "Menantang & menguji ketahanan argumen", en: "Challenging & stress-tests your answers" },
   },
 }
