@@ -81,7 +81,7 @@ export default function DashboardPage() {
   if (failed) {
     return (
       <Card pin rotate={-1} className="mx-auto max-w-md text-center py-8 p-6 space-y-4">
-        <FiAlertCircle className="mx-auto h-10 w-10 text-red animate-bounce" />
+        <FiAlertCircle className="mx-auto h-10 w-10 text-red " />
         <h2 className="hand text-2xl">Dashboard Gagal Dimuat 😵</h2>
         <p className="text-muted text-xs leading-relaxed">
           Pastikan backend API berjalan di <code>localhost:4000</code>.

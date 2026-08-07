@@ -83,6 +83,9 @@ const CONCEPT_MAP: Array<{ concepts: string[]; terms: string[] }> = [
       "data security",
     ],
     terms: [
+      "encryption",
+      "encrypt",
+      "enkrip",
       "aes-256",
       "aes-128",
       "gcm",
@@ -91,8 +94,6 @@ const CONCEPT_MAP: Array<{ concepts: string[]; terms: string[] }> = [
       "libsodium",
       "crypto-js",
       "sha-256",
-      "encrypt",
-      "enkrip",
     ],
   },
   {

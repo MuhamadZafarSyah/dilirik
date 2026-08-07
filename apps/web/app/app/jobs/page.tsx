@@ -3,14 +3,16 @@
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { FiBriefcase, FiPlus, FiZap, FiSearch, FiArrowRight, FiGlobe } from "react-icons/fi"
+import { FiBriefcase, FiPlus, FiZap, FiSearch, FiArrowRight, FiGlobe, FiTrash2 } from "react-icons/fi"
 import type { JobParsed } from "@dilirik/shared"
-import { useQuery } from "@tanstack/react-query"
-import { api } from "@/lib/api"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { api, errorMessage } from "@/lib/api"
 import { Skeleton } from "boneyard-js/react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
 
 type JobItem = { id: string; parsedJson: JobParsed; sourceUrl: string | null; createdAt: string }
@@ -27,7 +29,10 @@ const itemVariants = {
 
 export default function JobsPage() {
   const { t } = useI18n()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [jobToDelete, setJobToDelete] = useState<JobItem | null>(null)
 
   const jobsQuery = useQuery({
     queryKey: ["jobs"],
@@ -37,6 +42,17 @@ export default function JobsPage() {
     },
   })
   const jobs = jobsQuery.data ?? (jobsQuery.isError ? [] : null)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/jobs/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] })
+      toast("Lowongan berhasil dihapus.", "success")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
+  })
 
   const filteredJobs = jobs?.filter((job) => {
     const title = job.parsedJson.jobTitle?.toLowerCase() || ""
@@ -142,15 +158,27 @@ export default function JobsPage() {
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-line/60 flex items-center justify-between">
+                    <div className="pt-3 border-t border-line/60 flex items-center justify-between gap-2">
                       <span className="text-muted text-[11px]">
                         Disimpan {new Date(job.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                       </span>
-                      <Link href={`/app/jobs/${job.id}`}>
-                        <Button size="sm" variant="outline" icon={<FiArrowRight />}>
-                          Detail & Analisis
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={<FiTrash2 />}
+                          onClick={() => setJobToDelete(job)}
+                          className="text-red hover:bg-red/10"
+                          title="Hapus Lowongan"
+                        >
+                          Hapus
                         </Button>
-                      </Link>
+                        <Link href={`/app/jobs/${job.id}`}>
+                          <Button size="sm" variant="outline" icon={<FiArrowRight />}>
+                            Detail & Analisis
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </Card>
                 </motion.div>
@@ -159,6 +187,24 @@ export default function JobsPage() {
           )
         ) : null}
       </Skeleton>
+
+      {/* Konfirmasi Hapus Lowongan */}
+      <ConfirmDialog
+        open={jobToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setJobToDelete(null)
+        }}
+        title="Hapus lowongan ini?"
+        description={
+          jobToDelete?.parsedJson.jobTitle
+            ? `Lowongan "${jobToDelete.parsedJson.jobTitle}" akan dihapus permanen.`
+            : "Lowongan ini akan dihapus permanen."
+        }
+        confirmLabel="Ya, hapus lowongan"
+        onConfirm={async () => {
+          if (jobToDelete) await deleteMutation.mutateAsync(jobToDelete.id).catch(() => {})
+        }}
+      />
     </motion.div>
   )
 }

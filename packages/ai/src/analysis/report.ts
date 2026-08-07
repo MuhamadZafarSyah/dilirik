@@ -226,7 +226,7 @@ function checkGapLink(suggestion: Suggestion, gaps: Gap[]): PostCheckResult {
     if (findGap(gaps, claim)) continue
     return {
       ok: false,
-      reason: `addressesGap \"${claim}\" tidak ada di daftar gap hasil diagnosis — saran dan diagnosis tidak nyambung`,
+      reason: `addressesGap "${claim}" tidak ada di daftar gap hasil diagnosis — saran dan diagnosis tidak nyambung`,
     }
   }
   return { ok: true }
@@ -325,7 +325,7 @@ function checkGapDelivered(suggestion: Suggestion, gaps: Gap[]): PostCheckResult
     if (deliversGap(gap, suggestion)) continue
     return {
       ok: false,
-      reason: `Mengaku menjawab gap \"${gap.skill}\", tapi istilahnya tidak muncul di \`after\` — gap-nya tidak benar-benar terjawab`,
+      reason: `Mengaku menjawab gap "${gap.skill}", tapi istilahnya tidak muncul di \`after\` — gap-nya tidak benar-benar terjawab`,
     }
   }
   return { ok: true }
@@ -461,8 +461,8 @@ export function promoteHintedGaps(
       type: "presentation" as const,
       fixability: "fixable_by_editing" as const,
       evidenceQuote: best.quote,
-      explanation: `Lowongan memakai istilah \"${gap.skill}\", dan CV tidak pernah menuliskannya persis begitu. Tapi faktanya ADA: \"${trimQuote(best.quote)}\". Jadi ini bukan soal kemampuan, melainkan soal kata yang tidak pernah muncul — termasuk di mata filter ATS yang mencocokkan istilah secara harfiah.`,
-      advice: `Sebut \"${gap.skill}\" secara eksplisit di baris yang sudah ada itu, di samping ${best.hint.term}, dan tambahkan ke daftar skill. Tidak ada fakta baru yang perlu dikarang — hanya menamai yang sudah dikerjakan.`,
+      explanation: `Lowongan memakai istilah "${gap.skill}", dan CV tidak pernah menuliskannya persis begitu. Tapi faktanya ADA: "${trimQuote(best.quote)}". Jadi ini bukan soal kemampuan, melainkan soal kata yang tidak pernah muncul — termasuk di mata filter ATS yang mencocokkan istilah secara harfiah.`,
+      advice: `Sebut "${gap.skill}" secara eksplisit di baris yang sudah ada itu, di samping ${best.hint.term}, dan tambahkan ke daftar skill. Tidak ada fakta baru yang perlu dikarang — hanya menamai yang sudah dikerjakan.`,
     }
   })
 }
