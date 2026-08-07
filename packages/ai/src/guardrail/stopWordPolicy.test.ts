@@ -60,7 +60,7 @@ const suggestion = (over: Partial<Suggestion> = {}): Suggestion => ({
   ...over,
 })
 
-describe("postCheckUsefulness — angka baru diukur dari angkanya, bukin jumlah digit", () => {
+describe("postCheckUsefulness — angka baru diukur dari angkanya, bukan jumlah digit", () => {
   it("menerima angka yang berubah walau jumlah digitnya sama", () => {
     expect(postCheckUsefulness(suggestion(), job).ok).toBe(true)
   })
