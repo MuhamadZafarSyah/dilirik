@@ -147,14 +147,97 @@ export const BANNED_PHRASE_PATTERNS: Array<{ pattern: RegExp; label: string }> =
   { pattern: /\bmampu\s+bekerja\s+(dalam\s+tim|di\s+bawah\s+tekanan)\b/i, label: "mampu bekerja dalam tim" },
 ]
 
+/** Cari frasa terlarang di dalam teks, kembalikan label jika ada. */
+export function findBannedPhrase(text: string): string | null {
+  for (const { pattern, label } of BANNED_PHRASE_PATTERNS) {
+    if (pattern.test(text)) {
+      return label
+    }
+  }
+  return null
+}
+
+/** Buang kalimat-kalimat yang memuat frasa terlarang. */
+export function stripBannedSentences(text: string): string {
+  if (!text.trim()) return ""
+  const sentences = text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const clean = sentences.filter((sentence) => !findBannedPhrase(sentence))
+  return clean.join(" ").trim()
+}
+
+export const GENERIC_WORDS = new Set([
+  "data",
+  "system",
+  "sistem",
+  "management",
+  "manajemen",
+  "design",
+  "desain",
+  "development",
+  "pengembangan",
+  "pembuatan",
+  "application",
+  "aplikasi",
+  "testing",
+  "pengujian",
+  "automated",
+  "otomatis",
+  "security",
+  "keamanan",
+  "engineering",
+  "rekayasa",
+  "dan",
+  "dengan",
+  "atau",
+  "untuk",
+  "yang",
+  "ini",
+  "itu",
+  "pada",
+  "sebagai",
+  "adalah",
+  "di",
+  "ke",
+  "dari",
+  "secara",
+  "dalam",
+  "tim",
+  "akun",
+  "profesional",
+  "kerja",
+  "hasil",
+  "proses",
+  "banyak",
+  "berbagai",
+  "serta",
+  "lewat",
+  "and",
+  "with",
+  "for",
+  "the",
+  "team",
+  "work",
+])
+
+/** Ekstrak token unik berkarakter khas (panjang >= 3, bukan kata generik) dari teks. */
+export function distinctiveTokens(text: string): string[] {
+  return normalize(text)
+    .split(" ")
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3 && !GENERIC_WORDS.has(t))
+}
+
 /** Guardrail titik-3b: tolak kata sifat memuji diri yang tidak bisa diverifikasi. */
 export function postCheckBannedPhrases(suggestion: Suggestion): PostCheckResult {
-  for (const { pattern, label } of BANNED_PHRASE_PATTERNS) {
-    if (pattern.test(suggestion.after)) {
-      return {
-        ok: false,
-        reason: `Mengandung frasa klise yang dilarang: "${label}" — recruiter mengabaikannya dan ATS tidak menilainya`,
-      }
+  const banned = findBannedPhrase(suggestion.after)
+  if (banned) {
+    return {
+      ok: false,
+      reason: `Mengandung frasa klise yang dilarang: "${banned}" — recruiter mengabaikannya dan ATS tidak menilainya`,
     }
   }
   return { ok: true }
@@ -329,6 +412,15 @@ export function postCheckUsefulness(
     return {
       ok: false,
       reason: "Mengaku menambah tools yang diminta lowongan, tapi tidak ada istilah lowongan yang bertambah",
+    }
+  }
+  if (changes.includes("added_scope") && digitsAfter <= digitsBefore) {
+    const meaningfulNewTokens = addedTokens.filter((tok) => !GENERIC_WORDS.has(tok))
+    if (meaningfulNewTokens.length < 2) {
+      return {
+        ok: false,
+        reason: "Mengaku menambah cakupan kerja (added_scope), tetapi tidak ada penambahan detail atau informasi baru yang signifikan",
+      }
     }
   }
   if (changes.length === 1 && changes[0] === "reordered_for_relevance") {
