@@ -4,11 +4,11 @@ import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { FiZap, FiTrash2, FiArrowRight, FiCheckCircle, FiClock } from "react-icons/fi"
+import { FiZap, FiTrash2, FiArrowRight, FiCheckCircle, FiClock, FiAlertTriangle } from "react-icons/fi"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { api, errorMessage } from "@/lib/api"
+import { api, errorMessage, type QuotaInfo } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, Sticky } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
@@ -59,6 +59,16 @@ function AnalyzeHub() {
   const jobIdParam = searchParams.get("jobId")
   const [sessionToDelete, setSessionToDelete] = useState<SessionItem | null>(null)
 
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: async () => {
+      const { data } = await api.get<QuotaInfo>("/api/analyze/quota")
+      return data
+    },
+  })
+  const quota = quotaQuery.data ?? null
+  const isQuotaExhausted = quota !== null && quota.quota !== null && (quota.remaining ?? 0) <= 0
+
   const sessionsQuery = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => {
@@ -70,6 +80,9 @@ function AnalyzeHub() {
 
   const startMutation = useMutation({
     mutationFn: async () => {
+      if (isQuotaExhausted) {
+        throw new Error("Kuota bulan ini habis. Draft sesi ini tersimpan aman.")
+      }
       const { data } = await api.post<{ session: { id: string } }>("/api/sessions", {})
       const patchData: Record<string, unknown> = {}
       if (cvIdParam) patchData.cvId = cvIdParam
@@ -126,35 +139,55 @@ function AnalyzeHub() {
         </p>
       </motion.div>
 
-      {/* Start New Session Hero Card */}
-      <motion.div variants={itemVariants}>
-        <Card tape="red" pin className="text-center py-8 px-6 space-y-4">
-          <motion.div
-            whileHover={{ scale: 1.05, rotate: 2 }}
-            className="inline-block bg-red text-paper p-4 rounded-full shadow-paper"
-          >
-            <FiZap className="h-10 w-10" />
-          </motion.div>
-          <div>
-            <h2 className="hand text-3xl font-bold">Mulai Sesi Analisis Baru</h2>
-            <p className="text-muted text-sm max-w-md mx-auto mt-1">
-              Progres kamu tersimpan otomatis sebagai draft. Kamu bisa keluar kapan saja tanpa takut kehilangan data.
+      {/* Red Quota Exhausted Banner at outermost list level */}
+      {isQuotaExhausted && (
+        <motion.div variants={itemVariants}>
+          <Sticky tone="red" className="space-y-3 py-6 text-center shadow-paper">
+            <FiAlertTriangle className="mx-auto h-10 w-10 text-red " />
+            <h3 className="hand text-3xl font-bold">{t("quotaExhausted")}</h3>
+            <p className="text-sm text-muted max-w-md mx-auto">
+              Draft sesi ini tersimpan aman. Kamu bisa melanjutkan lagi setelah kuota bulanan ter-reset.
             </p>
-          </div>
-          <div className="pt-2">
-            <Button
-              onClick={() => startMutation.mutate()}
-              isLoading={busy}
-              variant="danger"
-              size="lg"
-              className="w-full sm:w-auto px-8"
+            <Link href="/pricing" className="inline-block mt-1">
+              <Button variant="danger" size="md">
+                Upgrade ke Pro (Unlimited)
+              </Button>
+            </Link>
+          </Sticky>
+        </motion.div>
+      )}
+
+      {/* Start New Session Hero Card (Hidden when quota is exhausted) */}
+      {!isQuotaExhausted && (
+        <motion.div variants={itemVariants}>
+          <Card tape="red" pin className="text-center py-8 px-6 space-y-4">
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: 2 }}
+              className="inline-block bg-red text-paper p-4 rounded-full shadow-paper"
             >
-              ⚡ Mulai Sesi Analisis Sekarang
-            </Button>
-          </div>
-          {error && <p className="text-red text-xs font-semibold">{error}</p>}
-        </Card>
-      </motion.div>
+              <FiZap className="h-10 w-10" />
+            </motion.div>
+            <div>
+              <h2 className="hand text-3xl font-bold">Mulai Sesi Analisis Baru</h2>
+              <p className="text-muted text-sm max-w-md mx-auto mt-1">
+                Progres kamu tersimpan otomatis sebagai draft. Kamu bisa keluar kapan saja tanpa takut kehilangan data.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Button
+                onClick={() => startMutation.mutate()}
+                isLoading={busy}
+                variant="danger"
+                size="lg"
+                className="w-full sm:w-auto px-8 font-bold"
+              >
+                ⚡ Mulai Sesi Analisis Sekarang
+              </Button>
+            </div>
+            {error && <p className="text-red text-xs font-semibold">{error}</p>}
+          </Card>
+        </motion.div>
+      )}
 
       {/* Active Draft Sessions */}
       <motion.section variants={itemVariants} className="space-y-3">
@@ -181,6 +214,11 @@ function AnalyzeHub() {
                       <span className="label bg-yellow/40 border border-yellow/70 text-ink rounded px-2 py-0.5 text-[10px] font-bold uppercase">
                         {STEP_LABELS[s.step]}
                       </span>
+                      {isQuotaExhausted && !s.analysisId && (
+                        <span className="label bg-red/15 text-red border border-red/40 rounded px-2 py-0.5 text-[10px] font-bold uppercase">
+                          Butuh Kuota
+                        </span>
+                      )}
                       <span className="text-[10px] text-muted">
                         {new Date(s.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -194,8 +232,21 @@ function AnalyzeHub() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-line/40">
-                    <Link href={`/app/analyze/session/${s.id}`}>
-                      <Button size="sm" variant="primary" icon={<FiArrowRight />}>
+                    <Link
+                      href={isQuotaExhausted && !s.analysisId ? "#" : `/app/analyze/session/${s.id}`}
+                      onClick={(e) => {
+                        if (isQuotaExhausted && !s.analysisId) {
+                          e.preventDefault()
+                          toast("Kuota bulan ini habis. Draft sesi ini tersimpan aman.", "error")
+                          router.push("/pricing")
+                        }
+                      }}
+                    >
+                      <Button
+                        size="sm"
+                        variant={isQuotaExhausted && !s.analysisId ? "secondary" : "primary"}
+                        icon={<FiArrowRight />}
+                      >
                         Lanjutkan
                       </Button>
                     </Link>
@@ -262,7 +313,7 @@ function AnalyzeHub() {
         description="CV & lowongan tersimpan tidak ikut terhapus."
         confirmLabel="Ya, hapus draft"
         onConfirm={async () => {
-          if (sessionToDelete) await deleteMutation.mutateAsync(sessionToDelete.id).catch(() => {})
+          if (sessionToDelete) await deleteMutation.mutateAsync(sessionToDelete.id).catch(() => { })
         }}
       />
     </motion.div>

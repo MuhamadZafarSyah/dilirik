@@ -64,7 +64,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
   if (analysisQuery.isError && isQuotaExceeded(analysisQuery.error)) {
     return (
       <Sticky tone="red" className="space-y-3 py-6 text-center">
-        <FiAlertTriangle className="mx-auto h-10 w-10 text-red animate-bounce" />
+        <FiAlertTriangle className="mx-auto h-10 w-10 text-red " />
         <h3 className="hand text-3xl font-bold">{t("quotaExhausted")}</h3>
         <p className="text-sm text-muted">Draft sesi ini tersimpan aman. Kamu bisa melanjutkan lagi setelah kuota bulanan ter-reset.</p>
         <Link href="/pricing" className="inline-block mt-2">

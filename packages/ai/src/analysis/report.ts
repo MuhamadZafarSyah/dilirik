@@ -233,12 +233,59 @@ function checkGapLink(suggestion: Suggestion, gaps: Gap[]): PostCheckResult {
 }
 
 /**
+ * Pecahan sebuah token majemuk, DENGAN bentuk utuhnya.
+ *
+ * `normalize` sengaja mempertahankan "-", "/", dan "." supaya "aes-256-gcm",
+ * "ci/cd", dan "next.js" tidak hancur jadi potongan tak bermakna. Efek
+ * sampingnya: "ocr-based" ikut jadi satu token utuh, sehingga pencarian token
+ * "ocr" meleset. Bentuk utuhnya tetap disertakan supaya istilah yang memang
+ * mengandung tanda hubung tidak kehilangan identitasnya.
+ */
+function expandCompound(token: string): string[] {
+  const parts = token.split(/[-/.]+/).filter(Boolean)
+  return parts.length > 1 ? [token, ...parts] : [token]
+}
+
+/** Seluruh token sebuah teks, termasuk pecahan kata majemuknya. */
+function tokenSet(text: string): Set<string> {
+  const tokens = new Set<string>()
+  for (const token of normalize(text).split(" ")) {
+    if (!token) continue
+    for (const part of expandCompound(token)) tokens.add(part)
+  }
+  return tokens
+}
+
+/**
+ * Apakah `term` muncul sebagai satuan utuh di `text`?
+ *
+ * Bukan `includes` biasa: "ocr" tersubstring di dalam "paddleocr", dan itu
+ * persis yang membuat istilah yang benar-benar BARU di `after` dikira sudah ada
+ * di `before`. Batasnya diuji ke karakter huruf/angka saja — bukan ke spasi —
+ * supaya "aes-256" tetap terbaca sebagai bagian utuh dari "aes-256-gcm".
+ */
+function containsTerm(text: string, term: string): boolean {
+  const needle = normalize(term)
+  if (!needle) return false
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, "u").test(text)
+}
+
+/**
  * Apakah `after` benar-benar memunculkan gap ini?
  *
  * Dua jalan diterima, supaya saran lintas bahasa tidak ikut tertolak:
  * a) salah satu token nama gap muncul sebagai token di `after`, atau
  * b) `after` memunculkan istilah implementasi dari konsep gap itu yang BELUM
  *    ada di `before` (mis. gap "enkripsi data" dijawab dengan "encryption").
+ *
+ * Engine v3.3.3: kedua jalan itu tadinya buta pada kata majemuk, dan akibatnya
+ * dua guardrail kita saling meniadakan. Guardrail kealamian (v3.3.0) melarang
+ * model menempelkan "(OCR)", jadi model menulis bentuk yang paling wajar —
+ * "OCR-based" — dan justru itu yang tidak terbaca: token "ocr-based" bukan
+ * "ocr", sementara jalan (b) mengira "ocr" sudah ada di `before` karena
+ * tersubstring di "paddleocr". Semakin patuh modelnya, semakin besar peluang
+ * sarannya dibuang.
  */
 function deliversGap(gap: Gap, suggestion: Suggestion): boolean {
   const tokens = normalize(gap.skill)
@@ -246,12 +293,12 @@ function deliversGap(gap: Gap, suggestion: Suggestion): boolean {
     .filter((tok) => tok.length >= 3)
   if (tokens.length === 0) return true
 
-  const afterTokens = new Set(normalize(suggestion.after).split(" "))
+  const afterTokens = tokenSet(suggestion.after)
   if (tokens.some((tok) => afterTokens.has(tok))) return true
 
   const beforeText = normalize(suggestion.before)
   return findConceptEvidence(gap.skill, [suggestion.after]).some(
-    (evidence) => !beforeText.includes(evidence.term),
+    (evidence) => !containsTerm(beforeText, evidence.term),
   )
 }
 
@@ -303,6 +350,32 @@ export function dropImpliedGaps(gaps: Gap[], implied: ImpliedInput[]): Gap[] {
 }
 
 /**
+ * Kalimat baku untuk gap yang TIDAK punya bukti apa pun di CV.
+ *
+ * Satu sumber untuk dua jalur yang menghasilkan keadaan sama persis:
+ * `enforceGapEvidence` saat MENURUNKAN gap penyajian yang kutipannya tidak bisa
+ * dilacak, dan `repairTemplateGaps` saat menimpa kalimat cetakan. Sebelum
+ * v3.3.3 hanya jalur kedua yang menulis ulang teks, sehingga gap hasil
+ * penurunan membawa `fixability: "requires_experience"` sambil tetap memajang
+ * saran tulisan model yang berbunyi "cukup sebutkan saja" — dua kalimat yang
+ * saling membantah di kartu yang sama.
+ */
+function describeUnprovenGap(gap: Gap): { explanation: string; advice: string } {
+  const searched = gap.searchedFor.length > 0 ? gap.searchedFor : expandSkill(normalize(gap.skill))
+  const terms = [...new Set(searched.map((term) => term.trim()).filter(Boolean))].slice(0, 6)
+  const scope = gap.severity === "must" ? "syarat wajib" : "nilai tambah"
+  const searchedText =
+    terms.length > 0
+      ? ` Istilah yang dicari di CV: ${terms.join(", ")} — tidak satu pun muncul di daftar skill, kalimat pengalaman, maupun pencapaian.`
+      : " Setelah menyisir daftar skill, kalimat pengalaman, dan pencapaian, tidak ada jejaknya."
+
+  return {
+    explanation: `Lowongan menyebut ${gap.skill} sebagai ${scope}.${searchedText}`,
+    advice: `Ini tidak bisa ditambal dengan menyunting teks. Yang paling cepat membuktikannya: kerjakan satu bagian nyata yang memakai ${gap.skill}, lalu tulis hasilnya dengan angka di CV.`,
+  }
+}
+
+/**
  * Verifikasi kutipan bukti pada gap "presentation" (engine v3.2).
  *
  * Klaim "faktanya sudah ada di CV" hanya bernilai kalau kutipannya benar. Kalau
@@ -320,6 +393,10 @@ export function dropImpliedGaps(gaps: Gap[], implied: ImpliedInput[]): Gap[] {
  * ambang dengan selisih satu — padahal ada kalimat pengalaman yang menyebut
  * "100+ reusable components" dan jauh lebih membuktikan. Sekarang semua kandidat
  * diadu dan yang TERKUAT yang dipakai, dengan petunjuk kode menang saat seri.
+ *
+ * Engine v3.3.3: penurunan ikut menulis ulang explanation & advice. Mengubah
+ * `type` tanpa menyentuh kalimatnya menghasilkan gap yang membantah dirinya
+ * sendiri — ditandai "butuh pengalaman baru", tapi sarannya "cukup sebutkan".
  */
 export function enforceGapEvidence(
   gaps: Gap[],
@@ -341,6 +418,7 @@ export function enforceGapEvidence(
       type: "real" as const,
       fixability: "requires_experience" as const,
       evidenceQuote: "",
+      ...describeUnprovenGap(gap),
     }
   })
 }
@@ -400,21 +478,15 @@ export function repairTemplateGaps(gaps: Gap[]): Gap[] {
   return gaps.map((gap) => {
     if (postCheckGapPhrases(gap).ok) return gap
 
-    const searched = gap.searchedFor.length > 0 ? gap.searchedFor : expandSkill(normalize(gap.skill))
-    const terms = [...new Set(searched.map((term) => term.trim()).filter(Boolean))].slice(0, 6)
-    const scope = gap.severity === "must" ? "syarat wajib" : "nilai tambah"
-    const searchedText =
-      terms.length > 0
-        ? ` Istilah yang dicari di CV: ${terms.join(", ")} — tidak satu pun muncul di daftar skill, kalimat pengalaman, maupun pencapaian.`
-        : " Setelah menyisir daftar skill, kalimat pengalaman, dan pencapaian, tidak ada jejaknya."
+    const { explanation, advice } = describeUnprovenGap(gap)
 
     return {
       ...gap,
-      explanation: `Lowongan menyebut ${gap.skill} sebagai ${scope}.${searchedText}`,
+      explanation,
       advice:
         gap.fixability === "fixable_by_editing"
           ? `Faktanya sudah ada di CV — sebut ${gap.skill} secara eksplisit di baris yang relevan agar terbaca manusia maupun ATS.`
-          : `Ini tidak bisa ditambal dengan menyunting teks. Yang paling cepat membuktikannya: kerjakan satu bagian nyata yang memakai ${gap.skill}, lalu tulis hasilnya dengan angka di CV.`,
+          : advice,
     }
   })
 }
@@ -441,6 +513,29 @@ export function alignSuggestionAnchors(
     if (canonical === null || canonical === suggestion.before) return suggestion
     return { ...suggestion, before: canonical }
   })
+}
+
+/**
+ * Kata sambung pertentangan yang jadi menggantung saat kalimat sebelumnya
+ * dibuang guardrail.
+ */
+const DANGLING_CONNECTIVE =
+  /^(however|but|meanwhile|on the other hand|namun(\s+demikian|\s+begitu)?|akan tetapi|tetapi|meski(\s+demikian|\s+begitu)?|walaupun begitu|selain itu|di sisi lain)\s*,?\s+/i
+
+/**
+ * Rapikan kalimat pembuka careerNote yang jadi menggantung setelah penyaringan.
+ *
+ * careerNote disaring per KALIMAT, jadi membuang kalimat pertama bisa
+ * menyisakan kalimat kedua yang dibuka "However..." tanpa ada apa pun yang
+ * dipertentangkan. Isinya tetap benar, tapi terbaca seperti potongan tulisan
+ * yang rusak — dan pengguna tidak punya cara tahu bahwa ada kalimat yang memang
+ * sengaja dibuang.
+ */
+function stripLeadingConnective(text: string): string {
+  const trimmed = text.trimStart()
+  const stripped = trimmed.replace(DANGLING_CONNECTIVE, "")
+  if (!stripped || stripped === trimmed) return trimmed
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1)
 }
 
 /**
@@ -481,6 +576,11 @@ export function alignSuggestionAnchors(
  * `careerNoteDropped`, sejajar dengan `rejected` untuk saran. Penyaringan yang
  * tidak meninggalkan jejak tidak bisa dievaluasi, dan careerNote kosong tanpa
  * keterangan tidak bisa dibedakan dari model yang memang memilih diam.
+ *
+ * Engine v3.3.3: sisa kalimat careerNote dirapikan setelah penyaringan. Membuang
+ * kalimat pertama menyisakan kalimat kedua yang dibuka kata sambung
+ * pertentangan, dan pengguna melihat catatan karier yang diawali "However"
+ * tanpa ada yang dipertentangkan.
  */
 export async function generateAnalysisReport(args: {
   cv: CvStructured
@@ -603,7 +703,8 @@ export async function generateAnalysisReport(args: {
     gaps,
     suggestions: kept.slice(0, limit),
     rejected,
-    careerNote: careerNote.kept,
+    careerNote:
+      careerNote.dropped.length > 0 ? stripLeadingConnective(careerNote.kept) : careerNote.kept,
     careerNoteDropped: careerNote.dropped,
   }
 }

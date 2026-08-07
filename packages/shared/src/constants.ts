@@ -138,8 +138,28 @@ export const DEFAULT_REPORT_LANGUAGE: (typeof REPORT_LANGUAGES)[number] = "id"
  * lagi dianggap tanpa perubahan, dan "3" → "5" terbaca sebagai angka baru),
  * dan kalimat careerNote yang dibuang guardrail kini dilaporkan lewat
  * careerNoteDropped supaya penyaringan yang selama ini senyap bisa diukur.
+ * v3.3.3: tiga guardrail yang masing-masing benar, tapi salah saat bekerja
+ * bersama. Yang terbesar: v3.3.0 melarang model menempelkan istilah dalam
+ * kurung, model MEMATUHINYA dengan menulis bentuk paling wajar — "OCR-based"
+ * — dan pemeriksa pengantaran v3.2.3 justru membuang saran itu, karena
+ * normalize() sengaja mempertahankan tanda hubung (demi "aes-256-gcm" dan
+ * "next.js") sehingga "ocr-based" jadi SATU token dan token "ocr" tidak pernah
+ * ketemu. Jalur cadangannya ikut buntu: istilah "ocr" yang benar-benar baru
+ * dianggap sudah ada di `before` semata karena tersubstring di "paddleocr".
+ * Hasilnya laporan dengan lima gap yang bisa diperbaiki tapi NOL saran — mesin
+ * yang jujur tapi tidak berguna, dan makin patuh modelnya makin besar
+ * peluang sarannya dibuang. Sekarang token majemuk dipecah saat dibaca (bentuk
+ * utuhnya tetap disimpan) dan keberadaan istilah diuji dengan batas
+ * huruf/angka, bukan substring. Kedua, jalur PENURUNAN di enforceGapEvidence
+ * cuma mengganti type → real dan fixability → requires_experience tanpa
+ * menyentuh kalimat tulisan model, sehingga satu kartu gap bisa berkata
+ * "butuh pengalaman baru" sambil menyarankan "cukup sebutkan saja"; kalimat
+ * baku untuk gap tanpa bukti kini satu sumber, dipakai jalur penurunan maupun
+ * repairTemplateGaps. Ketiga, penyaringan careerNote per kalimat meninggalkan
+ * kata sambung menggantung — pengguna membaca catatan karier yang diawali
+ * "However" tanpa ada apa pun yang dipertentangkan.
  */
-export const ENGINE_VERSION = "3.3.2"
+export const ENGINE_VERSION = "3.3.3"
 
 /**
  * Versi PROMPT — dipisah dari ENGINE_VERSION supaya eksperimen kalimat prompt
@@ -192,19 +212,19 @@ export const INTERVIEW_PERSONA_LABELS: Record<
   { id: string; en: string; hint: { id: string; en: string }; emoji: string }
 > = {
   SANTAI: {
-    id: "Santai", en: "Casual", emoji: "\ud83d\ude04",
+    id: "Santai", en: "Casual", emoji: "\\ud83d\\ude04",
     hint: { id: "Ngobrol hangat — cocok buat pemanasan", en: "Warm chat — good for warming up" },
   },
   NETRAL: {
-    id: "Netral", en: "Neutral", emoji: "\ud83d\ude42",
+    id: "Netral", en: "Neutral", emoji: "\\ud83d\\ude42",
     hint: { id: "HR profesional pada umumnya", en: "Typical professional HR" },
   },
   TEGAS: {
-    id: "Tegas", en: "Strict", emoji: "\ud83e\uddd0",
+    id: "Tegas", en: "Strict", emoji: "\\ud83e\\uddd0",
     hint: { id: "To the point, menggali detail jawaban", en: "To the point, digs into details" },
   },
   MENEKAN: {
-    id: "Menekan", en: "Pressure", emoji: "\ud83d\udd25",
+    id: "Menekan", en: "Pressure", emoji: "\\ud83d\\udd25",
     hint: { id: "Menantang & menguji ketahanan argumen", en: "Challenging & stress-tests your answers" },
   },
 }
