@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { FiDownload, FiFileText, FiMaximize2 } from "react-icons/fi"
+import { FiCopy, FiDownload, FiFileText, FiMaximize2 } from "react-icons/fi"
 import { api, errorMessage } from "@/lib/api"
 import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
+import { CopyButton } from "@/components/ui/copy-button"
 import { useToast } from "@/components/ui/toast"
 import { DownloadCvButton } from "./download-cv-button"
 import { PdfNativeModal } from "./pdf-native-modal"
@@ -33,13 +34,22 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 /**
- * Opsi download & preview CV dengan desain yang KONSISTEN antar format:
+ * Opsi download, preview & copy teks CV dengan desain yang KONSISTEN antar format:
  * - "PDF (desain asli)" — file asli dikonversi apa adanya (DOCX via Gotenberg).
- * - "Preview PDF Native" — membuka modal dengan embed native PDF.
  * - "Word (.docx)" — file .docx asli.
+ * - "Preview PDF" — membuka modal dengan embed native PDF.
+ * - "Salin Teks Revisi" — salin rawText ke clipboard.
  * - CV tanpa file desain (paste teks) → fallback PDF template Dilirik.
  */
-export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: boolean }) {
+export function DownloadCvMenu({
+  cv,
+  compact = false,
+  copyText,
+}: {
+  cv: CvLike
+  compact?: boolean
+  copyText?: string
+}) {
   const { toast } = useToast()
   const isDocx = Boolean(cv.fileKey?.toLowerCase().endsWith(".docx"))
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
@@ -82,24 +92,14 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        variant="outline"
-        size={compact ? "sm" : "md"}
-        icon={<FiMaximize2 />}
-        isLoading={previewMutation.isPending}
-        onClick={() => previewMutation.mutate()}
-        title="Buka PDF di Modal Embed Native"
-      >
-        {previewMutation.isPending ? "Menyiapkan\u2026" : compact ? "Modal PDF" : "Preview PDF (Modal)"}
-      </Button>
-
+    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
       <Button
         variant={compact ? "outline" : "primary"}
         size={compact ? "sm" : "md"}
         icon={<FiDownload />}
         isLoading={pdfMutation.isPending}
         onClick={() => pdfMutation.mutate()}
+        className="whitespace-nowrap"
       >
         {pdfMutation.isPending ? "Menyiapkan PDF\u2026" : compact ? "PDF" : "PDF (desain asli)"}
       </Button>
@@ -111,9 +111,33 @@ export function DownloadCvMenu({ cv, compact = false }: { cv: CvLike; compact?: 
           icon={<FiFileText />}
           isLoading={docxMutation.isPending}
           onClick={() => docxMutation.mutate()}
+          className="whitespace-nowrap"
         >
           {docxMutation.isPending ? "Menyiapkan\u2026" : compact ? "Word" : "Word (.docx)"}
         </Button>
+      )}
+
+      <Button
+        variant="outline"
+        size={compact ? "sm" : "md"}
+        icon={<FiMaximize2 />}
+        isLoading={previewMutation.isPending}
+        onClick={() => previewMutation.mutate()}
+        title="Buka PDF di Modal Embed Native"
+        className="whitespace-nowrap"
+      >
+        {previewMutation.isPending ? "Menyiapkan\u2026" : compact ? "Modal PDF" : "Preview PDF"}
+      </Button>
+
+      {copyText && (
+        <CopyButton
+          text={copyText}
+          label={compact ? "Salin Teks" : "Salin Teks Revisi"}
+          variant="outline"
+          size={compact ? "sm" : "md"}
+          icon={<FiCopy />}
+          className="whitespace-nowrap"
+        />
       )}
 
       <PdfNativeModal

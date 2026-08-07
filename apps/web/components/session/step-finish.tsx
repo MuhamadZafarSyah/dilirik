@@ -18,7 +18,6 @@ import { api, errorMessage } from "@/lib/api"
 import { track } from "@/lib/analytics/track"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
-import { CopyButton } from "@/components/ui/copy-button"
 import { DownloadCvMenu } from "@/components/pdf/download-cv-menu"
 import { useI18n } from "@/lib/i18n"
 import type { CvFull, Patch, SessionDetail } from "./types"
@@ -100,9 +99,8 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
           </div>
 
           {/* Action Row 1: Export Menu + Copy Text */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-            {revised && <DownloadCvMenu cv={revised} />}
-            {revised && <CopyButton text={revised.rawText} label="📋 Salin Semua Teks Revisi" />}
+          <div className="flex justify-center sm:justify-start">
+            {revised && <DownloadCvMenu cv={revised} copyText={revised.rawText} />}
           </div>
 
           <p className="text-muted text-[11px] leading-relaxed text-center sm:text-left bg-paper/60 p-3 rounded-xl border border-line/60">

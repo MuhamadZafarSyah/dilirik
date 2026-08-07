@@ -1,10 +1,27 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, type ReactNode } from "react"
+import { FiCheck, FiCopy } from "react-icons/fi"
+import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui/button"
 
-/** Tombol salin ke clipboard dengan feedback "✓ tersalin" (Fase 1a — copy per-saran). */
-export function CopyButton({ text, label = "📋 salin" }: { text: string; label?: string }) {
+/** Tombol salin ke clipboard dengan feedback "✓ Tersalin". */
+export function CopyButton({
+  text,
+  label = "Salin Teks",
+  variant = "secondary",
+  size = "md",
+  icon,
+  className = "",
+  title,
+}: {
+  text: string
+  label?: string
+  variant?: ButtonVariant
+  size?: ButtonSize
+  icon?: ReactNode
+  className?: string
+  title?: string
+}) {
   const [copied, setCopied] = useState(false)
 
   async function copy() {
@@ -17,9 +34,19 @@ export function CopyButton({ text, label = "📋 salin" }: { text: string; label
     }
   }
 
+  // Jika label sudah mengandung emoji (misal "📋 Salin"), jangan tambah icon default
+  const defaultIcon = icon ?? (typeof label === "string" && label.includes("📋") ? null : <FiCopy />)
+
   return (
-    <Button variant="secondary" onClick={copy}>
-      {copied ? "✓ tersalin" : label}
+    <Button
+      variant={variant}
+      size={size}
+      onClick={copy}
+      icon={copied ? <FiCheck className="text-green font-bold" /> : defaultIcon}
+      className={className}
+      title={title}
+    >
+      {copied ? "Tersalin!" : label}
     </Button>
   )
 }
