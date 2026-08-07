@@ -22,13 +22,14 @@ export function Card({
   style,
   ...props
 }: CardProps) {
-  const rotationStyle = rotate !== undefined ? { transform: `rotate(${rotate}deg)` } : {}
+  const rotNum = typeof rotate === "number" ? rotate : typeof rotate === "string" ? parseFloat(rotate) || 0 : 0
 
   return (
     <motion.div
-      whileHover={{ y: -3, scale: 1.01, boxShadow: "0 18px 40px -16px rgba(42,36,29,0.45)" }}
+      initial={rotate !== undefined ? { rotate: rotNum } : undefined}
+      whileHover={{ y: -4, scale: 1.01, rotate: 0 }}
       transition={{ type: "spring", stiffness: 350, damping: 25 }}
-      style={{ ...rotationStyle, ...style }}
+      style={style}
       className={cn(
         "card bg-panel border-line relative rounded-xl border-2 p-5 shadow-paper transition-shadow",
         tape === "yellow" && "tape",
@@ -56,12 +57,17 @@ export function Polaroid({
   rotate = -1,
   className = "",
   children,
+  style,
   ...props
 }: CardProps) {
+  const rotNum = typeof rotate === "number" ? rotate : typeof rotate === "string" ? parseFloat(rotate) || 0 : -1
+
   return (
     <motion.div
-      whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+      initial={{ rotate: rotNum }}
+      whileHover={{ rotate: 0, scale: 1.015, y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
+      style={style}
       className={cn(
         "polaroid bg-panel border-line relative rounded-sm border p-3.5 pb-8 shadow-lift",
         tape === "yellow" && "tape",
@@ -69,7 +75,6 @@ export function Polaroid({
         tape === "red" && "tape-red",
         className
       )}
-      style={{ transform: `rotate(${rotate}deg)` }}
       {...props}
     >
       {pin && (
@@ -89,6 +94,7 @@ export function Sticky({
   rotate = 1,
   className = "",
   children,
+  style,
   ...props
 }: CardProps & { tone?: "yellow" | "red" | "green" | "blue" }) {
   const tones = {
@@ -97,17 +103,19 @@ export function Sticky({
     green: "bg-green/15 border-green/60 text-ink",
     blue: "bg-blue/15 border-blue/60 text-ink",
   }
+  const rotNum = typeof rotate === "number" ? rotate : typeof rotate === "string" ? parseFloat(rotate) || 0 : 1
 
   return (
     <motion.div
-      whileHover={{ rotate: 0, scale: 1.02, y: -2 }}
+      initial={{ rotate: rotNum }}
+      whileHover={{ rotate: 0, scale: 1.015, y: -2 }}
       transition={{ type: "spring", stiffness: 350, damping: 24 }}
+      style={style}
       className={cn(
         "sticky-note relative rounded-sm border-l-4 p-4 shadow-paper backdrop-blur-xs",
         tones[tone],
         className
       )}
-      style={{ transform: `rotate(${rotate}deg)` }}
       {...props}
     >
       {children}

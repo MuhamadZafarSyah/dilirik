@@ -1,14 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { FiMic, FiPlus, FiClock, FiAward, FiArrowRight, FiZap } from "react-icons/fi"
+import { FiMic, FiPlus, FiClock, FiAward, FiArrowRight, FiZap, FiTrash2, FiPlay } from "react-icons/fi"
 import { INTERVIEW_PERSONA_LABELS, type InterviewPersona, type InterviewStatus } from "@dilirik/shared"
-import { api } from "@/lib/api"
+import { api, errorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useToast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -63,8 +66,22 @@ function getScoreBadgeColor(score: number | null) {
   return "bg-red/20 text-red border-red"
 }
 
+function cleanEmoji(str: string): string {
+  if (!str) return "🎙️"
+  try {
+    return str.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    )
+  } catch {
+    return str
+  }
+}
+
 export default function InterviewListPage() {
   const { lang, t } = useI18n()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const [sessionToDelete, setSessionToDelete] = useState<InterviewListItem | null>(null)
 
   const listQuery = useQuery({
     queryKey: ["interviews"],
@@ -73,6 +90,18 @@ export default function InterviewListPage() {
   const quotaQuery = useQuery({
     queryKey: ["interview-quota"],
     queryFn: async () => (await api.get<InterviewQuota>("/api/interview/quota")).data,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/interview/sessions/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["interviews"] })
+      queryClient.invalidateQueries({ queryKey: ["interview-quota"] })
+      toast("Sesi interview berhasil dihapus.", "success")
+    },
+    onError: (err) => toast(errorMessage(err), "error"),
   })
 
   const sessions = listQuery.data ?? []
@@ -118,7 +147,7 @@ export default function InterviewListPage() {
         </div>
 
         <Link href="/app/interview/new" className="shrink-0">
-          <Button variant="danger" size="lg" icon={<FiPlus />} tape="red" disabled={quotaHabis} className="w-full md:w-auto">
+          <Button variant="danger" size="lg" icon={<FiPlus />} tape="red" disabled={quotaHabis} className="w-full md:w-auto font-bold">
             {lang === "id" ? "Mulai Latihan Baru 🔥" : "New Practice Match 🔥"}
           </Button>
         </Link>
@@ -143,7 +172,7 @@ export default function InterviewListPage() {
       {/* Gamified Summary Stats Widgets */}
       {sessions.length > 0 && (
         <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 sm:grid-cols-3">
-          <Card tape="yellow" className="p-4 text-center space-y-1">
+          <Card tape="yellow" pin className="p-4 text-center space-y-1">
             <span className="label text-muted text-[10px] uppercase font-bold">Total Latihan</span>
             <p className="hand text-4xl font-bold text-ink">{sessions.length}</p>
           </Card>
@@ -184,7 +213,7 @@ export default function InterviewListPage() {
             📜 {lang === "id" ? "Daftar Riwayat Tanding" : "Match History List"}
           </h2>
 
-          <div className="grid gap-4">
+          <div className="grid gap-5 md:grid-cols-2">
             {sessions.map((session, i) => {
               const personaLabel = INTERVIEW_PERSONA_LABELS[session.persona]
               const statusBadge = STATUS_BADGES[session.status]
@@ -193,70 +222,118 @@ export default function InterviewListPage() {
                   ? `/app/interview/${session.id}/live`
                   : `/app/interview/${session.id}`
 
+              const tapeColor = i % 3 === 0 ? "yellow" : i % 3 === 1 ? "blue" : "red"
+
               return (
-                <Link key={session.id} href={href} className="block group">
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                <motion.div
+                  key={session.id}
+                  variants={itemVariants}
+                  className="h-full"
+                >
+                  <Card
+                    tape={tapeColor}
+                    rotate={i % 2 === 0 ? 0.4 : -0.4}
+                    className="p-5 space-y-4 h-full flex flex-col justify-between hover:border-ink hover:shadow-lift transition-all"
                   >
-                    <Card
-                      tape={i % 3 === 0 ? "yellow" : i % 3 === 1 ? "blue" : "red"}
-                      rotate={i % 2 === 0 ? 0.3 : -0.3}
-                      className="p-5 sm:p-6 transition-all group-hover:border-ink group-hover:shadow-lift"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="hand text-2xl font-bold text-ink group-hover:text-red transition-colors flex items-center gap-2">
-                              <FiMic className="text-red shrink-0" />
-                              {session.title}
-                            </span>
-                            <span className={cn("label px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border", statusBadge.color)}>
-                              {lang === "id" ? statusBadge.labelId : statusBadge.labelEn}
-                            </span>
-                          </div>
+                    {/* Card Header & Content */}
+                    <div className="space-y-3">
+                      {/* Badges Bar */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="label bg-yellow/30 border border-yellow/70 text-ink rounded-lg px-2.5 py-0.5 text-xs font-bold flex items-center gap-1">
+                          <span className="text-base">{cleanEmoji(personaLabel?.emoji ?? "🎙️")}</span>
+                          {lang === "id" ? personaLabel?.id : personaLabel?.en}
+                        </span>
 
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted font-medium">
-                            <span className="flex items-center gap-1">
-                              {personaLabel.emoji} {lang === "id" ? personaLabel.id : personaLabel.en}
-                            </span>
-                            {session.durationSec > 0 && (
-                              <span className="flex items-center gap-1">
-                                <FiClock className="h-3.5 w-3.5" /> {formatDuration(session.durationSec)}
-                              </span>
-                            )}
-                            <span>
-                              {new Date(session.createdAt).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-line/50">
-                          {session.overallScore !== null ? (
-                            <div className="flex items-center gap-2">
-                              <div className={cn("px-3 py-1 rounded-xl border font-mono font-bold text-lg", getScoreBadgeColor(session.overallScore))}>
-                                {session.overallScore} <span className="text-xs text-muted font-sans font-normal">/100</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="label text-xs font-bold text-red group-hover:underline flex items-center gap-1">
-                              Lanjutkan Sesi <FiArrowRight />
-                            </span>
-                          )}
-                        </div>
+                        <span className={cn("label px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border", statusBadge.color)}>
+                          {lang === "id" ? statusBadge.labelId : statusBadge.labelEn}
+                        </span>
                       </div>
-                    </Card>
-                  </motion.div>
-                </Link>
+
+                      {/* Title */}
+                      <div>
+                        <Link href={href} className="group/title">
+                          <h3 className="hand text-2xl font-bold text-ink group-hover/title:text-red transition-colors flex items-center gap-2 line-clamp-1">
+                            <FiMic className="text-red shrink-0 h-5 w-5" />
+                            {session.title}
+                          </h3>
+                        </Link>
+                        <p className="text-[11px] text-muted font-medium mt-1">
+                          Disimpan {new Date(session.createdAt).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+
+                      {/* Score & Duration Box */}
+                      <div className="flex items-center justify-between gap-2 bg-paper/60 border border-line/60 rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-xs text-muted font-semibold">
+                          <FiClock className="h-4 w-4 text-ink" />
+                          <span>{session.durationSec > 0 ? formatDuration(session.durationSec) : "0:00"}</span>
+                        </div>
+
+                        {session.overallScore !== null ? (
+                          <div className={cn("px-2.5 py-0.5 rounded-lg border font-mono font-bold text-sm", getScoreBadgeColor(session.overallScore))}>
+                            🎯 {session.overallScore}/100
+                          </div>
+                        ) : (
+                          <span className="text-[11px] font-bold text-muted italic">
+                            Belum dinilai
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Footer */}
+                    <div className="pt-3 border-t border-line/60 flex items-center justify-between gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<FiTrash2 />}
+                        onClick={() => setSessionToDelete(session)}
+                        className="text-red hover:bg-red/10"
+                        title="Hapus Sesi Interview"
+                      >
+                        Hapus
+                      </Button>
+
+                      <Link href={href}>
+                        <Button
+                          size="sm"
+                          variant={session.status === "FEEDBACK_READY" ? "outline" : "danger"}
+                          icon={session.status === "FEEDBACK_READY" ? <FiArrowRight /> : <FiPlay />}
+                          className="font-bold"
+                        >
+                          {session.status === "FEEDBACK_READY" ? "Detail Feedback" : "Lanjutkan Sesi"}
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                </motion.div>
               )
             })}
           </div>
         </motion.div>
       )}
+
+      {/* Konfirmasi Hapus Sesi Interview */}
+      <ConfirmDialog
+        open={sessionToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setSessionToDelete(null)
+        }}
+        title="Hapus sesi interview ini?"
+        description={
+          sessionToDelete
+            ? `Sesi interview "${sessionToDelete.title}" beserta transkrip dan feedback-nya akan dihapus permanen.`
+            : "Sesi interview ini akan dihapus permanen."
+        }
+        confirmLabel="Ya, hapus sesi"
+        onConfirm={async () => {
+          if (sessionToDelete) await deleteMutation.mutateAsync(sessionToDelete.id).catch(() => {})
+        }}
+      />
     </motion.div>
   )
 }

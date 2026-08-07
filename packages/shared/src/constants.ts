@@ -212,19 +212,19 @@ export const INTERVIEW_PERSONA_LABELS: Record<
   { id: string; en: string; hint: { id: string; en: string }; emoji: string }
 > = {
   SANTAI: {
-    id: "Santai", en: "Casual", emoji: "\\ud83d\\ude04",
+    id: "Santai", en: "Casual", emoji: "😄",
     hint: { id: "Ngobrol hangat — cocok buat pemanasan", en: "Warm chat — good for warming up" },
   },
   NETRAL: {
-    id: "Netral", en: "Neutral", emoji: "\\ud83d\\ude42",
+    id: "Netral", en: "Neutral", emoji: "🙂",
     hint: { id: "HR profesional pada umumnya", en: "Typical professional HR" },
   },
   TEGAS: {
-    id: "Tegas", en: "Strict", emoji: "\\ud83e\\uddd0",
+    id: "Tegas", en: "Strict", emoji: "🧐",
     hint: { id: "To the point, menggali detail jawaban", en: "To the point, digs into details" },
   },
   MENEKAN: {
-    id: "Menekan", en: "Pressure", emoji: "\\ud83d\\udd25",
+    id: "Menekan", en: "Pressure", emoji: "🔥",
     hint: { id: "Menantang & menguji ketahanan argumen", en: "Challenging & stress-tests your answers" },
   },
 }
