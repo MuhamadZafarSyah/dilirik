@@ -5,17 +5,15 @@ import { motion } from "framer-motion"
 import { FiCheckCircle, FiZap, FiArrowRight } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 import { Card, Polaroid } from "@/components/ui/card"
+import { DilirikLogo } from "@/components/ui/logo"
 
 export default function PricingPage() {
   return (
     <main className="paper-texture min-h-screen">
       {/* Header */}
       <header className="shell mx-auto flex max-w-shell items-center justify-between px-5 py-6">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="bg-ink text-paper flex h-9 w-9 items-center justify-center rounded-xl shadow-paper text-lg font-bold">
-            👀
-          </div>
-          <span className="hand text-3xl font-bold text-ink">Dilirik</span>
+        <Link href="/">
+          <DilirikLogo showText />
         </Link>
         <Link href="/register">
           <Button variant="primary" size="sm" tape="yellow">
@@ -30,7 +28,7 @@ export default function PricingPage() {
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Pricing Sederhana & Transparan
           </span>
-          <h1 className="hand text-5xl sm:text-6xl font-bold text-ink">Pilih Paket Kamu 📌</h1>
+          <h1 className="hand text-5xl sm:text-6xl font-bold text-ink">Pilih Paket Kamu</h1>
           <p className="scrawl text-muted text-xl">
             Selama masa beta: <strong className="text-ink font-bold">Semua fitur gratis.</strong> Tanpa kartu kredit.
           </p>
@@ -120,7 +118,7 @@ export default function PricingPage() {
 
             <div className="pt-4">
               <p className="scrawl text-muted text-sm text-center">
-                Pengguna Beta akan mendapatkan harga penawaran spesial 💛
+                Pengguna Beta akan mendapatkan harga penawaran spesial
               </p>
             </div>
           </Card>

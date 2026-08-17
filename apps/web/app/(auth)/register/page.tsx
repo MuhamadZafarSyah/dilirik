@@ -19,6 +19,7 @@ import { track } from "@/lib/analytics/track";
 import { registerSchema } from "@dilirik/shared";
 import { Button } from "@/components/ui/button";
 import { Card, Sticky } from "@/components/ui/card";
+import { DilirikLogo } from "@/components/ui/logo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -88,7 +89,7 @@ export default function RegisterPage() {
           className="w-full max-w-md p-8 text-center space-y-4"
         >
           <h2 className="hand text-4xl font-bold text-ink">
-            Cek Email Kamu! 📫
+            Cek Email Kamu!
           </h2>
           <p className="text-muted text-sm leading-relaxed">
             Kami telah mengirimkan link verifikasi ke{" "}
@@ -113,11 +114,9 @@ export default function RegisterPage() {
         rotate={-1}
         className="w-full max-w-md p-8 space-y-6"
       >
-        <div className="text-center">
-          <Link href="/" className="inline-block group">
-            <span className="hand text-4xl sm:text-5xl font-bold text-ink">
-              Dilirik 👀
-            </span>
+        <div className="text-center flex flex-col items-center">
+          <Link href="/" className="inline-block group mb-2">
+            <DilirikLogo showText iconClassName="h-10 w-10" />
           </Link>
           <h1 className="hand text-2xl font-bold text-ink mt-2">
             Daftar Akun Gratis

@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <h1 className="hand text-3xl font-bold text-ink">
-                {t("dashboard")} 📌
+                {t("dashboard")}
               </h1>
               <p className="scrawl text-muted text-base">Bikin CV-mu dilirik HR tanpa perlu bohong.</p>
             </div>
@@ -133,12 +133,12 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <Link href="/app/analyze">
                 <Button variant="danger" size="sm" icon={<FiZap />} tape="red">
-                  ⚡ {t("newAnalysis")}
+                  {t("newAnalysis")}
                 </Button>
               </Link>
               <Link href="/app/interview/new">
                 <Button variant="primary" size="sm" icon={<FiMic />} tape="yellow">
-                  🎙️ {lang === "id" ? "Latihan Interview" : "Mock Interview"}
+                  {lang === "id" ? "Latihan Interview" : "Mock Interview"}
                 </Button>
               </Link>
               <Link href="/app/cv/new">
@@ -307,7 +307,7 @@ export default function DashboardPage() {
 
                         <div className="flex justify-end pt-1">
                           <Sticky rotate={2} tone="yellow" className="text-[10px] py-1.5 px-2.5 max-w-[170px] shadow-sm">
-                            📌 Rata-rata kecocokan CV vs Lowongan
+                            Rata-rata kecocokan CV vs Lowongan
                           </Sticky>
                         </div>
                       </Card>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                   const gapBadgeText = totalGaps > 0
                     ? `${totalGaps} Skill Gap`
                     : data.recentAnalyses.length > 0
-                      ? "Bebas Gap 🎉"
+                      ? "Bebas Gap"
                       : "Deteksi Gap"
 
                   return (
@@ -426,7 +426,7 @@ export default function DashboardPage() {
               <motion.section variants={itemVariants} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
-                    🎯 Pipeline Tracker Pelamaran ({totalApplications})
+                    Pipeline Tracker Pelamaran ({totalApplications})
                   </h2>
                   <Link
                     href="/app/applications"
@@ -454,7 +454,7 @@ export default function DashboardPage() {
               <motion.section variants={itemVariants} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h2 className="hand text-2xl font-bold text-ink flex items-center gap-1.5">
-                    ⚡ {lang === "id" ? "Hasil Analisis Terbaru" : "Recent Match Analyses"}
+                    {lang === "id" ? "Hasil Analisis Terbaru" : "Recent Match Analyses"}
                   </h2>
                   <Link
                     href="/app/analyze"
@@ -470,7 +470,7 @@ export default function DashboardPage() {
                       <p className="scrawl text-muted text-base">Belum ada analisis match.</p>
                       <Link href="/app/analyze" className="inline-block mt-2">
                         <Button variant="danger" size="sm" icon={<FiZap />}>
-                          ⚡ Jalankan Analisis Pertama
+                          Jalankan Analisis Pertama
                         </Button>
                       </Link>
                     </Card>

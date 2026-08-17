@@ -15,10 +15,13 @@ import {
   FiCheck,
   FiXCircle,
   FiCopy,
+  FiEye,
 } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 import { Card, Sticky, Polaroid } from "@/components/ui/card"
 import { ScoreGauge } from "@/components/ui/gauge"
+import { DilirikLogo } from "@/components/ui/logo"
+import { useSession } from "@/lib/auth-client"
 
 /* ================= Animation Variants ================= */
 
@@ -142,6 +145,7 @@ const FAQS = [
 ]
 
 export default function LandingPage() {
+  const { data: session } = useSession()
   const [activeDemo, setActiveDemo] = useState(0)
   const [activeTab, setActiveTab] = useState<"match" | "gaps" | "revision">("match")
   const [openFaq, setOpenFaq] = useState<number | null>(0)
@@ -180,17 +184,8 @@ export default function LandingPage() {
       {/* ================= Sticky Navigation Header ================= */}
       <header className="sticky top-0 z-50 border-b-2 border-line bg-panel/90 backdrop-blur-md transition-all">
         <div className="shell mx-auto flex max-w-shell items-center justify-between px-4 sm:px-6 py-3">
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
-            <motion.div
-              whileHover={{ rotate: 12, scale: 1.1 }}
-              className="bg-ink text-paper flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl shadow-paper text-lg sm:text-xl font-bold"
-            >
-              👀
-            </motion.div>
-            <div className="flex flex-col">
-              <span className="hand text-2xl sm:text-3xl font-bold tracking-tight text-ink leading-none">Dilirik</span>
-              <span className="label text-[9px] sm:text-[10px] uppercase font-bold text-muted tracking-wider">AI CV Matcher</span>
-            </div>
+          <Link href="/">
+            <DilirikLogo showText iconClassName="h-9 w-9 sm:h-10 sm:w-10" />
           </Link>
 
           {/* Desktop Links */}
@@ -213,14 +208,24 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <Link href="/login" className="label text-xs font-bold text-ink hover:text-red transition-colors hidden sm:block">
-              Masuk
-            </Link>
-            <Link href="/register" className="shrink-0">
-              <Button variant="danger" size="sm" tape="yellow" className="text-xs px-3 sm:px-4">
-                Coba Gratis ⚡
-              </Button>
-            </Link>
+            {session ? (
+              <Link href="/app" className="shrink-0">
+                <Button variant="danger" size="sm" tape="yellow" className="text-xs px-3 sm:px-4">
+                  Dashboard →
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="label text-xs font-bold text-ink hover:text-red transition-colors hidden sm:block">
+                  Masuk
+                </Link>
+                <Link href="/register" className="shrink-0">
+                  <Button variant="danger" size="sm" tape="yellow" className="text-xs px-3 sm:px-4">
+                    Coba Gratis
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -262,10 +267,16 @@ export default function LandingPage() {
 
           {/* CTA Buttons */}
           <motion.div variants={popIn} className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
-            <Link href="/register" className="w-full sm:w-auto">
-              <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base">
-                <span className="xs:hidden">Mulai Analisis Gratis ⚡</span>
-                <span className="hidden xs:inline">Mulai Analisis Gratis — 10 Sesi / Bulan</span>
+            <Link href={session ? "/app" : "/register"} className="w-full sm:w-auto">
+              <Button variant="danger" size="lg" tape="red" className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base">
+                {session ? (
+                  "Buka Dashboard"
+                ) : (
+                  <>
+                    <span className="xs:hidden">Mulai Analisis Gratis</span>
+                    <span className="hidden xs:inline">Mulai Analisis Gratis — 10 Sesi / Bulan</span>
+                  </>
+                )}
               </Button>
             </Link>
             <a href="#showcase" className="w-full sm:w-auto">
@@ -304,7 +315,7 @@ export default function LandingPage() {
               key={idx}
               className="label bg-paper border border-line rounded-lg px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold uppercase text-ink shadow-xs inline-flex items-center gap-1.5 sm:gap-2"
             >
-              🏢 {comp}
+              {comp}
             </span>
           ))}
         </div>
@@ -316,7 +327,7 @@ export default function LandingPage() {
           <span className="label bg-blue/20 text-blue border border-blue/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Interactive SaaS App Demo
           </span>
-          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pengalaman Menggunakan Dilirik App ⚡</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pengalaman Menggunakan Dilirik App</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Simulasikan bagaimana AI Dilirik membedah CV kamu secara real-time.
           </p>
@@ -442,7 +453,7 @@ export default function LandingPage() {
                     </span>
                     <p className="text-xs font-semibold text-ink leading-relaxed">{sample.realGap}</p>
                     <p className="text-xs text-muted pt-2 border-t border-red/30">
-                      💡 <strong>Saran Jujur Dilirik:</strong> Jangan palsukan skill ini di CV. Pelajari dasar-dasarnya atau sebutkan pengalaman terdekat di wawancara.
+                      <strong>Saran Jujur Dilirik:</strong> Jangan palsukan skill ini di CV. Pelajari dasar-dasarnya atau sebutkan pengalaman terdekat di wawancara.
                     </p>
                   </Sticky>
 
@@ -450,9 +461,9 @@ export default function LandingPage() {
                     <span className="label bg-yellow/40 text-ink px-2.5 py-0.5 rounded text-[11px] font-bold uppercase">
                       Gap Penyajian (Presentation Gap)
                     </span>
-                    <p className="text-xs font-semibold text-ink leading-relaxed">{sample.presentationGap}</p>
+                    <p className="text-xs font-semibold text-ink leading-relaxed">{sample.realGap}</p>
                     <p className="text-xs text-muted pt-2 border-t border-yellow/40">
-                      💡 <strong>Saran Menampilkan:</strong> Kamu sudah memiliki pengalamannya, tinggal dipindahkan ke bagian atas CV agar langsung dibaca HR.
+                      <strong>Saran Menampilkan:</strong> Kamu sudah memiliki pengalamannya, tinggal dipindahkan ke bagian atas CV agar langsung dibaca HR.
                     </p>
                   </Sticky>
                 </motion.div>
@@ -517,7 +528,7 @@ export default function LandingPage() {
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Arsitektur Dilirik
           </span>
-          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Fitur Utama Yang Didesain Khusus 🛠️</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Fitur Utama Yang Didesain Khusus</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Bukan sekadar AI penulisa ulang teks biasa, Dilirik didesain khusus untuk efisiensi lamaran kerja.
           </p>
@@ -529,7 +540,7 @@ export default function LandingPage() {
           <Card tape="yellow" rotate={0} className="md:col-span-2 p-5 sm:p-8 space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
               <span className="label bg-ink text-paper px-3 py-1 rounded-full text-xs font-bold uppercase inline-block">
-                Fitur Utama 🛡️
+                Fitur Utama
               </span>
               <h3 className="hand text-2xl sm:text-3xl font-bold text-ink">Guardrail Kejujuran 3-Titik</h3>
               <p className="text-muted text-xs sm:text-sm leading-relaxed">
@@ -578,7 +589,7 @@ export default function LandingPage() {
               Unggah file Word (.docx) kamu, Dilirik akan merevisi teksnya langsung tanpa merusak desain, layout, font, dan tabel asli milikmu.
             </p>
             <span className="label bg-paper border border-line text-ink rounded-lg px-2.5 py-1 text-[11px] font-bold block text-center">
-              📄 Layout & Font Utuh 100%
+              Layout & Font Utuh 100%
             </span>
           </Card>
 
@@ -594,10 +605,10 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
-              <span className="label bg-paper border border-line text-ink rounded-md px-2.5 py-1 text-xs font-bold">📌 Disimpan</span>
-              <span className="label bg-yellow/30 text-ink rounded-md px-2.5 py-1 text-xs font-bold">📤 Dilamar</span>
-              <span className="label bg-blue/20 text-blue rounded-md px-2.5 py-1 text-xs font-bold">🗣 Wawancara</span>
-              <span className="label bg-green/20 text-green rounded-md px-2.5 py-1 text-xs font-bold">🎉 Offered</span>
+              <span className="label bg-paper border border-line text-ink rounded-md px-2.5 py-1 text-xs font-bold">Disimpan</span>
+              <span className="label bg-yellow/30 text-ink rounded-md px-2.5 py-1 text-xs font-bold">Dilamar</span>
+              <span className="label bg-blue/20 text-blue rounded-md px-2.5 py-1 text-xs font-bold">Wawancara</span>
+              <span className="label bg-green/20 text-green rounded-md px-2.5 py-1 text-xs font-bold">Offered</span>
             </div>
           </Card>
 
@@ -613,7 +624,7 @@ export default function LandingPage() {
               </p>
             </div>
             <span className="label bg-yellow/30 text-ink rounded-lg px-3 py-1 text-xs font-bold block text-center">
-              ⚡ 1-Click Client-Side Export PDF
+              1-Click Client-Side Export PDF
             </span>
           </Card>
         </div>
@@ -622,7 +633,7 @@ export default function LandingPage() {
       {/* ================= PROBLEM VS SOLUTION ================= */}
       <section id="mengapa" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
         <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
-          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Kenapa 80% CV Bagus Tetap Diabaikan HR? 🤔</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Kenapa 80% CV Bagus Tetap Diabaikan HR?</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Masalah utamanya bukan kurang pengalaman, tapi cara menyajikan fakta dan kata kunci yang tidak pas.
           </p>
@@ -718,7 +729,7 @@ export default function LandingPage() {
           <span className="label bg-yellow/40 border border-yellow/60 text-ink px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Kisah Sukses Kandidat
           </span>
-          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Apa Kata Mereka Yang Sudah Dilirik HR 💬</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Apa Kata Mereka Yang Sudah Dilirik HR</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Testimoni jujur dari para pencari kerja yang berhasil lolos ke tahap interview.
           </p>
@@ -784,7 +795,7 @@ export default function LandingPage() {
       {/* ================= INTERACTIVE FAQ ACCORDION ================= */}
       <section id="faq" className="shell mx-auto max-w-shell px-4 sm:px-6 py-12 sm:py-16 border-t-2 border-line">
         <div className="text-center space-y-2 sm:space-y-3 mb-8 sm:mb-12">
-          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pertanyaan Sering Diajukan (FAQ) ❓</h2>
+          <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">Pertanyaan Sering Diajukan (FAQ)</h2>
           <p className="scrawl text-muted text-base sm:text-xl max-w-xl mx-auto">
             Semua hal yang perlu kamu ketahui tentang Dilirik.
           </p>
@@ -830,7 +841,7 @@ export default function LandingPage() {
               Mulai Dalam 15 Detik
             </span>
             <h2 className="hand text-2xl sm:text-4xl lg:text-5xl font-bold text-ink leading-snug">
-              Siap Bikin CV-mu Dilirik HR Hari Ini? ⚡
+              Siap Bikin CV-mu Dilirik HR Hari Ini?
             </h2>
             <p className="scrawl text-muted text-base sm:text-xl max-w-lg mx-auto">
               Dapatkan 10 kali analisis match gratis bulan ini. Tanpa kartu kredit.
@@ -838,9 +849,9 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 pt-2">
-            <Link href="/register" className="w-full sm:w-auto">
+            <Link href={session ? "/app" : "/register"} className="w-full sm:w-auto">
               <Button variant="danger" size="lg" icon={<FiZap />} tape="red" className="w-full sm:w-auto px-6 sm:px-10 text-sm sm:text-base">
-                Daftar Gratis Sekarang →
+                {session ? "Buka Dashboard Sekarang →" : "Daftar Gratis Sekarang →"}
               </Button>
             </Link>
           </div>
@@ -850,11 +861,8 @@ export default function LandingPage() {
       {/* ================= FOOTER ================= */}
       <footer className="border-t-2 border-line bg-panel/80 py-8 sm:py-10 text-center backdrop-blur-xs">
         <div className="shell mx-auto max-w-shell px-4 sm:px-6 space-y-4">
-          <div className="flex items-center justify-center gap-2">
-            <div className="bg-ink text-paper flex h-8 w-8 items-center justify-center rounded-lg shadow-paper text-sm font-bold">
-              👀
-            </div>
-            <span className="hand text-2xl sm:text-3xl font-bold">Dilirik</span>
+          <div className="flex items-center justify-center">
+            <DilirikLogo showText iconClassName="h-8 w-8" />
           </div>
           <p className="scrawl text-muted text-base sm:text-lg max-w-md mx-auto">
             AI Matcher CV & Tracker Pelamaran Kerja dengan Guardrail Kejujuran.

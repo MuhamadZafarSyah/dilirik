@@ -190,7 +190,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
                       </span>
                       {s.targetRequirement && (
                         <span className="label bg-green/20 text-green px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                          🎯 Menjawab: {s.targetRequirement}
+                          Menjawab: {s.targetRequirement}
                         </span>
                       )}
                     </div>
@@ -199,18 +199,18 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
                       {s.after}
                     </p>
                     {applied[i] === "ok" ? (
-                      <p className="label text-green text-[10px] font-bold uppercase">✓ Diterapkan ke teks</p>
+                      <p className="label text-green text-[10px] font-bold uppercase">Tersimpan ke teks</p>
                     ) : applied[i] === "manual" ? (
                       <div className="space-y-2">
                         <p className="label text-red text-[10px] font-bold uppercase">Teks asli tidak ketemu persis — edit manual ya</p>
-                        <CopyButton text={s.after} label="📋 Salin teks revisi" />
+                        <CopyButton text={s.after} label="Salin Teks Revisi" />
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button variant="secondary" size="sm" onClick={() => applyOne(i)}>
                           Terapkan
                         </Button>
-                        <CopyButton text={s.after} label="📋 Salin" />
+                        <CopyButton text={s.after} label="Salin" />
                       </div>
                     )}
                   </Card>
@@ -231,7 +231,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => saveMutation.mutate()} isLoading={busy} disabled={busy || !changed} variant="primary">
-              {busy ? "Menyimpan versi baru…" : "💾 Simpan sebagai versi baru →"}
+              {busy ? "Menyimpan versi baru…" : "Simpan sebagai versi baru"}
             </Button>
             <Button
               variant="secondary"
@@ -256,7 +256,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
       {previewEnabled && cvFull.fileKey && (
         <div className="space-y-3 pt-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="scrawl text-2xl font-bold">Preview Desain Asli 📄</h3>
+            <h3 className="scrawl text-2xl font-bold">Preview Desain Asli</h3>
             <div className="flex flex-wrap items-center gap-3">
               {isDocxSource && (
                 <label className="flex cursor-pointer select-none items-center gap-1.5">
@@ -266,12 +266,12 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
                     onChange={(e) => setHighlight(e.target.checked)}
                     className="accent-ink h-3.5 w-3.5"
                   />
-                  <span className="label text-[10px] font-bold uppercase">🖍️ Sorot perubahan</span>
+                  <span className="label text-[10px] font-bold uppercase">Sorot perubahan</span>
                 </label>
               )}
               {afterPdfQuery.isFetching && (
                 <span className="label text-muted text-[10px] font-bold uppercase animate-pulse">
-                  ⏳ Memperbarui preview…
+                  Memperbarui preview…
                 </span>
               )}
             </div>
@@ -300,7 +300,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
                 {previewKey.length === 0 ? (
                   <div className="rounded-xl border-2 border-dashed border-line p-8 text-center">
                     <p className="scrawl text-muted text-lg">
-                      Terapkan minimal satu saran untuk melihat preview desain hasil revisi ✨
+                      Terapkan minimal satu saran untuk melihat preview desain hasil revisi
                     </p>
                   </div>
                 ) : (
@@ -316,7 +316,7 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
                     />
                     {(afterPdfQuery.data?.skipped ?? 0) > 0 && (
                       <p className="text-muted text-[11px]">
-                        ⚠️ {afterPdfQuery.data!.skipped} saran tidak bisa dipetakan ke desain (teks di file berbeda) —
+                        {afterPdfQuery.data!.skipped} saran tidak bisa dipetakan ke desain (teks di file berbeda) —
                         tetap masuk ke revisi teks.
                       </p>
                     )}

@@ -10,7 +10,7 @@ import type { JobOption, Patch, SessionDetail } from "./types"
 
 export function StepJob({ session, patch }: { session: SessionDetail; patch: Patch }) {
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<"paste" | "pilih">("paste")
+  const [tab, setTab] = useState<"paste" | "pilih">("pilih")
   const [jobId, setJobId] = useState("")
   const [rawText, setRawText] = useState("")
   const [sourceUrl, setSourceUrl] = useState("")
@@ -46,7 +46,7 @@ export function StepJob({ session, patch }: { session: SessionDetail; patch: Pat
   return (
     <Card className="relative space-y-5">
       <span className="tape-blue" aria-hidden />
-      <h2 className="hand text-3xl font-bold">Langkah 2 — Target lowongan 🎯</h2>
+      <h2 className="hand text-3xl font-bold">Langkah 2 — Target Lowongan</h2>
       <p className="text-muted text-sm">
         CV terpilih: <span className="font-bold text-ink">{session.cv ? `${session.cv.title} (v${session.cv.version})` : "—"}</span>{" "}
         <button onClick={() => patch({ step: "CV" })} className="label text-xs underline hover:text-ink">
@@ -56,15 +56,14 @@ export function StepJob({ session, patch }: { session: SessionDetail; patch: Pat
 
       <div className="flex flex-wrap gap-2">
         {([
-          ["paste", "📋 Tempel lowongan baru"],
-          ["pilih", "🗂 Pilih yang tersimpan"],
+          ["pilih", "Pilih yang Tersimpan"],
+          ["paste", "Tempel Lowongan Baru"],
         ] as const).map(([m, label]) => (
           <button
             key={m}
             onClick={() => setTab(m)}
-            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              tab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
-            }`}
+            className={`label rounded-xl px-4 py-2 text-xs font-bold transition-all ${tab === m ? "bg-ink text-paper shadow-paper -rotate-1" : "bg-paper border-2 border-line text-ink hover:border-ink"
+              }`}
           >
             {label}
           </button>
@@ -113,7 +112,7 @@ export function StepJob({ session, patch }: { session: SessionDetail; patch: Pat
         size="lg"
         className="w-full"
       >
-        {busy ? "Menyimpan lowongan…" : "Analisis sekarang ⚡"}
+        {busy ? "Menyimpan lowongan…" : "Analisis Sekarang"}
       </Button>
     </Card>
   )

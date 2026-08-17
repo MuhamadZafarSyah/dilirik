@@ -90,13 +90,13 @@ export function StepCv({ patch }: { patch: Patch }) {
   return (
     <Card className="relative space-y-5">
       <span className="tape" aria-hidden />
-      <h2 className="hand text-3xl font-bold">Langkah 1 — CV kamu 📄</h2>
+      <h2 className="hand text-3xl font-bold">Langkah 1 — CV Kamu</h2>
 
       <div className="flex flex-wrap gap-2">
         {([
-          ["pilih", "🗂 Pilih master CV"],
-          ["upload", "📎 Upload file PDF/DOCX"],
-          ["paste", "✏︎ Paste teks mentah"],
+          ["pilih", "Pilih Master CV"],
+          ["upload", "Upload File PDF/DOCX"],
+          ["paste", "Paste Teks Mentah"],
         ] as const).map(([m, label]) => (
           <button
             key={m}
@@ -155,12 +155,12 @@ export function StepCv({ patch }: { patch: Patch }) {
           >
             <input type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             <span className="hand text-2xl font-bold text-ink">
-              {isDragging ? "Lepaskan File di Sini! 📥" : file ? file.name : "Jatuhkan PDF/DOCX di sini 📄"}
+              {isDragging ? "Lepaskan File di Sini" : file ? file.name : "Jatuhkan PDF/DOCX di Sini"}
             </span>
             <p className="text-muted mt-1 text-xs">Maksimal 5MB · otomatis tersimpan juga ke master CV</p>
           </label>
           <p className="text-muted text-xs">
-            💡 Tips: upload versi <span className="font-bold">.docx</span> — Dilirik bisa merevisi file-nya langsung tanpa mengubah desain, font, dan tabelnya.
+            Tips: upload versi <span className="font-bold">.docx</span> — Dilirik bisa merevisi file-nya langsung tanpa mengubah desain, font, dan tabelnya.
           </p>
         </>
       )}

@@ -17,11 +17,13 @@ import {
   FiChevronRight,
   FiMenu,
   FiX,
+  FiEye,
 } from "react-icons/fi"
 import { signOut } from "@/lib/auth-client"
 import { posthogKey } from "@/lib/analytics/config"
 import { useI18n } from "@/lib/i18n"
 import { QuotaPill } from "@/components/nav/quota-pill"
+import { DilirikLogo } from "@/components/ui/logo"
 import { cn } from "@/lib/utils"
 
 const ROTATIONS = [-1.2, 0.8, -0.6, 1.2, -0.8, 0.6, -1.0]
@@ -124,14 +126,8 @@ export function Sidebar() {
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-                    <div className="bg-ink text-paper h-9 w-9 flex items-center justify-center rounded-lg shadow-paper font-bold text-lg">
-                      👀
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="hand text-ink text-3xl leading-none font-bold">Dilirik</span>
-                      <span className="scrawl text-muted text-xs leading-none -mt-1">smart CV matcher</span>
-                    </div>
+                  <Link href="/" onClick={() => setMobileOpen(false)}>
+                    <DilirikLogo showText />
                   </Link>
 
                   <button
@@ -209,19 +205,8 @@ export function Sidebar() {
       >
         {/* Brand logo & Collapse Toggle Button */}
         <div className={cn("flex items-center mb-6", collapsed ? "justify-center flex-col gap-3 px-0" : "justify-between px-2")}>
-          <Link href="/" className="group flex items-center gap-2 overflow-hidden" title="Dilirik">
-            <motion.div
-              whileHover={{ rotate: 12, scale: 1.1 }}
-              className="bg-ink text-paper flex h-9 w-9 items-center justify-center rounded-lg shadow-paper font-bold text-lg shrink-0"
-            >
-              👀
-            </motion.div>
-            {!collapsed && (
-              <div className="flex flex-col whitespace-nowrap overflow-hidden">
-                <span className="hand text-ink text-3xl leading-none font-bold">Dilirik</span>
-                <span className="scrawl text-muted text-xs leading-none -mt-1">smart CV matcher</span>
-              </div>
-            )}
+          <Link href="/" title="Dilirik">
+            <DilirikLogo showText={!collapsed} />
           </Link>
 
           {/* Desktop Collapse Toggle Button */}

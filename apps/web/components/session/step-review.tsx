@@ -173,7 +173,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                     )}
                     <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
                     <div className="pt-1 border-t border-red/30 text-xs font-bold text-ink">
-                      💡 Saran Jujur: {gap.advice}
+                      Saran Jujur: {gap.advice}
                     </div>
                   </Sticky>
                 ))}
@@ -188,7 +188,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                     )}
                     <p className="text-xs leading-relaxed font-medium">{gap.explanation}</p>
                     <div className="pt-1 border-t border-yellow/40 text-xs font-bold text-ink">
-                      💡 Cara Menonjolkan: {gap.advice}
+                      Cara Menonjolkan: {gap.advice}
                     </div>
                   </Sticky>
                 ))}
@@ -203,7 +203,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                       {gap.skill}
                     </span>
                     <p className="text-xs font-medium">{gap.explanation}</p>
-                    <p className="text-xs font-bold">💡 {gap.advice}</p>
+                    <p className="text-xs font-bold">{gap.advice}</p>
                   </Sticky>
                 ))}
               </div>
@@ -217,7 +217,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                       {gap.skill}
                     </span>
                     <p className="text-xs font-medium">{gap.explanation}</p>
-                    <p className="text-xs font-bold">💡 {gap.advice}</p>
+                    <p className="text-xs font-bold">{gap.advice}</p>
                   </Sticky>
                 ))}
               </div>
@@ -240,7 +240,7 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
                         </span>
                         {s.targetRequirement && (
                           <span className="label bg-green/20 text-green px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                            🎯 Menjawab: {s.targetRequirement}
+                            Menjawab: {s.targetRequirement}
                           </span>
                         )}
                       </div>
@@ -264,7 +264,6 @@ function StepReviewSkeleton() {
   return (
     <div className="space-y-8 animate-pulse">
       <Card tape="yellow" className="text-center py-6 space-y-2 border-2 border-line bg-panel">
-        <div className="inline-block  text-ink text-3xl">⚡</div>
         <h2 className="hand text-2xl font-bold">AI Sedang Menganalisis Match CV Kamu...</h2>
         <p className="scrawl text-muted text-base max-w-md mx-auto">
           Mengekstrak kualifikasi, mendeteksi gap penyajian vs fakta asli.
