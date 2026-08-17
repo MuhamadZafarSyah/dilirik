@@ -121,10 +121,6 @@
   --nav-bg: color-mix(in srgb, var(--color-panel) 80%, transparent);
 }
 
-@view-transition {
-  navigation: auto;
-}
-
 /* View Transition Theme Toggle styling */
 [data-magicui-theme-vt="active"]::view-transition-old(root) {
   animation: none;
@@ -232,25 +228,29 @@ textarea:focus-visible:not(.outline-none) {
   border-radius: 2px;
 }
 
-/* Warm paper grain + faint ruled texture */
+/* Warm paper grain + faint ruled texture (Hardware Accelerated GPU Layer) */
 .paper-texture {
   background-image:
     radial-gradient(
       circle at 18% 22%,
-      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.6) 0%,
       transparent 36%
     ),
     radial-gradient(
       circle at 82% 8%,
-      rgba(223, 81, 59, 0.05) 0%,
+      rgba(223, 81, 59, 0.04) 0%,
       transparent 30%
     ),
     radial-gradient(
       circle at 70% 88%,
-      rgba(63, 111, 176, 0.05) 0%,
+      rgba(63, 111, 176, 0.04) 0%,
       transparent 30%
     ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    radial-gradient(
+      rgba(42, 36, 29, 0.035) 1px,
+      transparent 1px
+    );
+  background-size: 100% 100%, 100% 100%, 100% 100%, 16px 16px;
 }
 .dark .paper-texture {
   background-image:
@@ -269,7 +269,11 @@ textarea:focus-visible:not(.outline-none) {
       rgba(92, 139, 189, 0.03) 0%,
       transparent 30%
     ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+    radial-gradient(
+      rgba(244, 237, 217, 0.03) 1px,
+      transparent 1px
+    );
+  background-size: 100% 100%, 100% 100%, 100% 100%, 16px 16px;
 }
 
 @layer components {

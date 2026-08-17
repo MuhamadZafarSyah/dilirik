@@ -57,12 +57,11 @@ const containerVariants = {
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 10, scale: 0.99 },
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    transition: { type: "spring", stiffness: 350, damping: 26 },
+    transition: { duration: 0.18, ease: "easeOut" },
   },
 }
 
@@ -438,13 +437,11 @@ export default function DashboardPage() {
 
                 <div className="grid gap-2.5 grid-cols-2 lg:grid-cols-5">
                   {Object.entries(data.pipeline).map(([status, count]) => (
-                    <Link key={status} href={`/app/applications?status=${status}`} className="block">
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                        <Card className="hover:border-ink flex items-center justify-between p-3 transition-colors">
-                          <StatusBadge status={status as ApplicationStatus} lang={lang} />
-                          <span className="hand text-2xl font-bold text-ink">{count}</span>
-                        </Card>
-                      </motion.div>
+                    <Link key={status} href={`/app/applications?status=${status}`} className="block group">
+                      <Card className="hover:border-ink flex items-center justify-between p-3 transition-all duration-150 transform-gpu group-hover:scale-[1.015]">
+                        <StatusBadge status={status as ApplicationStatus} lang={lang} />
+                        <span className="hand text-2xl font-bold text-ink">{count}</span>
+                      </Card>
                     </Link>
                   ))}
                 </div>
@@ -476,12 +473,11 @@ export default function DashboardPage() {
                     </Card>
                   ) : (
                     data.recentAnalyses.slice(0, 6).map((a, i) => (
-                      <Link key={a.id} href={`/app/analyze/${a.id}`} className="block">
-                        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                          <Card
-                            rotate={i % 2 ? 0.3 : -0.3}
-                            className="p-4 space-y-2 hover:border-ink transition-colors"
-                          >
+                      <Link key={a.id} href={`/app/analyze/${a.id}`} className="block group">
+                        <Card
+                          rotate={i % 2 ? 0.3 : -0.3}
+                          className="p-4 space-y-2 hover:border-ink transition-all duration-150 transform-gpu group-hover:scale-[1.015]"
+                        >
                             <div className="flex items-start justify-between gap-2 min-w-0">
                               <div className="min-w-0 flex-1">
                                 <h3 className="hand text-xl font-bold text-ink truncate max-w-56" title={a.cvTitle}>
@@ -503,7 +499,6 @@ export default function DashboardPage() {
                               <span className="label text-ink font-bold group-hover:underline">Detail →</span>
                             </div>
                           </Card>
-                        </motion.div>
                       </Link>
                     ))
                   )}

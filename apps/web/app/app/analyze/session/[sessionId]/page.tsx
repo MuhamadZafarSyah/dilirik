@@ -121,18 +121,27 @@ export default function SessionWizardPage({ params }: { params: Promise<{ sessio
         {STEPS.map((s, i) => {
           const isCurrent = i === stepIndex
           const isPast = i < stepIndex
+          const isAccessible =
+            s.key === "CV"
+              ? true
+              : s.key === "JOB"
+                ? Boolean(session.cvId || session.cv)
+                : Boolean(session.analysisId)
+
           const Icon = s.icon
           return (
             <button
               key={s.key}
-              disabled={!isPast}
+              type="button"
+              disabled={!isAccessible}
               onClick={() => patch({ step: s.key })}
-              className={`label relative flex-1 min-w-[100px] flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold uppercase transition-all select-none ${isCurrent
+              className={`label relative flex-1 min-w-[100px] flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold uppercase transition-all select-none ${
+                isCurrent
                   ? "bg-ink text-paper shadow-paper -rotate-1"
-                  : isPast
+                  : isAccessible
                     ? "bg-green/15 text-green border border-green/40 cursor-pointer hover:bg-green/25"
                     : "bg-paper/50 text-muted opacity-50 cursor-not-allowed"
-                }`}
+              }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span>

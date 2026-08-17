@@ -120,11 +120,9 @@ export function KanbanCard({
         <div className="absolute -top-2 left-0 right-0 h-1 bg-blue rounded-full shadow-sm z-20 animate-pulse pointer-events-none" />
       )}
 
-      <motion.div
-        whileHover={{ scale: 1.02, y: -2 }}
-        transition={{ type: "spring", stiffness: 350, damping: 22 }}
+      <div
         className={cn(
-          "bg-paper border-2 border-line/80 rounded-2xl p-4 shadow-paper space-y-2.5 hover:border-ink transition-colors relative",
+          "bg-paper border-2 border-line/80 rounded-2xl p-4 shadow-paper space-y-2.5 hover:border-ink transition-all duration-150 ease-out will-change-transform transform-gpu group-hover:scale-[1.015] group-hover:-translate-y-1 group-hover:shadow-lift relative",
           dropIndicator && "border-blue ring-2 ring-blue/30"
         )}
       >
@@ -214,7 +212,7 @@ export function KanbanCard({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {dropIndicator === "after" && (
         <div className="absolute -bottom-2 left-0 right-0 h-1 bg-blue rounded-full shadow-sm z-20 animate-pulse pointer-events-none" />

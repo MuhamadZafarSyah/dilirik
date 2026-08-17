@@ -178,7 +178,24 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
             )}
           </div>
           {suggestions.length === 0 ? (
-            <p className="text-muted text-xs">Tidak ada saran otomatis — edit teks langsung di sebelah kanan.</p>
+            <Card className="p-5 text-center space-y-3 bg-panel/60 border-2 border-line">
+              <div className="space-y-1">
+                <span className="label bg-green/20 text-green px-2.5 py-0.5 rounded text-[11px] font-bold uppercase inline-block">
+                  Tidak Perlu Revisi Otomatis
+                </span>
+                <p className="text-xs text-muted leading-relaxed">
+                  CV kamu tidak memerlukan revisi otomatis dari AI untuk lowongan ini. Kamu bisa mengedit teks manual di sebelah kanan jika ingin menambahkan detail, atau langsung selesaikan sesi.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => patch({ step: "FINISH" })}
+                className="w-full font-bold text-xs"
+              >
+                Gunakan Teks Asli & Lanjut ke Selesai →
+              </Button>
+            </Card>
           ) : (
             <ul className="space-y-3">
               {suggestions.map((s, i) => (
@@ -230,22 +247,45 @@ export function StepRevise({ session, patch }: { session: SessionDetail; patch: 
             className="w-full p-4 rounded-xl border-2 border-line bg-paper text-ink font-mono text-xs leading-relaxed outline-none focus:border-ink shadow-inner"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => saveMutation.mutate()} isLoading={busy} disabled={busy || !changed} variant="primary">
-              {busy ? "Menyimpan versi baru…" : "Simpan sebagai versi baru"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setDraft(null)
-                setApplied({})
-              }}
-            >
-              Reset
-            </Button>
+            {changed ? (
+              <Button
+                onClick={() => saveMutation.mutate()}
+                isLoading={busy}
+                disabled={busy}
+                variant="primary"
+                size="lg"
+                className="font-bold shadow-paper"
+              >
+                {busy ? "Menyimpan versi baru…" : "Simpan Versi Baru & Lanjut ke Selesai →"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => patch({ step: "FINISH" })}
+                disabled={busy}
+                variant="primary"
+                size="lg"
+                className="font-bold shadow-paper"
+              >
+                Gunakan Teks Asli & Lanjut ke Selesai →
+              </Button>
+            )}
+
+            {changed && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  setDraft(null)
+                  setApplied({})
+                }}
+              >
+                Reset Perubahan
+              </Button>
+            )}
           </div>
-          {!changed && (
+          {!changed && suggestions.length > 0 && (
             <p className="text-muted text-xs">
-              Belum ada perubahan — terapkan saran atau edit teks dulu supaya hasil compare tidak sama persis.
+              Belum ada saran yang diterapkan. Kamu bisa klik <strong>Terapkan Semua</strong> di sebelah kiri atau langsung lanjut dengan teks asli.
             </p>
           )}
           {error && <p className="text-red text-xs font-semibold">{error}</p>}

@@ -221,28 +221,28 @@ export function Sidebar() {
 
         {/* Navigation items */}
         <nav className="flex flex-col gap-1.5 flex-1 relative">
-          {/* Single Persistent Animated Active Pill */}
+          {/* Single Persistent Animated Active Pill (GPU Composited) */}
           {activeIndex !== -1 && (
             <motion.div
               initial={false}
               animate={{
-                top: activeIndex * 46,
+                y: activeIndex * 46,
                 rotate: activeRotate,
               }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              className="absolute inset-x-0 h-[40px] bg-ink rounded-xl shadow-paper z-0 pointer-events-none"
+              transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              className="absolute inset-x-0 top-0 h-[40px] bg-ink rounded-xl shadow-paper z-0 pointer-events-none transform-gpu"
             />
           )}
 
-          {/* Single Persistent Animated Yellow Dot */}
+          {/* Single Persistent Animated Yellow Dot (GPU Composited) */}
           {activeIndex !== -1 && !collapsed && (
             <motion.span
               initial={false}
               animate={{
-                top: activeIndex * 46 + 16,
+                y: activeIndex * 46 + 16,
               }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              className="bg-yellow absolute right-3.5 h-2 w-2 rounded-full hidden md:block z-10 pointer-events-none"
+              transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              className="bg-yellow absolute top-0 right-3.5 h-2 w-2 rounded-full hidden md:block z-10 pointer-events-none transform-gpu"
             />
           )}
 

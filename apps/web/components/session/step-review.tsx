@@ -111,35 +111,73 @@ export function StepReview({ session, patch }: { session: SessionDetail; patch: 
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {suggestions.length > 0 ? (
-                  <Button
-                    variant="danger"
-                    size="lg"
-                    icon={<FiEdit3 />}
-                    onClick={() => patch({ step: "REVISE" })}
-                    className="font-bold text-sm shadow-md"
-                  >
-                    ✏︎ Lanjut ke Revisi Teks CV →
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => patch({ step: "REVISE" })}
-                    className="font-bold text-sm"
-                  >
-                    ✏︎ Tetap Edit Teks Manual →
-                  </Button>
-                )}
+                {/* Primary CTA: Selalu jelas dan mengarahkan ke Langkah 4 */}
+                <Button
+                  variant="danger"
+                  size="lg"
+                  icon={<FiEdit3 />}
+                  onClick={() => patch({ step: "REVISE" })}
+                  className="font-bold text-sm shadow-paper hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  {suggestions.length > 0
+                    ? `Lanjut ke Langkah 4: Terapkan ${suggestions.length} Revisi Teks →`
+                    : "Lanjut ke Langkah 4: Edit Teks CV Manual →"}
+                </Button>
 
-                {session.cvId && session.jobPostingId && (
-                  <Link href={`/app/cover-letters?cvId=${session.cvId}&jobId=${session.jobPostingId}`}>
-                    <Button variant="outline" size="lg" icon={<FiFileText />} className="w-full sm:w-auto text-xs font-bold">
-                      ✉️ Buat Surat Lamaran
-                    </Button>
-                  </Link>
-                )}
+                {/* Alternatif jika user puas dengan CV dan tidak butuh revisi */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => patch({ step: "FINISH" })}
+                  className="font-bold text-xs"
+                >
+                  Lewati Revisi & Selesaikan Sesi →
+                </Button>
               </div>
+
+              {/* Cover Letter Section dengan validasi skor match */}
+              {session.cvId && session.jobPostingId && (
+                <div className="pt-3 border-t border-line/60 space-y-2">
+                  {analysis.matchScore >= 50 ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-panel/60 border border-line rounded-xl">
+                      <div className="space-y-0.5">
+                        <span className="label text-xs font-bold text-ink block">
+                          Siap melamar ke posisi ini?
+                        </span>
+                        <p className="text-[11px] text-muted">
+                          Skor match kamu ({analysis.matchScore}%) memenuhi syarat rekomendasi untuk membuat surat lamaran.
+                        </p>
+                      </div>
+                      <Link
+                        href={`/app/cover-letters?cvId=${session.cvId}&jobId=${session.jobPostingId}`}
+                        className="shrink-0"
+                      >
+                        <Button variant="primary" size="sm" icon={<FiFileText />} className="w-full sm:w-auto font-bold text-xs">
+                          Buat Surat Lamaran →
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-yellow/15 border border-yellow/40 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-start gap-2">
+                        <span className="label bg-yellow/50 text-ink px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0">
+                          Perhatian
+                        </span>
+                        <p className="text-muted leading-relaxed">
+                          Skor kecocokan masih di bawah 50% ({analysis.matchScore}%). Disarankan untuk <strong>mengoptimalkan CV di Langkah 4</strong> terlebih dahulu sebelum membuat surat lamaran agar peluang lolos screening HR lebih tinggi.
+                        </p>
+                      </div>
+                      <div className="flex justify-end">
+                        <Link href={`/app/cover-letters?cvId=${session.cvId}&jobId=${session.jobPostingId}`}>
+                          <Button variant="ghost" size="sm" className="text-[11px] text-muted hover:text-ink underline">
+                            Tetap buat surat lamaran
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 

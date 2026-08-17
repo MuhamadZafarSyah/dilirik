@@ -29,8 +29,8 @@ const containerVariants = {
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, scale: 0.9, y: 15 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } },
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
 }
 
 export default function CvListPage() {
@@ -118,8 +118,7 @@ export default function CvListPage() {
                   <motion.div
                     key={cv.id}
                     variants={itemVariants}
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    className="h-full"
                   >
                     <Polaroid tape={tapeColor} pin rotate={i % 2 === 0 ? -1.5 : 1.5} className="group h-full flex flex-col justify-between">
                       <div>

@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <TopProgressBar />
         </Suspense>
-        <div className="paper-texture flex min-h-screen flex-col md:flex-row">
+        <div className="flex min-h-screen flex-col md:flex-row">
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="border-line bg-panel/50 hidden md:flex items-center justify-between gap-3 border-b-2 px-8 py-3 backdrop-blur-xs">
