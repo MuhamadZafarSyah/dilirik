@@ -131,7 +131,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
                 size="sm"
                 className="w-full sm:w-auto font-bold shrink-0"
               >
-                {busy ? "Menyiapkan…" : `📌 ${t("saveToTracker")}`}
+                {busy ? "Menyiapkan…" : t("saveToTracker")}
               </Button>
             )}
           </div>
@@ -143,7 +143,7 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="label text-xs font-bold uppercase text-muted tracking-wider">
-            🚀 Langkah Selanjutnya (Opsional)
+            Langkah Selanjutnya (Opsional)
           </h3>
           <span className="text-[11px] text-muted font-medium">Pilih fitur tambahan yang dibutuhkan</span>
         </div>
@@ -154,7 +154,6 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
             <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-ink transition-all hover:shadow-paper">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-ink font-bold text-sm">
-                  <span className="p-1.5 bg-yellow/30 rounded-lg text-ink">✉️</span>
                   <span>Surat Lamaran</span>
                 </div>
                 <p className="text-muted text-xs leading-relaxed">
@@ -177,7 +176,6 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
             <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-ink transition-all hover:shadow-paper">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-ink font-bold text-sm">
-                  <span className="p-1.5 bg-yellow/30 rounded-lg text-ink">🎙️</span>
                   <span>Simulasi Interview</span>
                 </div>
                 <p className="text-muted text-xs leading-relaxed">
@@ -200,7 +198,6 @@ export function StepFinish({ session, patch }: { session: SessionDetail; patch: 
             <Card className="p-4 flex flex-col justify-between space-y-3 hover:border-ink transition-all hover:shadow-paper">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-ink font-bold text-sm">
-                  <span className="p-1.5 bg-panel border border-line rounded-lg text-ink">📊</span>
                   <span>Perbandingan CV</span>
                 </div>
                 <p className="text-muted text-xs leading-relaxed">

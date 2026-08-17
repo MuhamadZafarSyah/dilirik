@@ -9,6 +9,7 @@ import { signIn, useSession } from "@/lib/auth-client"
 import { getCaptchaToken } from "@/lib/captcha"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { DilirikLogo } from "@/components/ui/logo"
 import { FiEye, FiEyeOff, FiKey } from "react-icons/fi"
 
 function LoginForm() {
@@ -53,9 +54,9 @@ function LoginForm() {
   return (
     <main className="paper-texture flex min-h-screen items-center justify-center p-4">
       <Card tape="yellow" pin rotate={-1} className="w-full max-w-md p-8 space-y-6">
-        <div className="text-center">
-          <Link href="/" className="inline-block group">
-            <span className="hand text-4xl sm:text-5xl font-bold text-ink">Dilirik 👀</span>
+        <div className="text-center flex flex-col items-center">
+          <Link href="/" className="inline-block group mb-2">
+            <DilirikLogo showText iconClassName="h-10 w-10" />
           </Link>
           <h1 className="hand text-2xl font-bold text-ink mt-2">Selamat Datang Kembali</h1>
           <p className="scrawl text-muted text-base">Masuk ke akun kamu untuk lanjut analisis CV</p>

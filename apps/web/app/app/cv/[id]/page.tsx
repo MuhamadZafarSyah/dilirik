@@ -96,7 +96,7 @@ export default function CvDetailPage({ params }: { params: Promise<{ id: string 
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DownloadCvMenu cv={cv} />
-          <Link href={`/app/analyze?cvId=${cv.id}`} className="label bg-red text-paper rounded-md px-4 py-2 text-sm font-bold">⚡ Analisis dengan lowongan</Link>
+          <Link href={`/app/analyze?cvId=${cv.id}`} className="label bg-red text-paper rounded-md px-4 py-2 text-sm font-bold">Analisis dengan lowongan</Link>
           {siblings.length > 0 ? (
             <Link href={`/app/cv/${cv.id}/compare?with=${siblings[0]!.id}`} className="label bg-panel border-line rounded-md border-2 px-4 py-2 text-sm font-bold">{t("compare")}</Link>
           ) : null}

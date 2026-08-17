@@ -77,7 +77,7 @@ export default function CvListPage() {
       <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="hand text-4xl sm:text-5xl font-bold flex items-center gap-2">
-            Dokumen CV 📄
+            Dokumen CV
           </h1>
           <p className="scrawl text-muted text-xl mt-1">Kelola master CV dan versi revisi hasil AI.</p>
         </div>
@@ -102,7 +102,7 @@ export default function CvListPage() {
             </motion.div>
           ) : filteredRoots.length === 0 ? (
             <motion.div variants={itemVariants} className="text-center py-12">
-              <p className="scrawl text-muted text-2xl">CV yang kamu cari tidak ditemukan 🔍</p>
+              <p className="scrawl text-muted text-2xl">CV yang kamu cari tidak ditemukan</p>
             </motion.div>
           ) : (
             <motion.div
