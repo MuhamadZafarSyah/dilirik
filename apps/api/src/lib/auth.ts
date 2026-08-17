@@ -1,7 +1,7 @@
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@dilirik/db";
-import { DEFAULT_ANALYSIS_QUOTA } from "@dilirik/shared";
+import { DEFAULT_ANALYSIS_QUOTA, isDisposableEmail } from "@dilirik/shared";
 import { env } from "./env";
 import { getAllowedOrigins } from "./origins";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
@@ -27,6 +27,19 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: getAllowedOrigins(),
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (isDisposableEmail(user.email)) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Email sementara (disposable email) tidak diperbolehkan.",
+            });
+          }
+        },
+      },
+    },
+  },
   advanced: {
     crossSubDomainCookies: {
       enabled: true,

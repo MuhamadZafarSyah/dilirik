@@ -16,6 +16,7 @@ import {
 import { signIn, signUp, useSession } from "@/lib/auth-client";
 import { getCaptchaToken } from "@/lib/captcha";
 import { track } from "@/lib/analytics/track";
+import { registerSchema } from "@dilirik/shared";
 import { Button } from "@/components/ui/button";
 import { Card, Sticky } from "@/components/ui/card";
 
@@ -48,6 +49,14 @@ export default function RegisterPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Validasi Zod schema (termasuk deteksi disposable email)
+    const validation = registerSchema.safeParse({ name, email, password });
+    if (!validation.success) {
+      setError(validation.error.issues[0]?.message ?? "Data pendaftaran tidak valid.");
+      return;
+    }
+
     if (!isPasswordStrong) {
       setError("Password belum memenuhi kriteria password kuat.");
       return;
