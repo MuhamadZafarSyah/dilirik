@@ -14,11 +14,18 @@ import type { AtsCompanyRef, AtsConnector, RawJob, RemoteType } from "./types.js
  * menjatuhkan seluruh ingestion run.
  */
 
+const GREENHOUSE_BASE = "https://boards-api.greenhouse.io/v1/boards"
+const LEVER_BASE = "https://api.lever.co/v0/postings"
+const ASHBY_BASE = "https://api.ashbyhq.com/posting-api/job-board"
+const WORKABLE_BASE = "https://apply.workable.com/api/v1/widget/accounts"
+const RECRUITEE_HOST_SUFFIX = ".recruitee.com/api/offers/"
+
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : []
 }
 
 function str(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value)
   return typeof value === "string" && value.trim() ? value.trim() : null
 }
 
@@ -31,7 +38,7 @@ function iso(value: unknown): string | null {
     const date = new Date(value)
     return Number.isNaN(date.getTime()) ? null : date.toISOString()
   }
-  const raw = str(value)
+  const raw = typeof value === "string" ? value.trim() : ""
   if (!raw) return null
   const date = new Date(raw)
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
@@ -39,7 +46,7 @@ function iso(value: unknown): string | null {
 
 function remoteFrom(flag: unknown, text: string | null): RemoteType | null {
   if (flag === true) return "remote"
-  const value = (str(flag) ?? text ?? "").toLowerCase()
+  const value = `${typeof flag === "string" ? flag : ""} ${text ?? ""}`.toLowerCase().trim()
   if (!value) return null
   if (value.includes("hybrid")) return "hybrid"
   if (value.includes("remote") || value.includes("anywhere")) return "remote"
@@ -50,16 +57,18 @@ function remoteFrom(flag: unknown, text: string | null): RemoteType | null {
 }
 
 /* ===================== Greenhouse ===================== */
-// GET https://boards-api.greenhouse.io/v1/boards/<token>/jobs?content=true
+// GET <base>/<board_token>/jobs?content=true
 const greenhouse: AtsConnector = {
   id: "greenhouse",
   displayName: (company) => `Halaman karier ${company} (Greenhouse)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
-    const url = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(company.atsSlug)}/jobs?content=true`
-    const data = await fetchJson<{ jobs?: unknown }>(url)
+    const slug = encodeURIComponent(company.atsSlug)
+    const data = await fetchJson<{ jobs?: unknown }>(
+      `${GREENHOUSE_BASE}/${slug}/jobs?content=true`,
+    )
     return asArray(data.jobs).flatMap((entry) => {
       const job = entry as Record<string, unknown>
-      const id = str(job.id) ?? String(num(job.id) ?? "")
+      const id = str(job.id)
       const title = str(job.title)
       const applyUrl = str(job.absolute_url)
       if (!id || !title || !applyUrl) return []
@@ -77,20 +86,20 @@ const greenhouse: AtsConnector = {
           postedAt: iso(job.first_published ?? job.updated_at),
           applyUrl,
           sourceUrl: applyUrl,
-        },
+        } satisfies RawJob,
       ]
     })
   },
 }
 
 /* ===================== Lever ===================== */
-// GET https://api.lever.co/v0/postings/<site>?mode=json
+// GET <base>/<site>?mode=json
 const lever: AtsConnector = {
   id: "lever",
   displayName: (company) => `Halaman karier ${company} (Lever)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
-    const url = `https://api.lever.co/v0/postings/${encodeURIComponent(company.atsSlug)}?mode=json`
-    const data = await fetchJson<unknown>(url)
+    const slug = encodeURIComponent(company.atsSlug)
+    const data = await fetchJson<unknown>(`${LEVER_BASE}/${slug}?mode=json`)
     return asArray(data).flatMap((entry) => {
       const job = entry as Record<string, unknown>
       const categories = (job.categories as Record<string, unknown> | undefined) ?? {}
@@ -117,20 +126,22 @@ const lever: AtsConnector = {
           postedAt: iso(job.createdAt),
           applyUrl: str(job.applyUrl) ?? hostedUrl,
           sourceUrl: hostedUrl,
-        },
+        } satisfies RawJob,
       ]
     })
   },
 }
 
 /* ===================== Ashby ===================== */
-// GET https://api.ashbyhq.com/posting-api/job-board/<name>?includeCompensation=true
+// GET <base>/<board_name>?includeCompensation=true
 const ashby: AtsConnector = {
   id: "ashby",
   displayName: (company) => `Halaman karier ${company} (Ashby)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
-    const url = `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(company.atsSlug)}?includeCompensation=true`
-    const data = await fetchJson<{ jobs?: unknown }>(url)
+    const slug = encodeURIComponent(company.atsSlug)
+    const data = await fetchJson<{ jobs?: unknown }>(
+      `${ASHBY_BASE}/${slug}?includeCompensation=true`,
+    )
     return asArray(data.jobs).flatMap((entry) => {
       const job = entry as Record<string, unknown>
       const id = str(job.id)
@@ -151,20 +162,20 @@ const ashby: AtsConnector = {
           postedAt: iso(job.publishedAt ?? job.updatedAt),
           applyUrl: str(job.applyUrl) ?? jobUrl,
           sourceUrl: jobUrl,
-        },
+        } satisfies RawJob,
       ]
     })
   },
 }
 
 /* ===================== Workable ===================== */
-// GET https://apply.workable.com/api/v1/widget/accounts/<slug>
+// GET <base>/<slug>
 const workable: AtsConnector = {
   id: "workable",
   displayName: (company) => `Halaman karier ${company} (Workable)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
-    const url = `https://apply.workable.com/api/v1/widget/accounts/${encodeURIComponent(company.atsSlug)}`
-    const data = await fetchJson<{ jobs?: unknown }>(url)
+    const slug = encodeURIComponent(company.atsSlug)
+    const data = await fetchJson<{ jobs?: unknown }>(`${WORKABLE_BASE}/${slug}`)
     return asArray(data.jobs).flatMap((entry) => {
       const job = entry as Record<string, unknown>
       const id = str(job.shortcode) ?? str(job.id)
@@ -190,7 +201,7 @@ const workable: AtsConnector = {
           postedAt: iso(job.published_on ?? job.created_at),
           applyUrl: str(job.application_url) ?? jobUrl,
           sourceUrl: jobUrl,
-        },
+        } satisfies RawJob,
       ]
     })
   },
@@ -202,11 +213,13 @@ const recruitee: AtsConnector = {
   id: "recruitee",
   displayName: (company) => `Halaman karier ${company} (Recruitee)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
-    const url = `https://${encodeURIComponent(company.atsSlug)}.recruitee.com/api/offers/`
-    const data = await fetchJson<{ offers?: unknown }>(url)
+    const slug = encodeURIComponent(company.atsSlug)
+    const data = await fetchJson<{ offers?: unknown }>(
+      `https://${slug}${RECRUITEE_HOST_SUFFIX}`,
+    )
     return asArray(data.offers).flatMap((entry) => {
       const job = entry as Record<string, unknown>
-      const id = str(job.id) ?? String(num(job.id) ?? "")
+      const id = str(job.id)
       const title = str(job.title)
       const careersUrl = str(job.careers_url) ?? str(job.careers_apply_url)
       if (!id || !title || !careersUrl) return []
@@ -225,7 +238,7 @@ const recruitee: AtsConnector = {
           postedAt: iso(job.published_at ?? job.created_at),
           applyUrl: str(job.careers_apply_url) ?? careersUrl,
           sourceUrl: careersUrl,
-        },
+        } satisfies RawJob,
       ]
     })
   },
