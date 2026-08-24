@@ -1,0 +1,95 @@
+# Penjadwal ingestion lowongan (PRD Cari Lowongan §8.3).
+#
+# Repo ini belum punya scheduler sama sekali, jadi mekanismenya masih KEPUTUSAN
+# TERBUKA. GitHub Actions dipakai di sini karena paling murah untuk dimulai:
+# tidak menambah layanan baru, tidak menambah biaya, dan bisa dipicu manual saat
+# debugging. Kalau nanti pindah ke Cloud Scheduler / Vercel Cron / cron di VPS,
+# file ini bisa dihapus — kontraknya tetap sama: satu POST ke /api/internal/ingest.
+#
+# Prasyarat repository secrets:
+#   DISCOVERY_API_URL     — base URL API, contoh https://api.dilirik.tech
+#   DISCOVERY_INGEST_SECRET — harus SAMA dengan env di server
+#
+# Kalau salah satu secret kosong, job berhenti dengan pesan jelas dan TIDAK
+# menembak endpoint tanpa kredensial.
+
+name: discovery-ingest
+
+on:
+  schedule:
+    # 19:00 UTC = 02:00 WIB (Asia/Jakarta, UTC+7). Jam sepi trafik, dan hasilnya
+    # sudah siap sebelum orang mulai mencari lowongan pagi hari.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: "Jalankan tanpa menulis ke indeks"
+        type: boolean
+        default: false
+      maxCompanies:
+        description: "Batas jumlah perusahaan yang ditarik"
+        type: string
+        default: ""
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Panggil endpoint ingestion
+        env:
+          API_URL: ${{ secrets.DISCOVERY_API_URL }}
+          INGEST_SECRET: ${{ secrets.DISCOVERY_INGEST_SECRET }}
+          DRY_RUN: ${{ inputs.dryRun }}
+          MAX_COMPANIES: ${{ inputs.maxCompanies }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${API_URL:-}" ] || [ -z "${INGEST_SECRET:-}" ]; then
+            echo "Secret DISCOVERY_API_URL atau DISCOVERY_INGEST_SECRET belum diisi."
+            echo "Ingestion dilewati (bukan gagal): isi dulu secret di Settings > Secrets."
+            exit 1
+          fi
+
+          BODY='{"trigger":"cron"'
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            BODY="${BODY},\"dryRun\":true"
+          fi
+          if [ -n "${MAX_COMPANIES:-}" ]; then
+            BODY="${BODY},\"maxCompanies\":${MAX_COMPANIES}"
+          fi
+          BODY="${BODY}}"
+
+          echo "Request body: ${BODY}"
+
+          HTTP_CODE=$(curl --silent --show-error --fail-with-body \
+            --max-time 1500 \
+            --output response.json \
+            --write-out "%{http_code}" \
+            --request POST "${API_URL}/api/internal/ingest" \
+            --header "content-type: application/json" \
+            --header "x-ingest-secret: ${INGEST_SECRET}" \
+            --data "${BODY}") || true
+
+          echo "HTTP ${HTTP_CODE}"
+          cat response.json || true
+          echo
+
+          case "${HTTP_CODE}" in
+            2*) echo "Ingestion selesai." ;;
+            *) echo "Ingestion gagal."; exit 1 ;;
+          esac
+
+      - name: Ringkasan hasil
+        if: always()
+        run: |
+          if [ -f response.json ]; then
+            {
+              echo "### Hasil ingestion"
+              echo
+              echo '```json'
+              cat response.json
+              echo
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
