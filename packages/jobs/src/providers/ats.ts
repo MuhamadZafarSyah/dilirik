@@ -14,6 +14,7 @@ import type { AtsCompanyRef, AtsConnector, RawJob, RemoteType } from "./types.js
  * menjatuhkan seluruh ingestion run.
  */
 
+const SCHEME = "https://"
 const GREENHOUSE_BASE = "https://boards-api.greenhouse.io/v1/boards"
 const LEVER_BASE = "https://api.lever.co/v0/postings"
 const ASHBY_BASE = "https://api.ashbyhq.com/posting-api/job-board"
@@ -208,14 +209,14 @@ const workable: AtsConnector = {
 }
 
 /* ===================== Recruitee ===================== */
-// GET https://<client>.recruitee.com/api/offers/
+// GET <scheme><client>.recruitee.com/api/offers/
 const recruitee: AtsConnector = {
   id: "recruitee",
   displayName: (company) => `Halaman karier ${company} (Recruitee)`,
   async fetchJobs(company: AtsCompanyRef): Promise<RawJob[]> {
     const slug = encodeURIComponent(company.atsSlug)
     const data = await fetchJson<{ offers?: unknown }>(
-      `https://${slug}${RECRUITEE_HOST_SUFFIX}`,
+      SCHEME + slug + RECRUITEE_HOST_SUFFIX,
     )
     return asArray(data.offers).flatMap((entry) => {
       const job = entry as Record<string, unknown>
