@@ -15,6 +15,7 @@
     "@aws-sdk/client-s3": "^3.716.0",
     "@dilirik/ai": "workspace:*",
     "@dilirik/db": "workspace:*",
+    "@dilirik/jobs": "workspace:*",
     "@dilirik/shared": "workspace:*",
     "@google/genai": "^1.16.0",
     "@sentry/node": "^8.47.0",
