@@ -1,4 +1,4 @@
-import type { RawJob, RemoteType } from "./providers/types.js"
+import type { RawJob, RemoteType } from "./providers/types.js";
 
 /**
  * Normalisasi lowongan (PRD Cari Lowongan §12.1).
@@ -9,16 +9,16 @@ import type { RawJob, RemoteType } from "./providers/types.js"
  */
 
 export type NormalizedJob = RawJob & {
-  titleNorm: string
-  companyNorm: string
-  locationNorm: string | null
-  city: string | null
-  remoteType: RemoteType | null
-  skillTerms: string[]
-  descriptionSnippet: string
-}
+  titleNorm: string;
+  companyNorm: string;
+  locationNorm: string | null;
+  city: string | null;
+  remoteType: RemoteType | null;
+  skillTerms: string[];
+  descriptionSnippet: string;
+};
 
-const SNIPPET_MAX = 600
+const SNIPPET_MAX = 600;
 
 /** Suffix badan usaha — dibuang agar "PT Gojek Indonesia" == "Gojek". */
 const COMPANY_NOISE = [
@@ -41,7 +41,7 @@ const COMPANY_NOISE = [
   "global",
   "technologies",
   "technology",
-]
+];
 
 /** Kota Indonesia + alias yang sering dipakai di portal lowongan. */
 const CITY_ALIASES: Record<string, string> = {
@@ -82,13 +82,13 @@ const CITY_ALIASES: Record<string, string> = {
   manado: "Manado",
   singapore: "Singapore",
   "kuala lumpur": "Kuala Lumpur",
-}
+};
 
 /** Kata pengganggu pada judul lowongan yang menghalangi pencocokan. */
 const TITLE_NOISE =
-  /\b(urgent(ly)?|hiring|dibutuhkan|dicari|segera|wfh|wfo|fresh graduate|freshgraduate|full[- ]?time|part[- ]?time|kontrak|contract|internship|intern|magang|remote|hybrid|onsite|on[- ]site)\b/gi
+  /\b(urgent(ly)?|hiring|dibutuhkan|dicari|segera|wfh|wfo|fresh graduate|freshgraduate|full[- ]?time|part[- ]?time|kontrak|contract|internship|intern|magang|remote|hybrid|onsite|on[- ]site)\b/gi;
 
-const SENIORITY_NOISE = /\b(jr|sr|snr)\b/gi
+const SENIORITY_NOISE = /\b(jr|sr|snr)\.?(?=\s|\b|$)/gi;
 
 /**
  * Kamus skill. Dipakai untuk mengisi mustHaveSkills saat memberi skor kandidat
@@ -206,10 +206,10 @@ const SKILL_DICTIONARY: string[] = [
   "english",
   "negosiasi",
   "komunikasi",
-]
+];
 
 export function squash(input: string | null | undefined): string {
-  return (input ?? "").replace(/\s+/g, " ").trim()
+  return (input ?? "").replace(/\s+/g, " ").trim();
 }
 
 export function normalizeTitle(title: string): string {
@@ -221,48 +221,48 @@ export function normalizeTitle(title: string): string {
       .replace(TITLE_NOISE, " ")
       .replace(SENIORITY_NOISE, " ")
       .replace(/[^a-z0-9+#./ ]/g, " "),
-  )
+  );
 }
 
 export function normalizeCompany(company: string): string {
   const tokens = squash(company.toLowerCase().replace(/[^a-z0-9 ]/g, " "))
     .split(" ")
-    .filter((token) => token && !COMPANY_NOISE.includes(token))
-  return tokens.length > 0 ? tokens.join(" ") : squash(company.toLowerCase())
+    .filter((token) => token && !COMPANY_NOISE.includes(token));
+  return tokens.length > 0 ? tokens.join(" ") : squash(company.toLowerCase());
 }
 
 export function normalizeLocation(location: string | null | undefined): {
-  locationNorm: string | null
-  city: string | null
+  locationNorm: string | null;
+  city: string | null;
 } {
-  const raw = squash(location).toLowerCase()
-  if (!raw) return { locationNorm: null, city: null }
+  const raw = squash(location).toLowerCase();
+  if (!raw) return { locationNorm: null, city: null };
 
   const parts = raw
-    .split(/[,/|\u2022\-]+/)
+    .split(/[,/|\u2022]+/)
     .map((part) => squash(part))
-    .filter(Boolean)
+    .filter(Boolean);
 
   for (const part of [raw, ...parts]) {
-    const alias = CITY_ALIASES[part]
-    if (alias) return { locationNorm: alias.toLowerCase(), city: alias }
+    const alias = CITY_ALIASES[part];
+    if (alias) return { locationNorm: alias.toLowerCase(), city: alias };
   }
   for (const [alias, city] of Object.entries(CITY_ALIASES)) {
-    if (raw.includes(alias)) return { locationNorm: city.toLowerCase(), city }
+    if (raw.includes(alias)) return { locationNorm: city.toLowerCase(), city };
   }
-  return { locationNorm: parts[0] ?? raw, city: null }
+  return { locationNorm: parts[0] ?? raw, city: null };
 }
 
 export function detectRemoteType(
   explicit: RemoteType | null | undefined,
   text: string,
 ): RemoteType | null {
-  if (explicit) return explicit
-  const value = text.toLowerCase()
-  if (/\bhybrid\b/.test(value)) return "hybrid"
-  if (/\b(remote|wfh|work from home|anywhere)\b/.test(value)) return "remote"
-  if (/\b(onsite|on-site|wfo|work from office)\b/.test(value)) return "onsite"
-  return null
+  if (explicit) return explicit;
+  const value = text.toLowerCase();
+  if (/\bhybrid\b/.test(value)) return "hybrid";
+  if (/\b(remote|wfh|work from home|anywhere)\b/.test(value)) return "remote";
+  if (/\b(onsite|on-site|wfo|work from office)\b/.test(value)) return "onsite";
+  return null;
 }
 
 /**
@@ -271,58 +271,63 @@ export function detectRemoteType(
  * daripada menampilkan angka yang salah.
  */
 export function normalizeSalary(input: {
-  min?: number | null
-  max?: number | null
-  currency?: string | null
-  period?: string | null
+  min?: number | null;
+  max?: number | null;
+  currency?: string | null;
+  period?: string | null;
 }): {
-  salaryMin: number | null
-  salaryMax: number | null
-  currency: string | null
-  salaryPeriod: string | null
+  salaryMin: number | null;
+  salaryMax: number | null;
+  currency: string | null;
+  salaryPeriod: string | null;
 } {
-  const period = squash(input.period).toLowerCase() || null
-  const currency = squash(input.currency).toUpperCase() || null
+  const period = squash(input.period).toLowerCase() || null;
+  const currency = squash(input.currency).toUpperCase() || null;
   const clean = (value: number | null | undefined): number | null => {
-    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null
-    return Math.round(value)
-  }
-  let min = clean(input.min)
-  let max = clean(input.max)
-  if (min && max && min > max) [min, max] = [max, min]
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+      return null;
+    return Math.round(value);
+  };
+  let min = clean(input.min);
+  let max = clean(input.max);
+  if (min && max && min > max) [min, max] = [max, min];
   return {
     salaryMin: min,
     salaryMax: max,
     currency,
     salaryPeriod: period === "annum" ? "year" : period,
-  }
+  };
 }
 
 /** Ekstraksi skill berbasis kamus — pengganti parsing LLM saat ingestion. */
 export function extractSkillTerms(text: string): string[] {
-  const haystack = ` ${text.toLowerCase().replace(/[^a-z0-9+#./ ]/g, " ").replace(/\s+/g, " ")} `
-  const found = new Set<string>()
+  const haystack = ` ${text
+    .toLowerCase()
+    .replace(/\.(?=\s|$)/g, " ")
+    .replace(/[^a-z0-9+#./ ]/g, " ")
+    .replace(/\s+/g, " ")} `;
+  const found = new Set<string>();
   for (const skill of SKILL_DICTIONARY) {
-    if (haystack.includes(` ${skill} `)) found.add(skill)
+    if (haystack.includes(` ${skill} `)) found.add(skill);
   }
-  return [...found]
+  return [...found];
 }
 
 export function buildSnippet(description: string | null | undefined): string {
-  const text = squash(description)
-  if (text.length <= SNIPPET_MAX) return text
-  return `${text.slice(0, SNIPPET_MAX - 1).trimEnd()}\u2026`
+  const text = squash(description);
+  if (text.length <= SNIPPET_MAX) return text;
+  return `${text.slice(0, SNIPPET_MAX - 1).trimEnd()}\u2026`;
 }
 
 export function normalizeJob(raw: RawJob): NormalizedJob {
-  const description = squash(raw.description)
-  const { locationNorm, city } = normalizeLocation(raw.location)
+  const description = squash(raw.description);
+  const { locationNorm, city } = normalizeLocation(raw.location);
   const salary = normalizeSalary({
     min: raw.salaryMin,
     max: raw.salaryMax,
     currency: raw.currency,
     period: raw.salaryPeriod,
-  })
+  });
 
   return {
     ...raw,
@@ -339,5 +344,5 @@ export function normalizeJob(raw: RawJob): NormalizedJob {
     ...salary,
     skillTerms: extractSkillTerms(`${raw.title} ${description}`),
     descriptionSnippet: buildSnippet(description),
-  }
+  };
 }

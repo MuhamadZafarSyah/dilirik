@@ -127,14 +127,14 @@ export default function DiscoveryPage() {
         setResult((current) =>
           current
             ? {
-                ...current,
-                topPicks: current.topPicks.map((item) =>
-                  item.id === updated.id ? { ...item, status: updated.status } : item,
-                ),
-                otherCandidates: current.otherCandidates.map((item) =>
-                  item.id === updated.id ? { ...item, status: updated.status } : item,
-                ),
-              }
+              ...current,
+              topPicks: current.topPicks.map((item) =>
+                item.id === updated.id ? { ...item, status: updated.status } : item,
+              ),
+              otherCandidates: current.otherCandidates.map((item) =>
+                item.id === updated.id ? { ...item, status: updated.status } : item,
+              ),
+            }
             : current,
         )
       }
@@ -171,7 +171,9 @@ export default function DiscoveryPage() {
           <div className="label text-muted">{t("discovery.searchProfile")}</div>
 
           {cvsQuery.isLoading ? (
-            <Skeleton animate="shimmer" fallback={<div className="h-10" />} />
+            <Skeleton loading={true} animate="shimmer" fallback={<div className="h-10" />}>
+              <div className="h-10" />
+            </Skeleton>
           ) : cvs.length === 0 ? (
             <EmptyState
               title={t("emptyCvTitle")}
@@ -200,7 +202,7 @@ export default function DiscoveryPage() {
                 variant="primary"
                 size="lg"
                 icon={<FiSearch />}
-                tape
+                tape="yellow"
                 onClick={() => searchMutation.mutate(activeCvId)}
                 disabled={!activeCvId || searchMutation.isPending}
               >
@@ -215,7 +217,7 @@ export default function DiscoveryPage() {
           )}
 
           {statusQuery.data?.indexAgeHours !== null &&
-          statusQuery.data?.indexAgeHours !== undefined ? (
+            statusQuery.data?.indexAgeHours !== undefined ? (
             <p className="text-xs text-muted inline-flex items-center gap-1">
               <FiInfo aria-hidden />
               Indeks berisi {statusQuery.data.indexJobCount.toLocaleString("id-ID")} lowongan,
@@ -227,8 +229,12 @@ export default function DiscoveryPage() {
 
       {searchMutation.isPending ? (
         <div className="space-y-4">
-          <Skeleton animate="shimmer" fallback={<div className="h-40" />} />
-          <Skeleton animate="shimmer" fallback={<div className="h-40" />} />
+          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-40" />}>
+            <div className="h-40" />
+          </Skeleton>
+          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-40" />}>
+            <div className="h-40" />
+          </Skeleton>
         </div>
       ) : null}
 

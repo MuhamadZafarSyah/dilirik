@@ -119,6 +119,7 @@ export type CreateJobAlertInput = z.infer<typeof createJobAlertSchema>
 
 /** Payload trigger ingestion (dipanggil cron dengan secret header). */
 export const ingestRequestSchema = z.object({
+  trigger: z.enum(["cron", "manual"]).optional(),
   providers: z.array(z.string().min(1)).max(20).optional(),
   maxCompanies: z.number().int().min(1).max(2000).optional(),
   maxAggregatorQueries: z.number().int().min(0).max(200).optional(),
