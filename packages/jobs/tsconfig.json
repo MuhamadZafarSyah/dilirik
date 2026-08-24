@@ -1,0 +1,5 @@
+{
+  "extends": "@dilirik/tsconfig/base.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src"]
+}
