@@ -1,4 +1,4 @@
-import { HONESTY_SYSTEM_PROMPT, languageInstruction } from "../guardrail/prompts.js"
+import { HONESTY_SYSTEM_PROMPT, languageInstruction } from "../guardrail/systemPrompt.js"
 
 /**
  * Prompt fitur Cari Lowongan (PRD §11).
