@@ -47,6 +47,24 @@ const envSchema = z.object({
   // Google reCAPTCHA v3
   RECAPTCHA_SECRET_KEY: z.string().optional(),
   CAPTCHA_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.5),
+  // ===== Cari Lowongan (job discovery) =====
+  // SEMUA opsional dan tanpa nilai wajib: kunci kosong = provider itu mati,
+  // bukan boot gagal. Halaman karier ATS (Greenhouse/Lever/Ashby/Workable/
+  // Recruitee) tidak butuh kunci apa pun, jadi fitur tetap jalan tanpa satu pun
+  // env di bawah ini terisi — hanya cakupannya lebih sempit.
+  ADZUNA_APP_ID: z.string().optional(),
+  ADZUNA_APP_KEY: z.string().optional(),
+  ADZUNA_COUNTRY: z.string().default("id"),
+  JOOBLE_API_KEY: z.string().optional(),
+  RAPIDAPI_KEY: z.string().optional(),
+  // JSearch mahal per call; di produksi dipakai hanya sebagai pembanding cakupan.
+  DISCOVERY_JSEARCH_ENABLED: z.string().optional(),
+  // Secret untuk POST /api/internal/ingest. Kosong = endpoint ingestion MATI.
+  DISCOVERY_INGEST_SECRET: z.string().optional(),
+  DISCOVERY_ADZUNA_DAILY_BUDGET: z.coerce.number().int().min(0).default(30),
+  DISCOVERY_JOOBLE_DAILY_BUDGET: z.coerce.number().int().min(0).default(200),
+  DISCOVERY_JSEARCH_DAILY_BUDGET: z.coerce.number().int().min(0).default(0),
+  DISCOVERY_INDEX_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 });
 
 /** Validasi env saat boot — fail fast dengan pesan jelas. */
