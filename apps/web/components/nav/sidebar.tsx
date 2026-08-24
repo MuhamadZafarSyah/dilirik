@@ -11,6 +11,7 @@ import {
   FiLayers,
   FiLogOut,
   FiMic,
+  FiSearch,
   FiSettings,
   FiZap,
   FiChevronLeft,
@@ -62,6 +63,9 @@ export function Sidebar() {
     { href: "/app", label: t("dashboard"), icon: FiBarChart2, exact: true },
     { href: "/app/cv", label: t("cv"), icon: FiFileText },
     { href: "/app/jobs", label: t("jobs"), icon: FiBriefcase },
+    // Cari Lowongan diletakkan tepat setelah "Lowongan": alurnya cari dulu, baru
+    // simpan, baru analisis — urutan menu mengikuti urutan kerja user.
+    { href: "/app/discovery", label: t("findJobs"), icon: FiSearch },
     { href: "/app/analyze", label: t("analyze"), icon: FiZap },
     { href: "/app/interview", label: t("interview"), icon: FiMic },
     { href: "/app/cover-letters", label: t("coverLetter"), icon: FiFileText },
