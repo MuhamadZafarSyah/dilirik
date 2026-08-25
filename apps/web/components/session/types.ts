@@ -55,6 +55,8 @@ export function applySuggestionToText(text: string, s: Suggestion): { text: stri
     const pattern = s.before.trim().split(/\s+/).map(escapeRegExp).join("\\s+")
     const re = new RegExp(pattern)
     if (re.test(text)) return { text: text.replace(re, s.after), applied: true }
-  } catch {}
+  } catch {
+    // Ignore invalid regex pattern error
+  }
   return { text, applied: false }
 }

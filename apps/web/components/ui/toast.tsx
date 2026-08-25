@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, createContext, useContext, ReactNode, useCallback } from "react"
+import { useState, createContext, useContext, useCallback, type ReactNode } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { FiCheckCircle, FiAlertCircle, FiInfo, FiX } from "react-icons/fi"
 import { cn } from "@/lib/utils"

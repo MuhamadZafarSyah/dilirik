@@ -4,7 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "boneyard-js/react"
 import { motion } from "framer-motion"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { FiBell, FiInfo, FiSearch } from "react-icons/fi"
 import { JobMatchCard, type JobMatchView } from "@/components/discovery/job-match-card"
 import { Button } from "@/components/ui/button"
@@ -76,7 +76,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } },
 }
 
-export default function DiscoveryPage() {
+function DiscoveryContent() {
   const { t, lang } = useI18n()
   const { toast } = useToast()
   const router = useRouter()
@@ -552,6 +552,21 @@ export default function DiscoveryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function DiscoveryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto space-y-6 py-6 px-4 sm:px-6">
+          <div className="h-10 w-48 rounded-lg bg-panel animate-pulse" />
+          <div className="h-32 rounded-2xl bg-panel animate-pulse" />
+        </div>
+      }
+    >
+      <DiscoveryContent />
+    </Suspense>
   )
 }
 

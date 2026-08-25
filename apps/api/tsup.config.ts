@@ -6,5 +6,5 @@ export default defineConfig({
   outDir: "dist",
   clean: true,
   noSplitting: true,
-  noExternal: ["@dilirik/db", "@dilirik/shared", "@dilirik/ai"],
+  noExternal: ["@dilirik/db", "@dilirik/shared", "@dilirik/ai", "@dilirik/jobs"],
 })
