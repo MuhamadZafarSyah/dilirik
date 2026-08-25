@@ -16,6 +16,7 @@ import {
   prepareMatchAnalysis,
   requestAlert,
   saveMatch,
+  unsaveMatch,
   searchJobs,
   updateSearchProfile,
 } from "../services/discoveryService.js"
@@ -89,6 +90,15 @@ discoveryRouter.get("/runs/:id", async (req, res, next) => {
 discoveryRouter.post("/matches/:id/save", async (req, res, next) => {
   try {
     const match = await saveMatch(req.userId!, req.params.id as string)
+    res.json({ match })
+  } catch (e) {
+    next(e)
+  }
+})
+
+discoveryRouter.post("/matches/:id/unsave", async (req, res, next) => {
+  try {
+    const match = await unsaveMatch(req.userId!, req.params.id as string)
     res.json({ match })
   } catch (e) {
     next(e)

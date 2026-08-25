@@ -155,6 +155,7 @@ export async function getOrCreateSearchProfile(
   try {
     draft = await generateSearchProfile({ cv: cv.structuredJson, language: cv.language })
   } catch (error) {
+    console.error("[generateSearchProfile] Error detail:", error)
     throw new HttpError(
       502,
       "PROFILE_GENERATION_FAILED",
@@ -687,6 +688,7 @@ export async function listRuns(userId: string): Promise<DiscoveryRunListItemDto[
   })
   return runs.map((run) => ({
     id: run.id,
+    cvId: run.cvId,
     status: run.status as DiscoveryRunListItemDto["status"],
     candidateCount: run.candidateCount,
     curatedCount: run.curatedCount,
@@ -735,6 +737,15 @@ export async function saveMatch(userId: string, matchId: string): Promise<JobMat
   const updated = await prisma.jobMatch.update({
     where: { id: match.id },
     data: { status: "SAVED" },
+  })
+  return toJobMatchDto(updated, match.discoveredJob)
+}
+
+export async function unsaveMatch(userId: string, matchId: string): Promise<JobMatchDto> {
+  const match = await loadMatch(userId, matchId)
+  const updated = await prisma.jobMatch.update({
+    where: { id: match.id },
+    data: { status: "NEW" },
   })
   return toJobMatchDto(updated, match.discoveredJob)
 }

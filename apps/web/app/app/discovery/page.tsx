@@ -1,9 +1,10 @@
 "use client"
 
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "boneyard-js/react"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { FiBell, FiInfo, FiSearch } from "react-icons/fi"
 import { JobMatchCard, type JobMatchView } from "@/components/discovery/job-match-card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { useToast } from "@/components/ui/toast"
 import { api, errorMessage } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 /**
  * Halaman Cari Lowongan (PRD Cari Lowongan §6 & §7).
@@ -70,9 +72,16 @@ const itemVariants = {
 export default function DiscoveryPage() {
   const { t } = useI18n()
   const { toast } = useToast()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const [selectedCvId, setSelectedCvId] = useState<string>("")
+
+  const paramCvId = searchParams.get("cvId") || ""
+  const [selectedCvId, setSelectedCvId] = useState<string>(paramCvId)
   const [result, setResult] = useState<SearchResponse | null>(null)
+  const [filterTab, setFilterTab] = useState<"all" | "top" | "saved">("all")
+  const [searchFilter, setSearchFilter] = useState("")
 
   const cvsQuery = useQuery({
     queryKey: ["cvs"],
@@ -81,6 +90,29 @@ export default function DiscoveryPage() {
       return response.data.cvs
     },
   })
+
+  const cvs = cvsQuery.data ?? []
+  const activeCvId = selectedCvId || paramCvId || cvs[0]?.id || ""
+
+  // Sinkronisasi pilihan CV ke URL query parameter tanpa reload
+  const updateCvParam = (newCvId: string) => {
+    setSelectedCvId(newCvId)
+    setResult(null)
+    const params = new URLSearchParams(searchParams.toString())
+    if (newCvId) {
+      params.set("cvId", newCvId)
+    } else {
+      params.delete("cvId")
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  // Jika URL belum memiliki cvId tapi cvs sudah di-load, isi default param
+  useEffect(() => {
+    if (!paramCvId && cvs.length > 0 && cvs[0]?.id) {
+      updateCvParam(cvs[0].id)
+    }
+  }, [paramCvId, cvs])
 
   const statusQuery = useQuery({
     queryKey: ["discovery-status"],
@@ -102,15 +134,53 @@ export default function DiscoveryPage() {
     onSuccess: (data) => {
       setResult(data)
       queryClient.invalidateQueries({ queryKey: ["discovery-status"] })
+      queryClient.invalidateQueries({ queryKey: ["discovery-runs"] })
+      toast("Pencarian lowongan selesai!", "success")
     },
     onError: (error) => toast(errorMessage(error), "error"),
   })
 
   const actionMutation = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "save" | "dismiss" | "analyze" }) => {
+    mutationFn: async ({ id, action }: { id: string; action: "save" | "unsave" | "dismiss" | "analyze" }) => {
       const body = action === "dismiss" ? { reason: "NOT_RELEVANT" } : {}
       const response = await api.post(`/api/discovery/matches/${id}/${action}`, body)
-      return { action, data: response.data as Record<string, unknown> }
+      return { id, action, data: response.data as Record<string, unknown> }
+    },
+    onMutate: async ({ id, action }) => {
+      // Terapkan Optimistic Update ke React Query cache dan Local State seketika
+      const newStatus = action === "save" ? "SAVED" : action === "unsave" ? "NEW" : action === "dismiss" ? "DISMISSED" : undefined
+
+      if (newStatus) {
+        // 1. Optimistic update local state result
+        setResult((current) => {
+          if (!current) return current
+          return {
+            ...current,
+            topPicks: current.topPicks.map((item) =>
+              item.id === id ? { ...item, status: newStatus } : item,
+            ),
+            otherCandidates: current.otherCandidates.map((item) =>
+              item.id === id ? { ...item, status: newStatus } : item,
+            ),
+          }
+        })
+
+        // 2. Optimistic update React Query cache untuk run detail
+        if (latestMatchingRunId) {
+          queryClient.setQueryData<SearchResponse>(["discovery-run", latestMatchingRunId], (old) => {
+            if (!old) return old
+            return {
+              ...old,
+              topPicks: old.topPicks.map((item) =>
+                item.id === id ? { ...item, status: newStatus } : item,
+              ),
+              otherCandidates: old.otherCandidates.map((item) =>
+                item.id === id ? { ...item, status: newStatus } : item,
+              ),
+            }
+          })
+        }
+      }
     },
     onSuccess: ({ action, data }) => {
       if (action === "analyze") {
@@ -118,10 +188,15 @@ export default function DiscoveryPage() {
           "Lowongan disiapkan untuk analisis. Analisis penuh memakai kuota analisis.",
           "success",
         )
+      } else if (action === "save") {
+        toast("Disimpan ke tracker", "success")
+      } else if (action === "unsave") {
+        toast("Dihapus dari tracker", "success")
       } else {
-        toast(action === "save" ? "Disimpan ke tracker" : "Disembunyikan", "success")
+        toast("Disembunyikan", "success")
       }
 
+      // Sinkronisasi data asli dari server bila tersedia
       const updated = (data.match ?? null) as JobMatchView | null
       if (updated) {
         setResult((current) =>
@@ -139,7 +214,13 @@ export default function DiscoveryPage() {
         )
       }
     },
-    onError: (error) => toast(errorMessage(error), "error"),
+    onError: (error) => {
+      toast(errorMessage(error), "error")
+      // Revert cache bila request backend gagal
+      if (latestMatchingRunId) {
+        queryClient.invalidateQueries({ queryKey: ["discovery-run", latestMatchingRunId] })
+      }
+    },
   })
 
   const alertMutation = useMutation({
@@ -150,185 +231,278 @@ export default function DiscoveryPage() {
     onError: (error) => toast(errorMessage(error), "error"),
   })
 
-  const cvs = cvsQuery.data ?? []
-  const activeCvId = selectedCvId || cvs[0]?.id || ""
   const quotaRemaining = statusQuery.data?.quota.remaining ?? null
 
+  const runsQuery = useQuery({
+    queryKey: ["discovery-runs"],
+    queryFn: async () => {
+      const response = await api.get<{
+        runs: Array<{ id: string; cvId: string; status: string; createdAt: string }>
+      }>("/api/discovery/runs")
+      return response.data.runs
+    },
+  })
+
+  const latestMatchingRunId = runsQuery.data?.find((r) => r.cvId === activeCvId)?.id
+
+  const lastRunDetailQuery = useQuery({
+    queryKey: ["discovery-run", latestMatchingRunId],
+    queryFn: async () => {
+      if (!latestMatchingRunId) return null
+      const response = await api.get<SearchResponse>(`/api/discovery/runs/${latestMatchingRunId}`)
+      return response.data
+    },
+    enabled: !!latestMatchingRunId && !result,
+  })
+
+  const activeResult = result ?? lastRunDetailQuery.data ?? null
+  const isInitialLoading = runsQuery.isLoading || (!!latestMatchingRunId && lastRunDetailQuery.isLoading)
+
+  const allMatches = activeResult
+    ? [...activeResult.topPicks, ...activeResult.otherCandidates]
+    : []
+
+  const filteredMatches = allMatches.filter((match) => {
+    if (filterTab === "top" && !match.isTopPick) return false
+    if (filterTab === "saved" && match.status !== "SAVED") return false
+    if (searchFilter.trim()) {
+      const q = searchFilter.toLowerCase()
+      const matchText = `${match.title} ${match.company} ${match.location ?? ""} ${match.matchedSkills.join(" ")}`.toLowerCase()
+      return matchText.includes(q)
+    }
+    return true
+  })
+
+  const topPicksList = filteredMatches.filter((m) => m.isTopPick)
+  const otherCandidatesList = filteredMatches.filter((m) => !m.isTopPick)
+
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="max-w-shell mx-auto space-y-8 py-8"
-    >
-      <motion.header variants={itemVariants} className="space-y-2">
-        <h1 className="hand text-4xl sm:text-5xl font-bold text-ink">{t("discovery.title")}</h1>
-        <p className="scrawl text-muted text-xl">{t("discovery.subtitle")}</p>
-      </motion.header>
+    <div className="max-w-4xl mx-auto space-y-6 py-6 px-4 sm:px-6">
+      {/* Elegant & Clean Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line/60 pb-5">
+        <div>
+          <h1 className="hand text-3xl sm:text-4xl font-bold text-ink tracking-tight">
+            {t("discovery.title")}
+          </h1>
+          <p className="scrawl text-muted text-base sm:text-lg mt-0.5">
+            {t("discovery.subtitle")}
+          </p>
+        </div>
 
-      <motion.div variants={itemVariants}>
-        <Card tape="blue" className="p-5 space-y-4">
-          <div className="label text-muted">{t("discovery.searchProfile")}</div>
+        {statusQuery.data?.indexJobCount !== undefined && (
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-panel border border-line text-xs text-muted font-medium self-start sm:self-auto shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-green" />
+            <span>{statusQuery.data.indexJobCount.toLocaleString("id-ID")} lowongan terindeks</span>
+          </div>
+        )}
+      </header>
 
-          {cvsQuery.isLoading ? (
-            <Skeleton loading={true} animate="shimmer" fallback={<div className="h-10" />}>
-              <div className="h-10" />
-            </Skeleton>
-          ) : cvs.length === 0 ? (
-            <EmptyState
-              title={t("emptyCvTitle")}
-              note="Fitur ini membaca CV kamu untuk menyusun profil pencarian."
-              ctaLabel={t("emptyCvCta")}
-              ctaHref="/app/cv"
-            />
-          ) : (
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="space-y-1">
-                <span className="label text-muted block">CV</span>
-                <select
-                  value={activeCvId}
-                  onChange={(event) => setSelectedCvId(event.target.value)}
-                  className="rounded-md border border-line bg-paper px-3 py-2 text-ink shadow-xs"
-                >
-                  {cvs.map((cv) => (
-                    <option key={cv.id} value={cv.id}>
-                      {cv.title} (v{cv.version})
-                    </option>
-                  ))}
-                </select>
-              </label>
+      {/* Clean Control Bar */}
+      <div className="rounded-2xl border border-line bg-panel p-4 sm:p-5 shadow-xs space-y-4">
+        {cvsQuery.isLoading ? (
+          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-10" />}>
+            <div className="h-10" />
+          </Skeleton>
+        ) : cvs.length === 0 ? (
+          <EmptyState
+            title={t("emptyCvTitle")}
+            note="Unggah CV kamu terlebih dahulu untuk mulai mencari lowongan."
+            ctaLabel={t("emptyCvCta")}
+            ctaHref="/app/cv"
+          />
+        ) : (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs font-bold text-muted uppercase shrink-0">CV:</span>
+              <select
+                value={activeCvId}
+                onChange={(event) => updateCvParam(event.target.value)}
+                className="w-full sm:max-w-xs rounded-xl border border-line bg-paper px-3 py-2 text-sm font-medium text-ink shadow-2xs focus:border-ink focus:outline-none"
+              >
+                {cvs.map((cv) => (
+                  <option key={cv.id} value={cv.id}>
+                    {cv.title} (v{cv.version})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-3">
+              <span className="text-xs text-muted">
+                Sisa kuota:{" "}
+                <strong className="text-ink">
+                  {quotaRemaining === null ? "Tak terbatas" : quotaRemaining}
+                </strong>
+              </span>
 
               <Button
                 variant="primary"
-                size="lg"
-                icon={<FiSearch />}
-                tape="yellow"
+                size="md"
+                icon={<FiSearch className="text-yellow" />}
                 onClick={() => searchMutation.mutate(activeCvId)}
                 disabled={!activeCvId || searchMutation.isPending}
+                className="shadow-xs"
               >
-                {searchMutation.isPending ? t("loading") : t("discovery.cta")}
+                {searchMutation.isPending
+                  ? "Mencari..."
+                  : activeResult
+                    ? t("discovery.reSearch")
+                    : t("discovery.cta")}
               </Button>
+            </div>
+          </div>
+        )}
 
-              <span className="text-xs text-muted">
-                {t("discovery.quota")}:{" "}
-                {quotaRemaining === null ? t("unlimited") : quotaRemaining}
+        {/* Minimal Profile Chips */}
+        {activeResult?.searchProfile && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-line/50 text-xs">
+            <span className="text-muted font-medium mr-1">Target:</span>
+            {activeResult.searchProfile.roles.map((role) => (
+              <span key={role} className="px-2.5 py-0.5 rounded-md bg-paper border border-line font-medium text-ink">
+                {role}
               </span>
+            ))}
+            {activeResult.searchProfile.skills.slice(0, 4).map((skill) => (
+              <span key={skill} className="px-2 py-0.5 rounded-md bg-panel border border-line/60 text-muted">
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Loading Skeletons */}
+      {(searchMutation.isPending || (isInitialLoading && !activeResult)) && (
+        <div className="space-y-3">
+          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-32" />}>
+            <div className="h-32 rounded-2xl" />
+          </Skeleton>
+          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-32" />}>
+            <div className="h-32 rounded-2xl" />
+          </Skeleton>
+        </div>
+      )}
+
+      {/* Result Listing */}
+      {activeResult && !searchMutation.isPending && (
+        <div className="space-y-5">
+          {/* Quick Filter Navigation */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1 p-1 bg-panel rounded-xl border border-line shadow-2xs self-start">
+              <button
+                type="button"
+                onClick={() => setFilterTab("all")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  filterTab === "all" ? "bg-ink text-paper" : "text-muted hover:text-ink",
+                )}
+              >
+                Semua ({allMatches.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab("top")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  filterTab === "top" ? "bg-yellow text-ink font-bold" : "text-muted hover:text-ink",
+                )}
+              >
+                ★ Top Picks ({allMatches.filter((m) => m.isTopPick).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab("saved")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  filterTab === "saved" ? "bg-blue text-paper font-bold" : "text-muted hover:text-ink",
+                )}
+              >
+                Tersimpan ({allMatches.filter((m) => m.status === "SAVED").length})
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Cari posisi, skill, kota..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="w-full sm:w-60 rounded-xl border border-line bg-paper px-3 py-1.5 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none shadow-2xs"
+            />
+          </div>
+
+          {/* Empty State / AI Note */}
+          {activeResult.meta.curationNote && (
+            <div className="p-3 rounded-xl bg-paper border border-line text-xs text-ink leading-relaxed flex items-start gap-2">
+              <span className="text-yellow shrink-0">💡</span>
+              <p>{activeResult.meta.curationNote}</p>
             </div>
           )}
 
-          {statusQuery.data?.indexAgeHours !== null &&
-            statusQuery.data?.indexAgeHours !== undefined ? (
-            <p className="text-xs text-muted inline-flex items-center gap-1">
-              <FiInfo aria-hidden />
-              Indeks berisi {statusQuery.data.indexJobCount.toLocaleString("id-ID")} lowongan,
-              diperbarui {statusQuery.data.indexAgeHours} jam lalu.
-            </p>
-          ) : null}
-        </Card>
-      </motion.div>
+          {/* Top Picks List */}
+          {topPicksList.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="hand text-2xl font-bold text-ink">
+                  {t("discovery.topPicks")}
+                </h2>
+                <span className="text-xs text-muted">{topPicksList.length} lowongan</span>
+              </div>
 
-      {searchMutation.isPending ? (
-        <div className="space-y-4">
-          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-40" />}>
-            <div className="h-40" />
-          </Skeleton>
-          <Skeleton loading={true} animate="shimmer" fallback={<div className="h-40" />}>
-            <div className="h-40" />
-          </Skeleton>
-        </div>
-      ) : null}
-
-      {result ? (
-        <motion.section variants={containerVariants} className="space-y-8">
-          {/* Sumber yang gagal atau filter yang dilonggarkan diberitahukan, tidak disembunyikan. */}
-          {result.meta.relaxedFilters.length > 0 || result.meta.unavailableSources.length > 0 ? (
-            <motion.div variants={itemVariants}>
-              <Card className="p-4 text-sm text-muted">
-                {result.meta.relaxedFilters.length > 0 ? (
-                  <p>
-                    Filter dilonggarkan agar tetap ada hasil:{" "}
-                    {result.meta.relaxedFilters.join(", ")}.
-                  </p>
-                ) : null}
-                {result.meta.unavailableSources.length > 0 ? (
-                  <p>
-                    {t("discovery.partialSources")}: {result.meta.unavailableSources.join(", ")}.
-                  </p>
-                ) : null}
-              </Card>
-            </motion.div>
-          ) : null}
-
-          {result.emptyState ? (
-            <motion.div variants={itemVariants}>
-              <Card tape="yellow" className="p-6 space-y-3">
-                <h2 className="hand text-2xl font-bold text-ink">{result.emptyState.message}</h2>
-                <p className="text-sm text-muted">{result.emptyState.detail}</p>
-                {result.emptyState.canRequestAlert && result.emptyState.pendingQueryId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={<FiBell />}
-                    onClick={() => alertMutation.mutate(result.emptyState!.pendingQueryId!)}
-                    disabled={alertMutation.isPending}
-                  >
-                    {t("discovery.emptyAlertCta")}
-                  </Button>
-                ) : null}
-              </Card>
-            </motion.div>
-          ) : null}
-
-          {result.topPicks.length > 0 ? (
-            <div className="space-y-4">
-              <motion.h2 variants={itemVariants} className="hand text-3xl font-bold text-ink">
-                {t("discovery.topPicks")}
-              </motion.h2>
-              {result.meta.curationNote ? (
-                <motion.p variants={itemVariants} className="text-sm text-muted">
-                  {result.meta.curationNote}
-                </motion.p>
-              ) : null}
-              <div className="space-y-4">
-                {result.topPicks.map((match) => (
+              <div className="space-y-3">
+                {topPicksList.map((match) => (
                   <JobMatchCard
                     key={match.id}
                     match={match}
                     busy={actionMutation.isPending}
                     onSave={(id) => actionMutation.mutate({ id, action: "save" })}
+                    onUnsave={(id) => actionMutation.mutate({ id, action: "unsave" })}
                     onDismiss={(id) => actionMutation.mutate({ id, action: "dismiss" })}
                     onAnalyze={(id) => actionMutation.mutate({ id, action: "analyze" })}
                   />
                 ))}
               </div>
             </div>
-          ) : null}
+          )}
 
-          {result.otherCandidates.length > 0 ? (
-            <div className="space-y-4">
-              <motion.h2 variants={itemVariants} className="hand text-2xl font-bold text-ink">
-                {t("discovery.otherCandidates")}
-              </motion.h2>
-              <div className="space-y-4">
-                {result.otherCandidates.map((match) => (
+          {/* Other Candidates List */}
+          {otherCandidatesList.length > 0 && (
+            <div className="space-y-3 pt-3">
+              <div className="flex items-center justify-between">
+                <h2 className="hand text-xl font-bold text-ink">
+                  {t("discovery.otherCandidates")}
+                </h2>
+                <span className="text-xs text-muted">{otherCandidatesList.length} lowongan</span>
+              </div>
+
+              <div className="space-y-3">
+                {otherCandidatesList.map((match) => (
                   <JobMatchCard
                     key={match.id}
                     match={match}
                     busy={actionMutation.isPending}
                     onSave={(id) => actionMutation.mutate({ id, action: "save" })}
+                    onUnsave={(id) => actionMutation.mutate({ id, action: "unsave" })}
                     onDismiss={(id) => actionMutation.mutate({ id, action: "dismiss" })}
                     onAnalyze={(id) => actionMutation.mutate({ id, action: "analyze" })}
                   />
                 ))}
               </div>
             </div>
-          ) : null}
+          )}
 
-          <motion.p variants={itemVariants} className="text-xs text-muted">
+          {filteredMatches.length === 0 && (
+            <div className="p-8 text-center bg-panel border border-line rounded-2xl text-xs text-muted">
+              Tidak ada lowongan yang sesuai filter pencarian saat ini.
+            </div>
+          )}
+
+          <p className="text-[11px] text-muted text-center pt-2">
             {t("discovery.estimatedMatchDisclaimer")}
-          </motion.p>
-        </motion.section>
-      ) : null}
-    </motion.div>
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
+
+

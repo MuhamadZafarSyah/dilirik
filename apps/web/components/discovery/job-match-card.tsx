@@ -1,9 +1,14 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { FiAlertTriangle, FiBookmark, FiClock, FiExternalLink, FiEyeOff, FiZap } from "react-icons/fi"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import {
+  FiAlertTriangle,
+  FiBookmark,
+  FiCheckCircle,
+  FiExternalLink,
+  FiEyeOff,
+  FiMapPin,
+  FiZap,
+} from "react-icons/fi"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -41,16 +46,12 @@ export type JobMatchView = {
   status: string
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } },
-}
-
 function formatAge(hours: number | null): string {
-  if (hours === null) return "tanggal tidak diketahui"
-  if (hours < 1) return "kurang dari 1 jam lalu"
-  if (hours < 48) return `${hours} jam lalu`
-  return `${Math.round(hours / 24)} hari lalu`
+  if (hours === null) return ""
+  if (hours < 1) return "Baru saja"
+  if (hours < 24) return `${hours}j lalu`
+  const days = Math.round(hours / 24)
+  return `${days}h lalu`
 }
 
 function formatSalary(match: JobMatchView): string | null {
@@ -59,19 +60,21 @@ function formatSalary(match: JobMatchView): string | null {
   const range = [match.salaryMin, match.salaryMax]
     .filter((value): value is number => typeof value === "number")
     .map((value) => value.toLocaleString("id-ID"))
-    .join(" \u2013 ")
-  return `${currency} ${range}${match.salaryPeriod ? ` / ${match.salaryPeriod}` : ""}`
+    .join(" – ")
+  return `${currency} ${range}${match.salaryPeriod ? `/${match.salaryPeriod}` : ""}`
 }
 
 export function JobMatchCard({
   match,
   onSave,
+  onUnsave,
   onDismiss,
   onAnalyze,
   busy,
 }: {
   match: JobMatchView
   onSave: (id: string) => void
+  onUnsave?: (id: string) => void
   onDismiss: (id: string) => void
   onAnalyze: (id: string) => void
   busy?: boolean
@@ -79,127 +82,198 @@ export function JobMatchCard({
   const { t } = useI18n()
   const salary = formatSalary(match)
   const isDismissed = match.status === "DISMISSED"
+  const isSaved = match.status === "SAVED"
+
+  const score = match.estimatedScore
+  const scoreBadgeColor =
+    score >= 80
+      ? "bg-green/10 text-green border-green/30"
+      : score >= 60
+        ? "bg-blue/10 text-blue border-blue/30"
+        : "bg-paper text-muted border-line"
+
+  const ageText = formatAge(match.postedHoursAgo)
 
   return (
-    <motion.div variants={itemVariants}>
-      <Card
-        tape={match.isTopPick ? "yellow" : "blue"}
-        className={cn("p-5 space-y-4", isDismissed && "opacity-50")}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="hand text-2xl font-bold text-ink">{match.title}</h3>
-            <p className="scrawl text-muted text-lg">
-              {match.company}
-              {match.location ? ` \u00b7 ${match.location}` : ""}
-              {match.remoteType ? ` \u00b7 ${match.remoteType}` : ""}
-            </p>
+    <div
+      className={cn(
+        "group relative rounded-2xl border transition-all duration-150 p-5 sm:p-6 bg-panel shadow-xs hover:border-ink/40",
+        match.isTopPick ? "border-yellow/70 bg-gradient-to-br from-panel to-paper/40" : "border-line",
+        isDismissed && "opacity-40 grayscale hover:grayscale-0",
+      )}
+    >
+      {/* Top Header Row */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1 flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+            {match.isTopPick && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-yellow text-ink border border-ink/20 text-xs font-bold">
+                ★ {t("discovery.topPicks")} #{match.rank}
+              </span>
+            )}
+            <span className="text-muted font-medium">
+              {match.sources[0]?.displayName ?? match.primarySource}
+            </span>
+            {ageText && (
+              <>
+                <span className="text-line">•</span>
+                <span className="text-muted font-normal">{ageText}</span>
+              </>
+            )}
+            {salary && (
+              <>
+                <span className="text-line">•</span>
+                <span className="text-ink font-semibold">{salary}</span>
+              </>
+            )}
           </div>
 
-          {/* Angka ini perkiraan dari aturan, bukan hasil analisis penuh. Label
-              dan tooltip-nya sengaja mengatakan itu, supaya tidak dibaca sebagai
-              janji peluang diterima. */}
-          <div className="text-right shrink-0" title={t("discovery.estimatedMatchDisclaimer")}>
-            <div className="label text-muted">{t("discovery.estimatedMatch")}</div>
-            <div className="hand text-3xl font-bold text-ink">{match.estimatedScore}</div>
+          <h3 className="text-lg sm:text-xl font-bold text-ink leading-snug group-hover:text-primary transition-colors">
+            {match.title}
+          </h3>
+
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
+            <span className="font-semibold text-ink">{match.company}</span>
+            {match.location && (
+              <span className="inline-flex items-center gap-1">
+                <FiMapPin className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                {match.location}
+              </span>
+            )}
+            {match.remoteType && (
+              <span className="px-2 py-0.5 rounded-md bg-paper border border-line text-xs font-medium text-ink uppercase tracking-wide">
+                {match.remoteType}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Transparansi sumber & kesegaran: dua-duanya wajib tampil di setiap kartu. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-          <span className="inline-flex items-center gap-1">
-            <FiExternalLink aria-hidden />
-            {t("discovery.source")}: {match.sources[0]?.displayName ?? match.primarySource}
+        {/* Minimal Score Indicator */}
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center min-w-[58px] px-2.5 py-1.5 rounded-xl border shrink-0 text-center",
+            scoreBadgeColor,
+          )}
+          title={t("discovery.estimatedMatchDisclaimer")}
+        >
+          <span className="text-base sm:text-lg font-extrabold leading-none tracking-tight">
+            {match.estimatedScore}%
           </span>
-          <span className="inline-flex items-center gap-1">
-            <FiClock aria-hidden />
-            {t("discovery.postedAgo")} {formatAge(match.postedHoursAgo)}
+          <span className="text-[10px] font-semibold uppercase tracking-wider opacity-75 mt-0.5">
+            Cocok
           </span>
-          <span>
-            {t("discovery.indexedAgo")} {formatAge(match.indexedHoursAgo)}
-          </span>
-          {match.sources.length > 1 ? <span>+{match.sources.length - 1} sumber lain</span> : null}
         </div>
+      </div>
 
-        {match.isLikelyStale ? (
-          <p className="text-xs text-yellow inline-flex items-center gap-1">
-            <FiAlertTriangle aria-hidden />
-            {t("discovery.maybeClosed")}
+      {/* Clean AI Insight */}
+      {match.reasonText && (
+        <div className="mt-3.5 pt-3 border-t border-line/60 space-y-1.5 text-xs sm:text-sm text-ink leading-relaxed">
+          <p className="flex items-start gap-2">
+            <span className="text-yellow shrink-0 mt-0.5">💡</span>
+            <span>{match.reasonText}</span>
           </p>
-        ) : null}
+          {match.cautionText && (
+            <p className="flex items-start gap-2 text-muted">
+              <span className="text-red shrink-0 mt-0.5">⚠️</span>
+              <span>{match.cautionText}</span>
+            </p>
+          )}
+        </div>
+      )}
 
-        {match.reasonText ? (
-          <div className="rounded-md border border-line bg-panel/60 p-3 space-y-2">
-            <div className="label text-muted">{t("discovery.whyMatch")}</div>
-            <p className="text-sm text-ink">{match.reasonText}</p>
-            {match.cautionText ? (
-              <p className="text-sm text-yellow">
-                {t("discovery.caution")}: {match.cautionText}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+      {/* Skill Pills */}
+      {match.matchedSkills.length > 0 && (
+        <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+          {match.matchedSkills.slice(0, 5).map((skill) => (
+            <span
+              key={`m-${skill}`}
+              className="inline-flex items-center gap-1 rounded-md bg-paper border border-line px-2 py-0.5 text-xs text-ink/90 font-medium"
+            >
+              <FiCheckCircle className="text-green w-3 h-3 shrink-0" />
+              {skill}
+            </span>
+          ))}
+          {match.missingSkills.slice(0, 3).map((skill) => (
+            <span
+              key={`x-${skill}`}
+              className="rounded-md border border-dashed border-line px-2 py-0.5 text-xs text-muted"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
 
-        {salary ? <p className="text-sm text-ink">{salary}</p> : null}
+      {/* Bottom Actions Row */}
+      <div className="mt-4 pt-3.5 border-t border-line/50 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          {match.isLikelyStale ? (
+            <span className="inline-flex items-center gap-1 text-xs text-red font-medium">
+              <FiAlertTriangle className="w-3.5 h-3.5" />
+              {t("discovery.maybeClosed")}
+            </span>
+          ) : (
+            <span className="text-xs text-muted">
+              Sumber: {match.primarySource}
+            </span>
+          )}
+        </div>
 
-        {match.matchedSkills.length > 0 || match.missingSkills.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {match.matchedSkills.slice(0, 6).map((skill) => (
-              <span
-                key={`m-${skill}`}
-                className="rounded-full border border-line px-2 py-0.5 text-xs text-ink shadow-xs"
-              >
-                {skill}
-              </span>
-            ))}
-            {match.missingSkills.slice(0, 4).map((skill) => (
-              <span
-                key={`x-${skill}`}
-                className="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
-              >
-                {skill}?
-              </span>
-            ))}
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (isSaved && onUnsave) {
+                onUnsave(match.id)
+              } else {
+                onSave(match.id)
+              }
+            }}
+            disabled={busy}
+            title={isSaved ? "Klik untuk menghapus dari tracker" : "Simpan ke tracker"}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
+              isSaved
+                ? "bg-blue text-paper border-blue hover:bg-blue/90"
+                : "bg-paper text-ink border-line hover:border-ink/60",
+            )}
+          >
+            <FiBookmark className={cn("w-3.5 h-3.5", isSaved && "fill-current")} />
+            <span>{isSaved ? "Tersimpan" : "Simpan"}</span>
+          </button>
 
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {/* Apply selalu ke sumber aslinya. Dilirik tidak pernah menyisipkan diri
-              di antara pelamar dan perusahaan. */}
-          <a href={match.sources[0]?.applyUrl ?? "#"} target="_blank" rel="noopener noreferrer">
-            <Button variant="primary" size="sm" icon={<FiExternalLink />}>
-              {t("discovery.applyAt")}
-            </Button>
-          </a>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={<FiZap />}
+          <button
+            type="button"
             onClick={() => onAnalyze(match.id)}
             disabled={busy}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink/60 text-xs font-semibold transition-all cursor-pointer"
           >
-            {t("analyze")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<FiBookmark />}
-            onClick={() => onSave(match.id)}
-            disabled={busy || match.status === "SAVED"}
+            <FiZap className="w-3.5 h-3.5 text-yellow" />
+            <span>Analisis</span>
+          </button>
+
+          <a
+            href={match.sources[0]?.applyUrl ?? match.sources[0]?.url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold shadow-xs hover:opacity-90 transition-all"
           >
-            {t("saveToTracker")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<FiEyeOff />}
+            <span>Lamar</span>
+            <FiExternalLink className="w-3.5 h-3.5" />
+          </a>
+
+          <button
+            type="button"
             onClick={() => onDismiss(match.id)}
             disabled={busy || isDismissed}
+            title="Sembunyikan"
+            className="p-1.5 rounded-lg text-muted hover:text-red hover:bg-red/10 transition-colors cursor-pointer"
           >
-            {t("discovery.dismiss")}
-          </Button>
+            <FiEyeOff className="w-4 h-4" />
+          </button>
         </div>
-      </Card>
-    </motion.div>
+      </div>
+    </div>
   )
 }
+

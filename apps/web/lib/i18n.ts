@@ -61,6 +61,8 @@ const dict = {
     "discovery.dismiss": "Sembunyikan",
     "discovery.quota": "Sisa pencarian bulan ini",
     "discovery.quotaExceeded": "Kuota pencarian bulan ini habis",
+    "discovery.reSearch": "Cari Ulang / Perbarui Lowongan",
+    "discovery.lastSearched": "Hasil pencarian terakhir",
   },
   en: {
     dashboard: "Dashboard",
@@ -115,6 +117,8 @@ const dict = {
     "discovery.dismiss": "Hide",
     "discovery.quota": "Searches left this month",
     "discovery.quotaExceeded": "Monthly search quota exhausted",
+    "discovery.reSearch": "Search Again / Refresh",
+    "discovery.lastSearched": "Latest search result",
   },
 } as const;
 

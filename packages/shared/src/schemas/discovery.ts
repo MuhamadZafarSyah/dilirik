@@ -234,6 +234,7 @@ export type DiscoveryStatusDto = {
 
 export type DiscoveryRunListItemDto = {
   id: string
+  cvId: string
   status: DiscoveryRunStatus
   candidateCount: number
   curatedCount: number
