@@ -314,12 +314,12 @@ export default function DiscoveryPage() {
           </p>
         </div>
 
-        {statusQuery.data?.indexJobCount !== undefined && (
+        {/* {statusQuery.data?.indexJobCount !== undefined && (
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-panel border border-line text-xs text-muted font-medium self-start sm:self-auto shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-green" />
             <span>{statusQuery.data.indexJobCount.toLocaleString("id-ID")} lowongan terindeks</span>
           </div>
-        )}
+        )} */}
       </header>
 
       {/* Clean Control Bar with Global Select Component */}
@@ -355,7 +355,7 @@ export default function DiscoveryPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-3">
+            <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap">
               <span className="text-xs text-muted">
                 Sisa kuota:{" "}
                 <strong className="text-ink">
@@ -365,11 +365,11 @@ export default function DiscoveryPage() {
 
               <Button
                 variant="primary"
-                size="md"
-                icon={<FiSearch className="text-yellow" />}
+                size="sm"
+                icon={<FiSearch className="text-yellow w-3.5 h-3.5" />}
                 onClick={() => searchMutation.mutate(activeCvId)}
                 disabled={!activeCvId || searchMutation.isPending}
-                className="shadow-xs"
+                className="shadow-xs shrink-0"
               >
                 {searchMutation.isPending
                   ? "Mencari..."

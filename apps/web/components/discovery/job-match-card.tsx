@@ -212,21 +212,19 @@ export function JobMatchCard({
       )}
 
       {/* Bottom Actions Row */}
-      <div className="mt-4 pt-3.5 border-t border-line/50 flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="mt-4 pt-3.5 border-t border-line/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="text-xs text-muted">
           {match.isLikelyStale ? (
-            <span className="inline-flex items-center gap-1 text-xs text-red font-medium">
+            <span className="inline-flex items-center gap-1 text-red font-medium">
               <FiAlertTriangle className="w-3.5 h-3.5" />
               {t("discovery.maybeClosed")}
             </span>
           ) : (
-            <span className="text-xs text-muted">
-              Sumber: {match.primarySource}
-            </span>
+            <span>Sumber: {match.primarySource}</span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isDismissed ? (
             <button
               type="button"
@@ -250,7 +248,7 @@ export function JobMatchCard({
                 disabled={busy}
                 title={isSaved ? "Klik untuk menghapus dari tracker" : "Simpan ke tracker"}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
+                  "inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
                   isSaved
                     ? "bg-blue text-paper border-blue hover:bg-blue/90"
                     : "bg-paper text-ink border-line hover:border-ink/60",
@@ -264,7 +262,7 @@ export function JobMatchCard({
                 type="button"
                 onClick={() => onAnalyze(match.id)}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink/60 text-xs font-semibold transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink/60 text-xs font-semibold transition-all cursor-pointer"
               >
                 <FiZap className="w-3.5 h-3.5 text-yellow" />
                 <span>Analisis</span>
@@ -274,7 +272,7 @@ export function JobMatchCard({
                 href={match.sources[0]?.applyUrl ?? match.sources[0]?.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold shadow-xs hover:opacity-90 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold shadow-xs hover:opacity-90 transition-all"
               >
                 <span>Lamar</span>
                 <FiExternalLink className="w-3.5 h-3.5" />
@@ -285,7 +283,7 @@ export function JobMatchCard({
                 onClick={() => onDismiss(match.id)}
                 disabled={busy}
                 title="Sembunyikan lowongan ini"
-                className="p-1.5 rounded-lg text-muted hover:text-red hover:bg-red/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-muted hover:text-red hover:bg-red/10 transition-colors cursor-pointer shrink-0"
               >
                 <FiEyeOff className="w-4 h-4" />
               </button>
