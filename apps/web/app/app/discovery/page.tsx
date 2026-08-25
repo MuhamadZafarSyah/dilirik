@@ -10,6 +10,13 @@ import { JobMatchCard, type JobMatchView } from "@/components/discovery/job-matc
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/components/ui/toast"
 import { api, errorMessage } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
@@ -70,7 +77,7 @@ const itemVariants = {
 }
 
 export default function DiscoveryPage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { toast } = useToast()
   const router = useRouter()
   const pathname = usePathname()
@@ -142,7 +149,7 @@ export default function DiscoveryPage() {
 
   const actionMutation = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "save" | "unsave" | "dismiss" | "analyze" }) => {
-      const body = action === "dismiss" ? { reason: "NOT_RELEVANT" } : {}
+      const body = action === "dismiss" ? { reason: "other" } : {}
       const response = await api.post(`/api/discovery/matches/${id}/${action}`, body)
       return { id, action, data: response.data as Record<string, unknown> }
     },
@@ -297,7 +304,7 @@ export default function DiscoveryPage() {
         )}
       </header>
 
-      {/* Clean Control Bar */}
+      {/* Clean Control Bar with Global Select Component */}
       <div className="rounded-2xl border border-line bg-panel p-4 sm:p-5 shadow-xs space-y-4">
         {cvsQuery.isLoading ? (
           <Skeleton loading={true} animate="shimmer" fallback={<div className="h-10" />}>
@@ -312,19 +319,22 @@ export default function DiscoveryPage() {
           />
         ) : (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
               <span className="text-xs font-bold text-muted uppercase shrink-0">CV:</span>
-              <select
-                value={activeCvId}
-                onChange={(event) => updateCvParam(event.target.value)}
-                className="w-full sm:max-w-xs rounded-xl border border-line bg-paper px-3 py-2 text-sm font-medium text-ink shadow-2xs focus:border-ink focus:outline-none"
-              >
-                {cvs.map((cv) => (
-                  <option key={cv.id} value={cv.id}>
-                    {cv.title} (v{cv.version})
-                  </option>
-                ))}
-              </select>
+              <div className="w-full sm:max-w-xs">
+                <Select value={activeCvId} onValueChange={updateCvParam}>
+                  <SelectTrigger className="w-full rounded-xl border-2 border-line bg-paper px-3 py-2 text-sm font-medium text-ink shadow-2xs focus:border-ink">
+                    <SelectValue placeholder="Pilih CV..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cvs.map((cv) => (
+                      <SelectItem key={cv.id} value={cv.id}>
+                        📄 {cv.title} (v{cv.version})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-3">
@@ -386,8 +396,8 @@ export default function DiscoveryPage() {
       {/* Result Listing */}
       {activeResult && !searchMutation.isPending && (
         <div className="space-y-5">
-          {/* Quick Filter Navigation */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          {/* Quick Filter Navigation & Middle Search */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex items-center gap-1 p-1 bg-panel rounded-xl border border-line shadow-2xs self-start">
               <button
                 type="button"
@@ -421,13 +431,19 @@ export default function DiscoveryPage() {
               </button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Cari posisi, skill, kota..."
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full sm:w-60 rounded-xl border border-line bg-paper px-3 py-1.5 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none shadow-2xs"
-            />
+            {/* Middle Search Input */}
+            <div className="flex items-center gap-3 flex-1 max-w-sm">
+              <div className="relative flex-1">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted h-4 w-4" />
+                <input
+                  type="text"
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  placeholder={lang === "id" ? "Cari nama posisi, perusahaan, atau CV..." : "Search task, company, or CV..."}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border-2 border-line bg-paper text-ink text-xs font-bold outline-none focus:border-ink shadow-inner"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Empty State / AI Note */}
