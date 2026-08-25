@@ -267,7 +267,8 @@ export function DiscoveryFilterDrawer({
                 </div>
 
                 {/* 4. Ekspektasi Gaji Minimal */}
-                <div className="space-y-2.5">
+                {/* ZNOTE: sementara hilangkan filter gaji */}
+                {/* <div className="space-y-2.5">
                   <label className="flex items-center gap-2 text-xs font-bold text-ink uppercase tracking-wider">
                     <FiDollarSign className="w-3.5 h-3.5 text-muted" />
                     <span>Gaji Minimal (IDR / Bulan)</span>
@@ -289,7 +290,7 @@ export function DiscoveryFilterDrawer({
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border-2 border-line bg-panel text-xs font-bold text-ink placeholder:text-muted focus:border-ink focus:outline-none"
                     />
                   </div>
-                </div>
+                </div> */}
 
                 {/* 5. Rentang Waktu Posting */}
                 <div className="space-y-2.5">

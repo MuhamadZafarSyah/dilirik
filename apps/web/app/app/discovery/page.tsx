@@ -169,14 +169,11 @@ function DiscoveryContent() {
       if (filters) {
         payload.postedWithinDays = filters.postedWithinDays
 
-        const profileOverrides: Record<string, unknown> = {}
-        if (filters.remotePref !== "any") profileOverrides.remotePref = filters.remotePref
-        if (filters.locations.length > 0) profileOverrides.locations = filters.locations
-        if (filters.seniority) profileOverrides.seniority = filters.seniority
-        if (filters.salaryMin && filters.salaryMin > 0) profileOverrides.salaryMin = filters.salaryMin
-
-        if (Object.keys(profileOverrides).length > 0) {
-          payload.profileOverrides = profileOverrides
+        payload.profileOverrides = {
+          remotePref: filters.remotePref,
+          locations: filters.locations,
+          seniority: filters.seniority || undefined,
+          salaryMin: filters.salaryMin && filters.salaryMin > 0 ? filters.salaryMin : undefined,
         }
       }
 
@@ -433,7 +430,7 @@ function DiscoveryContent() {
                 onClick={() =>
                   searchMutation.mutate({
                     cvId: activeCvId,
-                    filters: hasFilterOverrides ? customFilters : undefined,
+                    filters: customFilters,
                   })
                 }
                 disabled={!activeCvId || searchMutation.isPending}
