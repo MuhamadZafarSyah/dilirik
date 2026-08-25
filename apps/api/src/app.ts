@@ -21,6 +21,8 @@ import { settingsRouter } from "./routes/settings";
 import { interviewRouter } from "./routes/interview";
 import { previewRouter } from "./routes/preview";
 import { coverLetterRouter } from "./routes/coverLetters";
+import { discoveryRouter } from "./routes/discovery";
+import { internalRouter } from "./routes/internal";
 
 export function createApp(): express.Express {
   const app = express();
@@ -84,6 +86,9 @@ export function createApp(): express.Express {
   app.use("/api/interview", interviewRouter);
   app.use("/api/preview", previewRouter);
   app.use("/api/cover-letters", coverLetterRouter);
+  app.use("/api/discovery", discoveryRouter);
+  // Dipanggil penjadwal, bukan browser. Auth-nya secret di header, bukan sesi.
+  app.use("/api/internal", internalRouter);
 
   // 404 JSON konsisten (tanpa bocor stack/HTML default Express)
   app.use((_req, res) => {

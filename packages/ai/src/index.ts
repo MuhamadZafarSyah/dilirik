@@ -65,3 +65,28 @@ export {
   countWords,
   type GenerateCoverLetterParams,
 } from "./coverLetter/generateCoverLetter.js"
+export {
+  generateSearchProfile,
+  searchProfileSchema,
+  summarizeProfile,
+  type SearchProfileDraft,
+  type GenerateSearchProfileParams,
+} from "./discovery/searchProfile.js"
+export {
+  curateTopPicks,
+  curationSchema,
+  buildCandidatesText,
+  checkReason,
+  TOP_PICK_TARGET,
+  MIN_VALID_PICKS,
+  type CurationCandidate,
+  type CurationResult,
+  type CuratedPick,
+  type CurateTopPicksResult,
+} from "./discovery/curateTop5.js"
+export {
+  SEARCH_PROFILE_SYSTEM,
+  CURATION_SYSTEM,
+  buildSearchProfilePrompt,
+  buildCurationPrompt,
+} from "./discovery/prompts.js"

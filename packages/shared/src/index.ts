@@ -6,5 +6,6 @@ export * from "./schemas/analysis"
 export * from "./schemas/application"
 export * from "./schemas/session"
 export * from "./schemas/coverLetter"
+export * from "./schemas/discovery"
 export * from "./utils/disposableEmail"
 
