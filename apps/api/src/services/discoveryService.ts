@@ -767,6 +767,19 @@ export async function dismissMatch(
   return toJobMatchDto(updated, match.discoveredJob)
 }
 
+export async function undismissMatch(userId: string, matchId: string): Promise<JobMatchDto> {
+  const match = await loadMatch(userId, matchId)
+  const updated = await prisma.jobMatch.update({
+    where: { id: match.id },
+    data: {
+      status: "NEW",
+      dismissReason: null,
+      dismissNote: null,
+    },
+  })
+  return toJobMatchDto(updated, match.discoveredJob)
+}
+
 /**
  * Menyiapkan analisis penuh: snippet lowongan dijadikan JobPosting milik user,
  * lalu alur analisis yang SUDAH ADA yang mengerjakan sisanya. Sengaja tidak

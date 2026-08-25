@@ -8,7 +8,6 @@ import { Router } from "express"
 import { rateLimit } from "../middleware/rateLimit.js"
 import { requireAuth } from "../middleware/requireAuth.js"
 import {
-  dismissMatch,
   getDiscoveryStatus,
   getOrCreateSearchProfile,
   getRun,
@@ -17,6 +16,8 @@ import {
   requestAlert,
   saveMatch,
   unsaveMatch,
+  dismissMatch,
+  undismissMatch,
   searchJobs,
   updateSearchProfile,
 } from "../services/discoveryService.js"
@@ -109,6 +110,15 @@ discoveryRouter.post("/matches/:id/dismiss", async (req, res, next) => {
   try {
     const input = dismissJobMatchSchema.parse(req.body)
     const match = await dismissMatch(req.userId!, req.params.id as string, input)
+    res.json({ match })
+  } catch (e) {
+    next(e)
+  }
+})
+
+discoveryRouter.post("/matches/:id/undismiss", async (req, res, next) => {
+  try {
+    const match = await undismissMatch(req.userId!, req.params.id as string)
     res.json({ match })
   } catch (e) {
     next(e)

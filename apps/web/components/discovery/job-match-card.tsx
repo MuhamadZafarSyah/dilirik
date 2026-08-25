@@ -69,6 +69,7 @@ export function JobMatchCard({
   onSave,
   onUnsave,
   onDismiss,
+  onUndismiss,
   onAnalyze,
   busy,
 }: {
@@ -76,6 +77,7 @@ export function JobMatchCard({
   onSave: (id: string) => void
   onUnsave?: (id: string) => void
   onDismiss: (id: string) => void
+  onUndismiss?: (id: string) => void
   onAnalyze: (id: string) => void
   busy?: boolean
 }) {
@@ -99,7 +101,7 @@ export function JobMatchCard({
       className={cn(
         "group relative rounded-2xl border transition-all duration-150 p-5 sm:p-6 bg-panel shadow-xs hover:border-ink/40",
         match.isTopPick ? "border-yellow/70 bg-gradient-to-br from-panel to-paper/40" : "border-line",
-        isDismissed && "opacity-40 grayscale hover:grayscale-0",
+        isDismissed && "opacity-60 bg-paper/50",
       )}
     >
       {/* Top Header Row */}
@@ -109,6 +111,11 @@ export function JobMatchCard({
             {match.isTopPick && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-yellow text-ink border border-ink/20 text-xs font-bold">
                 ★ {t("discovery.topPicks")} #{match.rank}
+              </span>
+            )}
+            {isDismissed && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red/15 text-red border border-red/30 text-xs font-semibold">
+                Disembunyikan
               </span>
             )}
             <span className="text-muted font-medium">
@@ -220,57 +227,70 @@ export function JobMatchCard({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (isSaved && onUnsave) {
-                onUnsave(match.id)
-              } else {
-                onSave(match.id)
-              }
-            }}
-            disabled={busy}
-            title={isSaved ? "Klik untuk menghapus dari tracker" : "Simpan ke tracker"}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
-              isSaved
-                ? "bg-blue text-paper border-blue hover:bg-blue/90"
-                : "bg-paper text-ink border-line hover:border-ink/60",
-            )}
-          >
-            <FiBookmark className={cn("w-3.5 h-3.5", isSaved && "fill-current")} />
-            <span>{isSaved ? "Tersimpan" : "Simpan"}</span>
-          </button>
+          {isDismissed ? (
+            <button
+              type="button"
+              onClick={() => onUndismiss && onUndismiss(match.id)}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            >
+              <span>Tampilkan Kembali</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSaved && onUnsave) {
+                    onUnsave(match.id)
+                  } else {
+                    onSave(match.id)
+                  }
+                }}
+                disabled={busy}
+                title={isSaved ? "Klik untuk menghapus dari tracker" : "Simpan ke tracker"}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
+                  isSaved
+                    ? "bg-blue text-paper border-blue hover:bg-blue/90"
+                    : "bg-paper text-ink border-line hover:border-ink/60",
+                )}
+              >
+                <FiBookmark className={cn("w-3.5 h-3.5", isSaved && "fill-current")} />
+                <span>{isSaved ? "Tersimpan" : "Simpan"}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => onAnalyze(match.id)}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink/60 text-xs font-semibold transition-all cursor-pointer"
-          >
-            <FiZap className="w-3.5 h-3.5 text-yellow" />
-            <span>Analisis</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => onAnalyze(match.id)}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-paper text-ink hover:border-ink/60 text-xs font-semibold transition-all cursor-pointer"
+              >
+                <FiZap className="w-3.5 h-3.5 text-yellow" />
+                <span>Analisis</span>
+              </button>
 
-          <a
-            href={match.sources[0]?.applyUrl ?? match.sources[0]?.url ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold shadow-xs hover:opacity-90 transition-all"
-          >
-            <span>Lamar</span>
-            <FiExternalLink className="w-3.5 h-3.5" />
-          </a>
+              <a
+                href={match.sources[0]?.applyUrl ?? match.sources[0]?.url ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ink text-paper text-xs font-bold shadow-xs hover:opacity-90 transition-all"
+              >
+                <span>Lamar</span>
+                <FiExternalLink className="w-3.5 h-3.5" />
+              </a>
 
-          <button
-            type="button"
-            onClick={() => onDismiss(match.id)}
-            disabled={busy || isDismissed}
-            title="Sembunyikan"
-            className="p-1.5 rounded-lg text-muted hover:text-red hover:bg-red/10 transition-colors cursor-pointer"
-          >
-            <FiEyeOff className="w-4 h-4" />
-          </button>
+              <button
+                type="button"
+                onClick={() => onDismiss(match.id)}
+                disabled={busy}
+                title="Sembunyikan lowongan ini"
+                className="p-1.5 rounded-lg text-muted hover:text-red hover:bg-red/10 transition-colors cursor-pointer"
+              >
+                <FiEyeOff className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

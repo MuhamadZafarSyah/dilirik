@@ -87,7 +87,7 @@ export default function DiscoveryPage() {
   const paramCvId = searchParams.get("cvId") || ""
   const [selectedCvId, setSelectedCvId] = useState<string>(paramCvId)
   const [result, setResult] = useState<SearchResponse | null>(null)
-  const [filterTab, setFilterTab] = useState<"all" | "top" | "saved">("all")
+  const [filterTab, setFilterTab] = useState<"all" | "top" | "saved" | "hidden">("all")
   const [searchFilter, setSearchFilter] = useState("")
 
   const cvsQuery = useQuery({
@@ -148,14 +148,21 @@ export default function DiscoveryPage() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "save" | "unsave" | "dismiss" | "analyze" }) => {
+    mutationFn: async ({ id, action }: { id: string; action: "save" | "unsave" | "dismiss" | "undismiss" | "analyze" }) => {
       const body = action === "dismiss" ? { reason: "other" } : {}
       const response = await api.post(`/api/discovery/matches/${id}/${action}`, body)
       return { id, action, data: response.data as Record<string, unknown> }
     },
     onMutate: async ({ id, action }) => {
       // Terapkan Optimistic Update ke React Query cache dan Local State seketika
-      const newStatus = action === "save" ? "SAVED" : action === "unsave" ? "NEW" : action === "dismiss" ? "DISMISSED" : undefined
+      const newStatus =
+        action === "save"
+          ? "SAVED"
+          : action === "unsave" || action === "undismiss"
+            ? "NEW"
+            : action === "dismiss"
+              ? "DISMISSED"
+              : undefined
 
       if (newStatus) {
         // 1. Optimistic update local state result
@@ -189,7 +196,7 @@ export default function DiscoveryPage() {
         }
       }
     },
-    onSuccess: ({ action, data }) => {
+    onSuccess: ({ id, action, data }) => {
       if (action === "analyze") {
         toast(
           "Lowongan disiapkan untuk analisis. Analisis penuh memakai kuota analisis.",
@@ -199,8 +206,10 @@ export default function DiscoveryPage() {
         toast("Disimpan ke tracker", "success")
       } else if (action === "unsave") {
         toast("Dihapus dari tracker", "success")
+      } else if (action === "undismiss") {
+        toast("Lowongan ditampilkan kembali", "success")
       } else {
-        toast("Disembunyikan", "success")
+        toast("Lowongan disembunyikan", "success")
       }
 
       // Sinkronisasi data asli dari server bila tersedia
@@ -269,9 +278,18 @@ export default function DiscoveryPage() {
     ? [...activeResult.topPicks, ...activeResult.otherCandidates]
     : []
 
+  const hiddenMatchesCount = allMatches.filter((m) => m.status === "DISMISSED").length
+  const activeMatches = allMatches.filter((m) => m.status !== "DISMISSED")
+
   const filteredMatches = allMatches.filter((match) => {
-    if (filterTab === "top" && !match.isTopPick) return false
-    if (filterTab === "saved" && match.status !== "SAVED") return false
+    if (filterTab === "hidden") {
+      if (match.status !== "DISMISSED") return false
+    } else {
+      if (match.status === "DISMISSED") return false
+      if (filterTab === "top" && !match.isTopPick) return false
+      if (filterTab === "saved" && match.status !== "SAVED") return false
+    }
+
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase()
       const matchText = `${match.title} ${match.company} ${match.location ?? ""} ${match.matchedSkills.join(" ")}`.toLowerCase()
@@ -407,7 +425,7 @@ export default function DiscoveryPage() {
                   filterTab === "all" ? "bg-ink text-paper" : "text-muted hover:text-ink",
                 )}
               >
-                Semua ({allMatches.length})
+                Semua ({activeMatches.length})
               </button>
               <button
                 type="button"
@@ -417,7 +435,7 @@ export default function DiscoveryPage() {
                   filterTab === "top" ? "bg-yellow text-ink font-bold" : "text-muted hover:text-ink",
                 )}
               >
-                ★ Top Picks ({allMatches.filter((m) => m.isTopPick).length})
+                ★ Top Picks ({activeMatches.filter((m) => m.isTopPick).length})
               </button>
               <button
                 type="button"
@@ -427,8 +445,20 @@ export default function DiscoveryPage() {
                   filterTab === "saved" ? "bg-blue text-paper font-bold" : "text-muted hover:text-ink",
                 )}
               >
-                Tersimpan ({allMatches.filter((m) => m.status === "SAVED").length})
+                Tersimpan ({activeMatches.filter((m) => m.status === "SAVED").length})
               </button>
+              {hiddenMatchesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilterTab("hidden")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    filterTab === "hidden" ? "bg-red/80 text-paper font-bold" : "text-muted hover:text-ink",
+                  )}
+                >
+                  Disembunyikan ({hiddenMatchesCount})
+                </button>
+              )}
             </div>
 
             {/* Middle Search Input */}
@@ -473,6 +503,7 @@ export default function DiscoveryPage() {
                     onSave={(id) => actionMutation.mutate({ id, action: "save" })}
                     onUnsave={(id) => actionMutation.mutate({ id, action: "unsave" })}
                     onDismiss={(id) => actionMutation.mutate({ id, action: "dismiss" })}
+                    onUndismiss={(id) => actionMutation.mutate({ id, action: "undismiss" })}
                     onAnalyze={(id) => actionMutation.mutate({ id, action: "analyze" })}
                   />
                 ))}
@@ -485,7 +516,7 @@ export default function DiscoveryPage() {
             <div className="space-y-3 pt-3">
               <div className="flex items-center justify-between">
                 <h2 className="hand text-xl font-bold text-ink">
-                  {t("discovery.otherCandidates")}
+                  {filterTab === "hidden" ? "Lowongan Disembunyikan" : t("discovery.otherCandidates")}
                 </h2>
                 <span className="text-xs text-muted">{otherCandidatesList.length} lowongan</span>
               </div>
@@ -499,6 +530,7 @@ export default function DiscoveryPage() {
                     onSave={(id) => actionMutation.mutate({ id, action: "save" })}
                     onUnsave={(id) => actionMutation.mutate({ id, action: "unsave" })}
                     onDismiss={(id) => actionMutation.mutate({ id, action: "dismiss" })}
+                    onUndismiss={(id) => actionMutation.mutate({ id, action: "undismiss" })}
                     onAnalyze={(id) => actionMutation.mutate({ id, action: "analyze" })}
                   />
                 ))}
@@ -508,7 +540,9 @@ export default function DiscoveryPage() {
 
           {filteredMatches.length === 0 && (
             <div className="p-8 text-center bg-panel border border-line rounded-2xl text-xs text-muted">
-              Tidak ada lowongan yang sesuai filter pencarian saat ini.
+              {filterTab === "hidden"
+                ? "Tidak ada lowongan yang disembunyikan."
+                : "Tidak ada lowongan yang sesuai filter pencarian saat ini."}
             </div>
           )}
 
