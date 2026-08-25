@@ -18,11 +18,17 @@ import type { AtsCompanyRef } from "./providers/types.js"
  */
 
 export const CURATED_COMPANIES_SEED: Array<AtsCompanyRef & { region: string }> = [
-  // ===== Tech Indonesia & SEA =====
+  // ===== Tech Indonesia & SEA (Onsite & Hybrid Jakarta / SEA) =====
   { name: "Xendit", atsProvider: "greenhouse", atsSlug: "xendit", region: "ID" },
-  { name: "Ajaib", atsProvider: "greenhouse", atsSlug: "ajaib", region: "ID" },
-  { name: "Kredivo", atsProvider: "greenhouse", atsSlug: "kredivogroup", region: "ID" },
   { name: "Flip", atsProvider: "greenhouse", atsSlug: "flip", region: "ID" },
+  { name: "Ajaib", atsProvider: "workable", atsSlug: "ajaib", region: "ID" },
+  { name: "DKatalis (Bank Jago)", atsProvider: "greenhouse", atsSlug: "dkatalis", region: "ID" },
+  { name: "StraitsX", atsProvider: "greenhouse", atsSlug: "straitsx", region: "ID" },
+  { name: "AppsFlyer Indonesia", atsProvider: "greenhouse", atsSlug: "appsflyer", region: "ID" },
+  { name: "Braze", atsProvider: "greenhouse", atsSlug: "braze", region: "ID" },
+  { name: "Kredivo Group", atsProvider: "greenhouse", atsSlug: "kredivogroup", region: "ID" },
+  { name: "Decathlon Indonesia", atsProvider: "workable", atsSlug: "decathlon-indonesia", region: "ID" },
+  { name: "CADDi Indonesia", atsProvider: "workable", atsSlug: "caddi-indonesia", region: "ID" },
   { name: "Sleekflow", atsProvider: "ashby", atsSlug: "sleekflow", region: "SEA" },
   { name: "Coda Payments", atsProvider: "greenhouse", atsSlug: "codapayments", region: "SEA" },
   { name: "Ninja Van", atsProvider: "greenhouse", atsSlug: "ninjavan", region: "SEA" },

@@ -255,28 +255,65 @@ async function retrieveCandidates(
       take: DISCOVERY_CANDIDATE_LIMIT,
     })
 
-  const locationClause =
-    cities.length > 0 && profile.remotePref !== "remote"
-      ? {
-          OR: [
-            ...cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })),
-            { remoteType: "remote" },
-          ],
-        }
-      : profile.remotePref === "remote"
-        ? { remoteType: "remote" }
-        : {}
+  const locationConditions: Array<Record<string, unknown>> = []
 
-  // Percobaan 1: judul + lokasi + jendela waktu.
+  // 1. Jika user mencari REMOTE ONLY:
+  // Jangan kunci ke kota tertentu (karena lowongan remote lokasinya bisa Anywhere/Global/US/dsb)
+  if (profile.remotePref === "remote") {
+    locationConditions.push({ remoteType: "remote" })
+  }
+  // 2. Jika user mencari ONSITE:
+  // Wajib mencocokkan kota target (jika ada) dan bukan remote
+  else if (profile.remotePref === "onsite") {
+    if (cities.length > 0) {
+      locationConditions.push({
+        OR: [
+          ...cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })),
+          ...cities.map((city) => ({ location: { contains: city, mode: "insensitive" as const } })),
+        ],
+      })
+    }
+    locationConditions.push({
+      OR: [
+        { remoteType: "onsite" },
+        { remoteType: null }, // Lowongan lokal/ATS umum yang tidak mencantumkan tag remote
+      ],
+      NOT: { remoteType: "remote" },
+    })
+  }
+  // 3. Jika user mencari HYBRID:
+  else if (profile.remotePref === "hybrid") {
+    if (cities.length > 0) {
+      locationConditions.push({
+        OR: [
+          ...cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })),
+          ...cities.map((city) => ({ location: { contains: city, mode: "insensitive" as const } })),
+        ],
+      })
+    }
+    locationConditions.push({ remoteType: "hybrid" })
+  }
+  // 4. Jika user mencari SEMUA TIPE (any / default):
+  // Lowongan cocok jika di kota target ATAU lowongan bersifat remote
+  else if (cities.length > 0) {
+    locationConditions.push({
+      OR: [
+        ...cities.map((city) => ({ city: { equals: city, mode: "insensitive" as const } })),
+        ...cities.map((city) => ({ location: { contains: city, mode: "insensitive" as const } })),
+        { remoteType: "remote" },
+      ],
+    })
+  }
+
+  // Percobaan 1: judul + lokasi/remote + jendela waktu.
   let rows = await query({
     ...baseWhere,
     ...(titleFilter ? { OR: titleFilter } : {}),
-    ...(Object.keys(locationClause).length > 0 ? { AND: [locationClause] } : {}),
+    ...(locationConditions.length > 0 ? { AND: locationConditions } : {}),
   })
 
-  // Percobaan 2: buang filter lokasi. Lebih baik menampilkan lowongan di kota
-  // lain dengan JUJUR bahwa lokasinya beda, daripada mengembalikan halaman kosong.
-  if (rows.length < DISCOVERY_RELAX_THRESHOLD) {
+  // Percobaan 2: buang filter lokasi jika hasil minim (kecuali jika user eksplisit minta remote/onsite)
+  if (rows.length < DISCOVERY_RELAX_THRESHOLD && profile.remotePref === "any") {
     relaxedFilters.push("lokasi")
     rows = await query({
       ...baseWhere,
@@ -284,12 +321,14 @@ async function retrieveCandidates(
     })
   }
 
-  // Percobaan 3: lebarkan jendela waktu posting.
+  // Percobaan 3: lebarkan jendela waktu posting jika hasil masih minim
   if (rows.length < DISCOVERY_RELAX_THRESHOLD) {
     relaxedFilters.push("tanggal posting")
     rows = await query({
       expiresAt: { gt: new Date() },
       ...(titleFilter ? { OR: titleFilter } : {}),
+      ...(profile.remotePref === "remote" ? { remoteType: "remote" } : {}),
+      ...(profile.remotePref === "onsite" ? { NOT: { remoteType: "remote" } } : {}),
     })
   }
 
