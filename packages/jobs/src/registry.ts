@@ -1,8 +1,9 @@
 import { dedupeJobs, type MergedJob } from "./dedupe.js"
 import { normalizeJob, type NormalizedJob } from "./normalize.js"
 import { disabledAggregators, enabledAggregators } from "./providers/aggregators.js"
+import { INDONESIA_PROVIDERS } from "./providers/indonesia.js"
 import { ATS_CONNECTORS, getAtsConnector } from "./providers/ats.js"
-import type { AtsCompanyRef, JobQuery, ProviderRunResult, RawJob } from "./providers/types.js"
+import type { AtsCompanyRef, JobProvider, JobQuery, ProviderRunResult, RawJob } from "./providers/types.js"
 
 /**
  * Orkestrasi ingestion (PRD Cari Lowongan §8.2).
@@ -147,7 +148,9 @@ async function collectFromAggregators(
   const jobs: RawJob[] = []
   const runs: ProviderRunResult[] = []
 
-  for (const provider of enabledAggregators()) {
+  const allProviders = [...enabledAggregators(), ...INDONESIA_PROVIDERS.filter((p) => p.isEnabled())]
+
+  for (const provider of allProviders) {
     const budget = provider.dailyCallBudget
     const allowed = budget > 0 ? queries.slice(0, budget) : queries
     let calls = 0

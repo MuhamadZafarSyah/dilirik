@@ -79,6 +79,59 @@ export async function fetchJson<T>(
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
+export async function fetchText(
+  url: string,
+  options: {
+    timeoutMs?: number
+    retries?: number
+    headers?: Record<string, string>
+  } = {},
+): Promise<string> {
+  const { timeoutMs = 12_000, retries = 2, headers = {} } = options
+
+  let lastError: unknown
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        signal: controller.signal,
+        headers: {
+          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          ...headers,
+        },
+      })
+
+      if (!response.ok) {
+        const error = new ProviderHttpError(
+          response.status,
+          url,
+          `HTTP ${response.status} dari ${new URL(url).host}`,
+        )
+        if (RETRYABLE.has(response.status) && attempt <= retries) {
+          lastError = error
+          await sleep(500 * attempt * attempt)
+          continue
+        }
+        throw error
+      }
+
+      return await response.text()
+    } catch (error) {
+      lastError = error
+      if (error instanceof ProviderHttpError && !RETRYABLE.has(error.status)) throw error
+      if (attempt > retries) break
+      await sleep(500 * attempt * attempt)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
