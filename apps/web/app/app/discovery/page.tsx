@@ -4,9 +4,13 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "boneyard-js/react"
 import { motion } from "framer-motion"
-import { useState, useEffect } from "react"
-import { FiBell, FiInfo, FiSearch } from "react-icons/fi"
+import { useState, useEffect, Suspense } from "react"
+import { FiBell, FiInfo, FiSearch, FiSliders } from "react-icons/fi"
 import { JobMatchCard, type JobMatchView } from "@/components/discovery/job-match-card"
+import {
+  DiscoveryFilterDrawer,
+  type SearchFilters,
+} from "@/components/discovery/discovery-filter-drawer"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -76,7 +80,15 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } },
 }
 
-export default function DiscoveryPage() {
+const DEFAULT_FILTERS: SearchFilters = {
+  remotePref: "any",
+  locations: [],
+  seniority: "",
+  salaryMin: undefined,
+  postedWithinDays: 30,
+}
+
+function DiscoveryContent() {
   const { t, lang } = useI18n()
   const { toast } = useToast()
   const router = useRouter()
@@ -89,6 +101,10 @@ export default function DiscoveryPage() {
   const [result, setResult] = useState<SearchResponse | null>(null)
   const [filterTab, setFilterTab] = useState<"all" | "top" | "saved" | "hidden">("all")
   const [searchFilter, setSearchFilter] = useState("")
+
+  // Filter Drawer State
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+  const [customFilters, setCustomFilters] = useState<SearchFilters>(DEFAULT_FILTERS)
 
   const cvsQuery = useQuery({
     queryKey: ["cvs"],
@@ -133,9 +149,38 @@ export default function DiscoveryPage() {
     },
   })
 
+  const hasFilterOverrides =
+    customFilters.remotePref !== "any" ||
+    customFilters.locations.length > 0 ||
+    Boolean(customFilters.seniority) ||
+    Boolean(customFilters.salaryMin && customFilters.salaryMin > 0) ||
+    customFilters.postedWithinDays !== 30
+
   const searchMutation = useMutation({
-    mutationFn: async (cvId: string) => {
-      const response = await api.post<SearchResponse>("/api/discovery/search", { cvId })
+    mutationFn: async ({
+      cvId,
+      filters,
+    }: {
+      cvId: string
+      filters?: SearchFilters
+    }) => {
+      const payload: Record<string, unknown> = { cvId }
+
+      if (filters) {
+        payload.postedWithinDays = filters.postedWithinDays
+
+        const profileOverrides: Record<string, unknown> = {}
+        if (filters.remotePref !== "any") profileOverrides.remotePref = filters.remotePref
+        if (filters.locations.length > 0) profileOverrides.locations = filters.locations
+        if (filters.seniority) profileOverrides.seniority = filters.seniority
+        if (filters.salaryMin && filters.salaryMin > 0) profileOverrides.salaryMin = filters.salaryMin
+
+        if (Object.keys(profileOverrides).length > 0) {
+          payload.profileOverrides = profileOverrides
+        }
+      }
+
+      const response = await api.post<SearchResponse>("/api/discovery/search", payload)
       return response.data
     },
     onSuccess: (data) => {
@@ -355,19 +400,42 @@ export default function DiscoveryPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap">
-              <span className="text-xs text-muted">
+            <div className="flex items-center justify-between sm:justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+              <span className="text-xs text-muted mr-1">
                 Sisa kuota:{" "}
                 <strong className="text-ink">
                   {quotaRemaining === null ? "Tak terbatas" : quotaRemaining}
                 </strong>
               </span>
 
+              {/* Filter Button */}
+              <button
+                type="button"
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs shrink-0",
+                  hasFilterOverrides
+                    ? "bg-blue/10 text-blue border-blue font-bold"
+                    : "bg-paper text-ink border-line hover:border-ink/60",
+                )}
+              >
+                <FiSliders className={cn("w-3.5 h-3.5", hasFilterOverrides && "text-blue")} />
+                <span>Filter</span>
+                {hasFilterOverrides && (
+                  <span className="w-2 h-2 rounded-full bg-blue animate-pulse" />
+                )}
+              </button>
+
               <Button
                 variant="primary"
                 size="sm"
                 icon={<FiSearch className="text-yellow w-3.5 h-3.5" />}
-                onClick={() => searchMutation.mutate(activeCvId)}
+                onClick={() =>
+                  searchMutation.mutate({
+                    cvId: activeCvId,
+                    filters: hasFilterOverrides ? customFilters : undefined,
+                  })
+                }
                 disabled={!activeCvId || searchMutation.isPending}
                 className="shadow-xs shrink-0"
               >
@@ -381,8 +449,47 @@ export default function DiscoveryPage() {
           </div>
         )}
 
+        {/* Filter Overrides Summary Pill (jika aktif) */}
+        {hasFilterOverrides && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-line/50 text-xs">
+            <span className="text-muted font-bold">Filter Aktif:</span>
+            {customFilters.remotePref !== "any" && (
+              <span className="px-2.5 py-0.5 rounded-md bg-blue/10 text-blue border border-blue/30 font-semibold uppercase">
+                {customFilters.remotePref}
+              </span>
+            )}
+            {customFilters.locations.map((loc) => (
+              <span key={loc} className="px-2.5 py-0.5 rounded-md bg-paper border border-line font-medium text-ink">
+                📍 {loc}
+              </span>
+            ))}
+            {customFilters.seniority && (
+              <span className="px-2.5 py-0.5 rounded-md bg-paper border border-line font-medium text-ink">
+                Level: {customFilters.seniority}
+              </span>
+            )}
+            {Boolean(customFilters.salaryMin && customFilters.salaryMin > 0) && (
+              <span className="px-2.5 py-0.5 rounded-md bg-paper border border-line font-medium text-ink">
+                Min: Rp {customFilters.salaryMin?.toLocaleString("id-ID")}
+              </span>
+            )}
+            {customFilters.postedWithinDays !== 30 && (
+              <span className="px-2.5 py-0.5 rounded-md bg-paper border border-line font-medium text-ink">
+                {customFilters.postedWithinDays} hari
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setCustomFilters(DEFAULT_FILTERS)}
+              className="text-xs text-muted hover:text-red underline ml-1 cursor-pointer"
+            >
+              Hapus
+            </button>
+          </div>
+        )}
+
         {/* Minimal Profile Chips */}
-        {activeResult?.searchProfile && (
+        {activeResult?.searchProfile && !hasFilterOverrides && (
           <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-line/50 text-xs">
             <span className="text-muted font-medium mr-1">Target:</span>
             {activeResult.searchProfile.roles.map((role) => (
@@ -551,7 +658,37 @@ export default function DiscoveryPage() {
           </p>
         </div>
       )}
+
+      {/* Discovery Filter Drawer (Side Sheet) */}
+      <DiscoveryFilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        filters={customFilters}
+        onApply={(newFilters) => {
+          setCustomFilters(newFilters)
+          toast("Filter pencarian diterapkan! Klik 'Cari Lowongan' untuk mencari.", "info")
+        }}
+        onReset={() => {
+          setCustomFilters(DEFAULT_FILTERS)
+          toast("Filter pencarian direset ke default CV.", "info")
+        }}
+      />
     </div>
+  )
+}
+
+export default function DiscoveryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto space-y-6 py-6 px-4 sm:px-6">
+          <div className="h-10 w-48 rounded-lg bg-panel animate-pulse" />
+          <div className="h-32 rounded-2xl bg-panel animate-pulse" />
+        </div>
+      }
+    >
+      <DiscoveryContent />
+    </Suspense>
   )
 }
 
